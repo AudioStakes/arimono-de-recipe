@@ -1,7 +1,9 @@
 import { advancedComboOrder, combos, cookTimeOptions, servingGroups } from "./data";
 import { icon } from "./icons";
+import { createComboRegistry, type ComboRegistry } from "./combo-registry";
+import { createConditionReaderFromInputs } from "./conditions";
 import { getServingsValue, updateServingSteppers } from "./serving-controls";
-import { renderCombo, updateCookTimeDisplay } from "./combo-field";
+import { getCookTimeValue, updateCookTimeDisplay } from "./combo-field";
 import { bindAppEvents } from "./app-events";
 import type { PromptPanelServices } from "./output-panel";
 import {
@@ -12,14 +14,7 @@ import type { AppState, ComboConfig, ComboId } from "./types";
 import type { AppElements } from "./app-elements";
 
 const createInitialState = (): AppState => {
-  const initialCombos = {} as Record<ComboId, string[]>;
-  for (const combo of combos) {
-    initialCombos[combo.id] = [];
-  }
-
   return {
-    combos: initialCombos,
-    editingCombo: null,
     hasUserInput: false,
     inlineVisible: false,
     nearBottom: false,
@@ -50,13 +45,15 @@ export function initializeApp(root: HTMLElement): void {
 
   const state = createInitialState();
   const elements = getElements();
-  activeOutputPanel = createOutputPanelServices(state, elements);
+  renderFields();
+  const comboRegistry = createComboRegistry(elements.form);
+  comboRegistry.bind(elements.form);
+  activeOutputPanel = createOutputPanelServices(state, elements, comboRegistry);
   const outputPanel = activeOutputPanel;
   if (!outputPanel) {
     throw new Error("Output panel was not initialized.");
   }
 
-  renderFields();
   bindAppEvents(state, elements, outputPanel);
   updateCookTimeDisplay();
   updateServingSteppers();
@@ -193,32 +190,36 @@ function getCombo(id: ComboId): ComboConfig {
   return combo;
 }
 
-function comboValues(state: AppState, id: ComboId): string[] {
-  return state.combos[id] ?? [];
-}
-
 function createOutputPanelServices(
   state: AppState,
   elements: ReturnType<typeof getElements>,
+  comboRegistry: ComboRegistry,
 ): PromptPanelServices {
-  return {
+  const notifyOutputChange = (): void => {
+    if (!activeOutputPanel) return;
+    markPromptHasInputPanel(state, elements, activeOutputPanel);
+  };
+
+  const conditionReader = createConditionReaderFromInputs({
+    comboRegistry,
     getServingsText: getServingsValue,
+    getCookTimeText: getCookTimeValue,
     getSupplementalNotes: () =>
       safe$<HTMLTextAreaElement>("#supplementalNotes")?.value.trim() ?? "",
-    getComboValues: (group) => comboValues(state, group),
+  });
+
+  comboRegistry.setOnChange(notifyOutputChange);
+
+  return {
+    readConditions: () => conditionReader.read(),
     setHasUserInput: (value) => {
       state.hasUserInput = value;
     },
     setNearBottom: (value) => {
       state.nearBottom = value;
     },
-    clearEditingCombo: (group) => {
-      if (state.editingCombo?.group === group) {
-        state.editingCombo = null;
-      }
-    },
-    clearComboValues: (group) => {
-      state.combos[group] = [];
+    clearCombo: (group) => {
+      comboRegistry.clear(group);
     },
     clearCookTime: () => {
       const range = safe$<HTMLInputElement>("#cookTimeRange");
@@ -228,10 +229,6 @@ function createOutputPanelServices(
       const textarea = safe$<HTMLTextAreaElement>("#supplementalNotes");
       if (textarea) textarea.value = "";
     },
-    renderCombo: (group) => renderCombo(state, group),
-    onChange: () => {
-      if (!activeOutputPanel) return;
-      markPromptHasInputPanel(state, elements, activeOutputPanel);
-    },
+    onChange: notifyOutputChange,
   };
 }

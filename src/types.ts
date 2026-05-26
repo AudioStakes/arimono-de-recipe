@@ -75,11 +75,6 @@ export type ChipItem = {
 };
 
 export type AppState = {
-  combos: Record<ComboId, string[]>;
-  editingCombo: {
-    group: ComboId;
-    value: string;
-  } | null;
   hasUserInput: boolean;
   inlineVisible: boolean;
   nearBottom: boolean;

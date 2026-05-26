@@ -1,8 +1,8 @@
 import { buildConditionChipSpecs } from "./chips";
+import { countAdvancedConditions } from "./conditions";
 import { buildPrompt } from "./prompt";
 import { getStickyFooterView } from "./sticky-footer";
-import { getCookTimeValue } from "./combo-field";
-import type { AppState, ChipItem, ComboId, PromptData } from "./types";
+import type { ChipItem, ComboId, PromptData } from "./types";
 
 type Elements = {
   output: HTMLTextAreaElement;
@@ -15,8 +15,6 @@ type Elements = {
 };
 
 type StateReader = {
-  combos: AppState["combos"];
-  editingCombo: AppState["editingCombo"];
   hasUserInput: boolean;
   inlineVisible: boolean;
   nearBottom: boolean;
@@ -29,16 +27,12 @@ type Runtime = {
 };
 
 export type PromptPanelServices = {
-  getServingsText: () => string;
-  getSupplementalNotes: () => string;
-  getComboValues: (group: ComboId) => string[];
+  readConditions: () => PromptData;
   setHasUserInput: (value: boolean) => void;
   setNearBottom: (value: boolean) => void;
-  clearEditingCombo: (group: ComboId) => void;
-  clearComboValues: (group: ComboId) => void;
+  clearCombo: (group: ComboId) => void;
   clearCookTime: () => void;
   clearSupplementalNotes: () => void;
-  renderCombo: (group: ComboId) => void;
   onChange: () => void;
 };
 
@@ -62,25 +56,6 @@ const renderChips = (container: Element, items: ChipItem[], readOnly = false): v
   }
 };
 
-function buildPromptData(services: PromptPanelServices): PromptData {
-  return {
-    materials: services.getComboValues("materials"),
-    dishTypes: services.getComboValues("dishTypes"),
-    cookingTools: services.getComboValues("cookingTools"),
-    pairingTargets: services.getComboValues("pairingTargets"),
-    difficulty: services.getComboValues("difficulty"),
-    health: services.getComboValues("health"),
-    flavors: services.getComboValues("flavors"),
-    genres: services.getComboValues("genres"),
-    scenes: services.getComboValues("scenes"),
-    ngMaterials: services.getComboValues("ngMaterials"),
-    ngSeasonings: services.getComboValues("ngSeasonings"),
-    servings: services.getServingsText(),
-    cookTime: getCookTimeValue(),
-    supplementalNotes: services.getSupplementalNotes(),
-  };
-}
-
 function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[] {
   const specs = buildConditionChipSpecs(data);
 
@@ -90,9 +65,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
         label: spec.label,
         removable: spec.removable,
         action: () => {
-          services.clearEditingCombo(spec.id);
-          services.clearComboValues(spec.id);
-          services.renderCombo(spec.id);
+          services.clearCombo(spec.id);
           services.onChange();
         },
       };
@@ -132,23 +105,14 @@ export function refreshPromptPanel(
   elements: Elements,
   services: PromptPanelServices,
 ): void {
-  const data = buildPromptData(services);
+  const data = services.readConditions();
   elements.output.value = buildPrompt(data);
 
   const chips = buildChips(data, services);
   renderChips(elements.chips, chips);
   renderChips(elements.stickyChips, chips.slice(0, 8), true);
 
-  const advancedCount =
-    services.getComboValues("difficulty").length +
-    services.getComboValues("health").length +
-    services.getComboValues("flavors").length +
-    services.getComboValues("genres").length +
-    services.getComboValues("scenes").length +
-    services.getComboValues("ngMaterials").length +
-    services.getComboValues("ngSeasonings").length +
-    (getCookTimeValue() ? 1 : 0) +
-    (services.getSupplementalNotes() ? 1 : 0);
+  const advancedCount = countAdvancedConditions(data);
 
   elements.advancedCount.textContent = advancedCount ? `(${advancedCount}件指定中)` : "";
   elements.advancedTitle.textContent = elements.advancedDetails.open

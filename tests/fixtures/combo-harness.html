@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Combo Harness</title>
+  </head>
+  <body>
+    <form id="harnessForm">
+      <div class="combo" data-combo="materials">
+        <input
+          class="combo-input"
+          type="text"
+          placeholder="材料を入力"
+          aria-label="材料"
+          autocomplete="off"
+          role="combobox"
+          aria-expanded="false"
+        />
+        <button class="combo-picker" type="button" aria-label="材料の候補を表示"></button>
+        <div class="suggestions" role="listbox" aria-label="材料の候補"></div>
+      </div>
+      <button id="outside" type="button">outside</button>
+    </form>
+    <pre id="values"></pre>
+    <script type="module" src="./combo-harness.ts"></script>
+  </body>
+</html>

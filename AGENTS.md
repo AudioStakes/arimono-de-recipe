@@ -74,3 +74,5 @@
 - 不要になった旧UI、旧文言、未使用コードは残さないこと。
 - できるだけDRYに保ち、フォーム項目・候補・プロンプト出力ルールは設定データ中心に管理すること。
 - HTMLとJavaScriptが構文エラーなく実行される状態を常に保つこと。
+- `combo` 系の入力挙動は `src/combo-registry.ts` を中心に管理し、`app-events.ts` に IME・候補開閉・ピル編集の分岐を戻さないこと。
+- `combo` 系の仕様変更時は、まず `tests/e2e/combo-controller.spec.ts` と `tests/fixtures/combo-harness.html` / `tests/fixtures/combo-harness.ts` で単体挙動を確認し、そのうえで画面全体の E2E を見ること。
