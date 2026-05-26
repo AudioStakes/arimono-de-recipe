@@ -7,7 +7,7 @@ declare const process: {
 };
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: "./tests/e2e",
   fullyParallel: true,
   reporter: process.env.CI ? [["html"], ["github"]] : "html",
   use: {

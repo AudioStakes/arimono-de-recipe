@@ -1,13 +1,8 @@
-import {
-  advancedComboOrder,
-  chipOrder,
-  combos,
-  cookTimeOptions,
-  optionSets,
-  servingGroups,
-} from "./data";
+import { buildConditionChipSpecs } from "./chips";
+import { advancedComboOrder, combos, cookTimeOptions, optionSets, servingGroups } from "./data";
 import { icon } from "./icons";
 import { buildPrompt } from "./prompt";
+import { buildServingsText, type ServingGroupId } from "./servings";
 import type { AppState, ChipItem, ComboConfig, ComboId, PromptData } from "./types";
 
 const createInitialState = (): AppState => {
@@ -41,7 +36,6 @@ const safe$ = <T extends Element>(selector: string, root: ParentNode = document)
 const optionHtml = (value: number): string => `<option value="${value}">${value}人</option>`;
 const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
-const inlineList = (items: string[]): string => items.join("、");
 const suggestionLabel = (value: string): string => (value === "高野豆腐" ? "高野とうふ" : value);
 
 export function initializeApp(root: HTMLElement): void {
@@ -189,6 +183,14 @@ function comboOptionValues(group: ComboId): string[] {
   return combo.optionSet === "materials"
     ? [...values].sort((a, b) => a.localeCompare(b, "ja"))
     : values;
+}
+
+function getServingsCounts(): Partial<Record<ServingGroupId, number>> {
+  const counts: Partial<Record<ServingGroupId, number>> = {};
+  for (const { id } of servingGroups) {
+    counts[id] = getCountValue(id);
+  }
+  return counts;
 }
 
 function closeSuggestions(except?: HTMLElement | null): void {
@@ -340,66 +342,55 @@ function getCountValue(id: string): number {
 }
 
 function getServingsValue(): string {
-  return servingGroups
-    .map(({ id, label }) => [label, getCountValue(id)] as const)
-    .filter(([, count]) => count > 0)
-    .map(([label, count]) => `${label}${count}人`)
-    .join("、");
+  return buildServingsText(getServingsCounts());
 }
 
 function chipItems(state: AppState, elements: ReturnType<typeof getElements>): ChipItem[] {
-  const items: ChipItem[] = [];
-  const addCombo = (id: ComboId) => {
-    const combo = getCombo(id);
-    const values = comboValues(state, id);
-    if (!values.length) return;
-    items.push({
-      label: `${combo.chip || combo.label}: ${inlineList(values)}`,
-      removable: true,
-      action: () => {
-        state.combos[id] = [];
-        renderCombo(state, elements, id);
-        markHasInput(state, elements);
-      },
-    });
-  };
+  const data = getFormData(state);
+  const specs = buildConditionChipSpecs(data);
 
-  addCombo("materials");
-  const servings = getServingsValue();
-  if (servings) items.push({ label: servings });
-  for (const id of ["dishTypes", "cookingTools", "pairingTargets"] as ComboId[]) {
-    addCombo(id);
-  }
-  const cookTime = getCookTimeValue();
-  if (cookTime) {
-    items.push({
-      label: `調理時間: ${cookTime}`,
-      removable: true,
-      action: () => {
-        $("#cookTimeRange", document).setAttribute("value", "0");
-        (safe$<HTMLInputElement>("#cookTimeRange") as HTMLInputElement).value = "0";
-        markHasInput(state, elements);
-      },
-    });
-  }
-  chipOrder
-    .filter((id) => !["materials", "dishTypes", "cookingTools", "pairingTargets"].includes(id))
-    .forEach(addCombo);
+  return specs.map((spec) => {
+    if (spec.kind === "combo") {
+      return {
+        label: spec.label,
+        removable: spec.removable,
+        action: () => {
+          state.combos[spec.id] = [];
+          renderCombo(state, elements, spec.id);
+          markHasInput(state, elements);
+        },
+      };
+    }
 
-  const supplementalNotes = safe$<HTMLTextAreaElement>("#supplementalNotes")?.value.trim();
-  if (supplementalNotes) {
-    items.push({
-      label: "補足あり",
-      removable: true,
-      action: () => {
-        const textarea = safe$<HTMLTextAreaElement>("#supplementalNotes");
-        if (textarea) textarea.value = "";
-        markHasInput(state, elements);
-      },
-    });
-  }
+    if (spec.kind === "cookTime") {
+      return {
+        label: spec.label,
+        removable: spec.removable,
+        action: () => {
+          const range = safe$<HTMLInputElement>("#cookTimeRange");
+          if (range) range.value = "0";
+          markHasInput(state, elements);
+        },
+      };
+    }
 
-  return items;
+    if (spec.kind === "supplementalNotes") {
+      return {
+        label: spec.label,
+        removable: spec.removable,
+        action: () => {
+          const textarea = safe$<HTMLTextAreaElement>("#supplementalNotes");
+          if (textarea) textarea.value = "";
+          markHasInput(state, elements);
+        },
+      };
+    }
+
+    return {
+      label: spec.label,
+      removable: spec.removable,
+    };
+  });
 }
 
 function renderChips(
