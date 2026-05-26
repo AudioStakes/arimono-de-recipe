@@ -1,0 +1,26 @@
+{
+  "name": "arimono-de-recipe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "format": "biome check --write .",
+    "format:unsafe": "biome check --write --unsafe .",
+    "format:check": "biome ci .",
+    "lint": "biome lint . && htmlhint index.html",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "latest",
+    "@playwright/test": "latest",
+    "htmlhint": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
