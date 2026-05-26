@@ -25,6 +25,57 @@ test("自由入力してEnterでピル化し、重複追加しない", async ({ 
   await expect(input).toHaveValue("");
 });
 
+test("IME変換中と変換直後のEnterではピル化せず、変換後のEnterでピル化する", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const input = page.locator('[data-combo="materials"] input');
+  await input.fill("にんじん");
+
+  await input.evaluate((element) => {
+    element.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Enter",
+        isComposing: true,
+      }),
+    );
+  });
+
+  await expect(page.locator('[data-combo="materials"] .pill')).toHaveCount(0);
+
+  await input.evaluate((element) => {
+    element.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Enter",
+      }),
+    );
+  });
+
+  await expect(page.locator('[data-combo="materials"] .pill')).toHaveCount(0);
+
+  await page.waitForTimeout(100);
+
+  await input.evaluate((element) => {
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Enter",
+      }),
+    );
+  });
+
+  await expect(page.locator('[data-combo="materials"] .pill')).toHaveCount(1);
+  await expect(input).toHaveValue("");
+});
+
 test("空入力欄のBackspaceは直前ピルにフォーカスし、再度Backspaceで削除する", async ({ page }) => {
   await page.goto("/");
 

@@ -40,6 +40,31 @@ const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
 const suggestionLabel = (value: string): string => (value === "高野豆腐" ? "高野とうふ" : value);
 
+export function isImeComposing(
+  input: HTMLInputElement | null | undefined,
+  e: Pick<KeyboardEvent, "isComposing" | "keyCode">,
+): boolean {
+  return Boolean(
+    e.isComposing ||
+      e.keyCode === 229 ||
+      input?.dataset["composing"] === "true" ||
+      input?.dataset["justComposed"] === "true",
+  );
+}
+
+function markCompositionEnded(input: HTMLInputElement | null): void {
+  if (!input) {
+    return;
+  }
+
+  input.dataset["composing"] = "false";
+  input.dataset["justComposed"] = "true";
+
+  window.setTimeout(() => {
+    input.dataset["justComposed"] = "false";
+  }, 80);
+}
+
 export function initializeApp(root: HTMLElement): void {
   root.innerHTML = renderAppShell();
 
@@ -570,6 +595,9 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
     if (!input) return;
     if (keyboardEvent.key === "Enter") {
+      if (isImeComposing(input, keyboardEvent)) {
+        return;
+      }
       keyboardEvent.preventDefault();
       commitComboInput(state, elements, input);
       return;
@@ -650,6 +678,23 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     else markHasInput(state, elements);
   });
 
+  elements.form.addEventListener("compositionstart", (event) => {
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    if (input) {
+      input.dataset["composing"] = "true";
+    }
+  });
+
+  elements.form.addEventListener("compositionend", (event) => {
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    if (!input) {
+      return;
+    }
+
+    markCompositionEnded(input);
+    showSuggestions(state, input);
+  });
+
   elements.form.addEventListener(
     "blur",
     (event) => {
@@ -666,7 +711,7 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
 
   elements.form.addEventListener("input", (event) => {
     const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
-    if (input) showSuggestions(state, input);
+    if (input && input.dataset["composing"] !== "true") showSuggestions(state, input);
     markHasInput(state, elements);
   });
 
