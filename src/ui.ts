@@ -2,7 +2,7 @@ import { buildConditionChipSpecs } from "./chips";
 import { advancedComboOrder, combos, cookTimeOptions, optionSets, servingGroups } from "./data";
 import { icon } from "./icons";
 import { buildPrompt } from "./prompt";
-import { buildServingsText, type ServingGroupId } from "./servings";
+import { buildServingsText, clampServingCount, type ServingGroupId } from "./servings";
 import type { AppState, ChipItem, ComboConfig, ComboId, PromptData } from "./types";
 
 const createInitialState = (): AppState => {
@@ -214,7 +214,7 @@ function comboValues(state: AppState, id: ComboId): string[] {
   return state.combos[id] ?? [];
 }
 
-function comboOptionValues(group: ComboId): string[] {
+export function comboOptionValues(group: ComboId): string[] {
   const combo = getCombo(group);
   const values = optionSets[combo.optionSet] ?? [];
   return combo.optionSet === "materials"
@@ -234,7 +234,7 @@ function setCountValue(id: ServingGroupId, value: number): void {
   const stepper = safe$<HTMLElement>(`[data-serving-id="${id}"]`);
   if (!stepper) return;
 
-  const count = Math.max(SERVING_MIN, Math.min(SERVING_MAX, Number(value) || 0));
+  const count = clampServingCount(value);
   const dataset = stepper.dataset as DOMStringMap & { count?: string };
   dataset.count = String(count);
 
@@ -275,9 +275,9 @@ function showSuggestions(state: AppState, input: HTMLInputElement): void {
 
   const query = input.value.trim();
   const selected = new Set(comboValues(state, group));
-  const options = comboOptionValues(group).filter(
-    (value) => !selected.has(value) && (!query || value.includes(query)),
-  );
+  const options = comboOptionValues(group)
+    .filter((value) => !selected.has(value) && (!query || value.includes(query)))
+    .slice(0, 40);
 
   panel.innerHTML = options.length
     ? options
@@ -349,6 +349,10 @@ function renderCombo(
       const keyboardEvent = event as KeyboardEvent;
       if (keyboardEvent.key !== "Backspace" && keyboardEvent.key !== "Delete") return;
       keyboardEvent.preventDefault();
+      const dataset = pill.dataset as DOMStringMap & { armedDelete?: string };
+      if (dataset.armedDelete === "true") {
+        return;
+      }
       removeComboValue(state, elements, group, value);
       input.focus();
     });
@@ -387,6 +391,13 @@ function focusPreviousPill(input: HTMLInputElement): boolean {
     pill.classList.remove("pending-delete");
   }
   target.classList.add("pending-delete");
+  const dataset = target.dataset as DOMStringMap & { armedDelete?: string };
+  dataset.armedDelete = "true";
+  window.setTimeout(() => {
+    if (dataset.armedDelete === "true") {
+      dataset.armedDelete = "false";
+    }
+  }, 120);
   target.focus();
   return true;
 }
