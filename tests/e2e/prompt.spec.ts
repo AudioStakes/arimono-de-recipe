@@ -11,14 +11,14 @@ test("プロンプト欄は初期表示と自動更新の両方が機能する",
     /冷蔵庫にある材料を使って、今日の食事に合うレシピを考えてください。/,
   );
 
-  await page.locator('[data-combo="materials"] input').fill("豆腐");
-  await page.locator('[data-combo="materials"] input').press("Enter");
+  await page.locator('[data-combo="materials"] .combo-input').fill("豆腐");
+  await page.locator('[data-combo="materials"] .combo-input').press("Enter");
   await expect(output).toHaveValue(/【材料】\n- 豆腐/);
 
-  await page.locator('[data-combo="dishTypes"] input').fill("副菜");
-  await page.locator('[data-combo="dishTypes"] input').press("Enter");
-  await page.locator('[data-combo="pairingTargets"] input').fill("餃子");
-  await page.locator('[data-combo="pairingTargets"] input').press("Enter");
+  await page.locator('[data-combo="dishTypes"] .combo-input').fill("副菜");
+  await page.locator('[data-combo="dishTypes"] .combo-input').press("Enter");
+  await page.locator('[data-combo="pairingTargets"] .combo-input').fill("餃子");
+  await page.locator('[data-combo="pairingTargets"] .combo-input').press("Enter");
   await page.locator("#cookTimeRange").evaluate((input) => {
     const range = input as HTMLInputElement;
     range.value = "4";
@@ -35,20 +35,18 @@ test("プロンプト欄は初期表示と自動更新の両方が機能する",
   expect(prompt).toContain("2. 一緒に出す料理との相性");
   expect(prompt).toContain("5. 調理のポイント");
 
-  await page.locator('[data-combo="pairingTargets"] .pill button').click();
+  await page.locator('[data-combo="pairingTargets"] .pill-remove').click();
   const promptWithoutPairing = await output.inputValue();
   expect(promptWithoutPairing).not.toContain("一緒に出す料理との相性");
   expect(promptWithoutPairing).toContain("2. 使う材料");
   expect(promptWithoutPairing).toContain("4. 調理のポイント");
 });
 
-test("プロンプトを見るボタンはプロンプト欄へスクロールしてフォーカスする", async ({
-  page,
-}) => {
+test("プロンプトを見るボタンはプロンプト欄へスクロールしてフォーカスする", async ({ page }) => {
   await page.goto("/");
 
-  await page.locator('[data-combo="materials"] input').fill("卵");
-  await page.locator('[data-combo="materials"] input').press("Enter");
+  await page.locator('[data-combo="materials"] .combo-input').fill("卵");
+  await page.locator('[data-combo="materials"] .combo-input').press("Enter");
 
   await page.locator("#generatePromptInline").click();
   await expect(page.locator("#output")).toBeFocused();

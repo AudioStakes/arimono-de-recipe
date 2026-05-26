@@ -7,8 +7,8 @@ test("コピーアイコンは本文をクリップボードに書き込み、�
     origin: page.url(),
   });
 
-  await page.locator('[data-combo="materials"] input').fill("豆腐");
-  await page.locator('[data-combo="materials"] input').press("Enter");
+  await page.locator('[data-combo="materials"] .combo-input').fill("豆腐");
+  await page.locator('[data-combo="materials"] .combo-input').press("Enter");
 
   await page.locator("#copyPrompt").click();
   await expect(page.locator("#copyPrompt .copy-toast")).toHaveClass(/show/);

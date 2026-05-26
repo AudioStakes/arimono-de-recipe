@@ -1,4 +1,5 @@
 import { buildConditionChipSpecs } from "./chips";
+import { updateComboValues } from "./combo-values";
 import { advancedComboOrder, combos, cookTimeOptions, optionSets, servingGroups } from "./data";
 import { icon } from "./icons";
 import { buildPrompt } from "./prompt";
@@ -13,6 +14,7 @@ const createInitialState = (): AppState => {
 
   return {
     combos: initialCombos,
+    editingCombo: null,
     hasUserInput: false,
     inlineVisible: false,
     nearBottom: false,
@@ -35,6 +37,10 @@ const safe$ = <T extends Element>(selector: string, root: ParentNode = document)
 
 const SERVING_MIN = 0;
 const SERVING_MAX = 10;
+type ImeDataset = DOMStringMap & {
+  composing?: string;
+  justComposed?: string;
+};
 
 const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
@@ -44,11 +50,13 @@ export function isImeComposing(
   input: HTMLInputElement | null | undefined,
   e: Pick<KeyboardEvent, "isComposing" | "keyCode">,
 ): boolean {
+  const dataset = input?.dataset as ImeDataset | undefined;
+
   return Boolean(
     e.isComposing ||
       e.keyCode === 229 ||
-      input?.dataset["composing"] === "true" ||
-      input?.dataset["justComposed"] === "true",
+      dataset?.composing === "true" ||
+      dataset?.justComposed === "true",
   );
 }
 
@@ -57,12 +65,21 @@ function markCompositionEnded(input: HTMLInputElement | null): void {
     return;
   }
 
-  input.dataset["composing"] = "false";
-  input.dataset["justComposed"] = "true";
+  const dataset = input.dataset as ImeDataset;
+  dataset.composing = "false";
+  dataset.justComposed = "true";
 
   window.setTimeout(() => {
-    input.dataset["justComposed"] = "false";
+    dataset.justComposed = "false";
   }, 80);
+}
+
+function getMainComboInput(box: HTMLElement): HTMLInputElement | null {
+  return safe$<HTMLInputElement>(".combo-input", box);
+}
+
+function getEditingState(state: AppState, group: ComboId, value: string): boolean {
+  return state.editingCombo?.group === group && state.editingCombo.value === value;
 }
 
 export function initializeApp(root: HTMLElement): void {
@@ -165,7 +182,7 @@ function renderComboField(combo: ComboConfig): string {
     <div class="field">
       <div class="field-title">${labelHtml(combo.label, combo.icon)}</div>
       <div class="combo" data-combo="${combo.id}">
-        <input type="text" placeholder="${combo.placeholder}" aria-label="${combo.label}" autocomplete="off" role="combobox" aria-expanded="false" />
+        <input class="combo-input" type="text" placeholder="${combo.placeholder}" aria-label="${combo.label}" autocomplete="off" role="combobox" aria-expanded="false" />
         <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示"></button>
         <div class="suggestions" role="listbox" aria-label="${combo.label}の候補"></div>
       </div>
@@ -261,7 +278,7 @@ function closeSuggestions(except?: HTMLElement | null): void {
   for (const element of $$<HTMLElement>(".suggestions.show")) {
     if (element === except) continue;
     element.classList.remove("show");
-    const input = safe$<HTMLInputElement>("input", element.closest(".combo") ?? document);
+    const input = safe$<HTMLInputElement>(".combo-input", element.closest(".combo") ?? document);
     input?.setAttribute("aria-expanded", "false");
   }
 }
@@ -309,6 +326,78 @@ function addComboValue(
   markHasInput(state, elements);
 }
 
+function startComboEditing(
+  state: AppState,
+  elements: ReturnType<typeof getElements>,
+  group: ComboId,
+  value: string,
+): void {
+  state.editingCombo = { group, value };
+  renderCombo(state, elements, group);
+  closeSuggestions();
+
+  const pill = safe$<HTMLElement>(
+    `.pill[data-value="${CSS.escape(value)}"]`,
+    safe$<HTMLElement>(`[data-combo="${group}"]`) ?? document,
+  );
+  const input = pill ? safe$<HTMLInputElement>(".pill-edit-input", pill) : null;
+  if (!input) return;
+  input.focus({ preventScroll: true });
+  input.select();
+}
+
+function finishComboEditing(
+  state: AppState,
+  elements: ReturnType<typeof getElements>,
+  group: ComboId,
+  oldValue: string,
+  input: HTMLInputElement,
+  options: { focusAfterSave?: boolean } = {},
+): void {
+  const values = comboValues(state, group);
+  const nextValues = updateComboValues(values, oldValue, input.value);
+  const nextValue = input.value.trim();
+  state.editingCombo = null;
+
+  if (nextValues !== values) {
+    state.combos[group] = nextValues;
+  }
+
+  renderCombo(state, elements, group);
+
+  if (options.focusAfterSave) {
+    focusComboValue(group, nextValues.includes(nextValue) ? nextValue : oldValue);
+  }
+
+  if (nextValues !== values) {
+    markHasInput(state, elements);
+  }
+}
+
+function cancelComboEditing(
+  state: AppState,
+  elements: ReturnType<typeof getElements>,
+  group: ComboId,
+  oldValue: string,
+): void {
+  state.editingCombo = null;
+  renderCombo(state, elements, group);
+  focusComboValue(group, oldValue);
+}
+
+function focusComboValue(group: ComboId, value: string): void {
+  const box = safe$<HTMLElement>(`[data-combo="${group}"]`);
+  const pill = box ? safe$<HTMLElement>(`.pill[data-value="${CSS.escape(value)}"]`, box) : null;
+  const label = pill ? safe$<HTMLButtonElement>(".pill-label", pill) : null;
+  if (label) {
+    label.focus({ preventScroll: true });
+    return;
+  }
+
+  const input = box ? getMainComboInput(box) : null;
+  input?.focus({ preventScroll: true });
+}
+
 function removeComboValue(
   state: AppState,
   elements: ReturnType<typeof getElements>,
@@ -316,8 +405,13 @@ function removeComboValue(
   value: string,
 ): void {
   state.combos[group] = comboValues(state, group).filter((item) => item !== value);
+  if (getEditingState(state, group, value)) {
+    state.editingCombo = null;
+  }
   renderCombo(state, elements, group);
   markHasInput(state, elements);
+  const box = safe$<HTMLElement>(`[data-combo="${group}"]`);
+  getMainComboInput(box ?? document.body)?.focus({ preventScroll: true });
 }
 
 function renderCombo(
@@ -327,7 +421,7 @@ function renderCombo(
 ): void {
   const box = safe$<HTMLElement>(`[data-combo="${group}"]`);
   if (!box) return;
-  const input = $("input", box) as HTMLInputElement;
+  const input = getMainComboInput(box);
   for (const pill of $$<HTMLElement>(".pill", box)) {
     pill.remove();
   }
@@ -337,16 +431,88 @@ function renderCombo(
     pill.className = "pill";
     pill.tabIndex = -1;
     (pill.dataset as DOMStringMap & { value?: string }).value = value;
-    pill.innerHTML = `<span>${value}</span>`;
+    const editing = getEditingState(state, group, value);
+
+    if (editing) {
+      pill.classList.add("editing");
+      const editInput = document.createElement("input");
+      editInput.className = "pill-edit-input";
+      editInput.type = "text";
+      editInput.value = value;
+      editInput.setAttribute("aria-label", `${value}を編集`);
+      editInput.setAttribute("autocomplete", "off");
+      const dataset = editInput.dataset as ImeDataset & { suppressBlurCommit?: string };
+
+      editInput.addEventListener("keydown", (event) => {
+        const keyboardEvent = event as KeyboardEvent;
+        if (keyboardEvent.key === "Enter") {
+          if (isImeComposing(editInput, keyboardEvent)) {
+            return;
+          }
+          keyboardEvent.preventDefault();
+          dataset.suppressBlurCommit = "true";
+          finishComboEditing(state, elements, group, value, editInput, { focusAfterSave: true });
+          return;
+        }
+        if (keyboardEvent.key === "Escape") {
+          keyboardEvent.preventDefault();
+          dataset.suppressBlurCommit = "true";
+          cancelComboEditing(state, elements, group, value);
+        }
+      });
+
+      editInput.addEventListener("compositionstart", () => {
+        const dataset = editInput.dataset as ImeDataset;
+        dataset.composing = "true";
+      });
+      editInput.addEventListener("compositionend", () => {
+        markCompositionEnded(editInput);
+      });
+      editInput.addEventListener("blur", () => {
+        if (dataset.suppressBlurCommit === "true") {
+          return;
+        }
+        window.setTimeout(() => {
+          if (pill.contains(document.activeElement)) {
+            return;
+          }
+          finishComboEditing(state, elements, group, value, editInput);
+        }, 0);
+      });
+      editInput.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+      pill.appendChild(editInput);
+    } else {
+      const label = document.createElement("button");
+      label.type = "button";
+      label.className = "pill-label";
+      label.textContent = value;
+      label.setAttribute("aria-label", `${value}を編集`);
+      label.addEventListener("click", (event) => {
+        event.stopPropagation();
+        startComboEditing(state, elements, group, value);
+      });
+      pill.appendChild(label);
+    }
 
     const remove = document.createElement("button");
     remove.type = "button";
+    remove.className = "pill-remove";
     remove.textContent = "×";
     remove.setAttribute("aria-label", `${value}を削除`);
-    remove.addEventListener("click", () => removeComboValue(state, elements, group, value));
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      removeComboValue(state, elements, group, value);
+    });
 
     pill.addEventListener("keydown", (event) => {
       const keyboardEvent = event as KeyboardEvent;
+      if (keyboardEvent.key === "Enter" && !editing && event.target === pill) {
+        keyboardEvent.preventDefault();
+        startComboEditing(state, elements, group, value);
+        return;
+      }
       if (keyboardEvent.key !== "Backspace" && keyboardEvent.key !== "Delete") return;
       keyboardEvent.preventDefault();
       const dataset = pill.dataset as DOMStringMap & { armedDelete?: string };
@@ -354,11 +520,11 @@ function renderCombo(
         return;
       }
       removeComboValue(state, elements, group, value);
-      input.focus();
+      input?.focus({ preventScroll: true });
     });
 
     pill.appendChild(remove);
-    box.insertBefore(pill, input);
+    box.insertBefore(pill, input ?? null);
   }
 }
 
@@ -432,6 +598,9 @@ function chipItems(state: AppState, elements: ReturnType<typeof getElements>): C
         label: spec.label,
         removable: spec.removable,
         action: () => {
+          if (state.editingCombo?.group === spec.id) {
+            state.editingCombo = null;
+          }
           state.combos[spec.id] = [];
           renderCombo(state, elements, spec.id);
           markHasInput(state, elements);
@@ -603,7 +772,7 @@ function showCopyToast(button: HTMLElement | null): void {
 function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): void {
   elements.form.addEventListener("keydown", (event) => {
     const keyboardEvent = event as KeyboardEvent;
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
     if (!input) return;
     if (keyboardEvent.key === "Enter") {
       if (isImeComposing(input, keyboardEvent)) {
@@ -636,12 +805,15 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     const button = target.closest<HTMLButtonElement>(".combo-picker");
     if (!button) return;
     event.preventDefault();
-    const input = safe$<HTMLInputElement>("input", button.closest(".combo") ?? document);
+    const input = safe$<HTMLInputElement>(".combo-input", button.closest(".combo") ?? document);
     if (input) openSuggestions(state, input);
   });
 
   elements.form.addEventListener("click", (event) => {
     const target = event.target as Element;
+    if (target.closest(".pill")) {
+      return;
+    }
     const servingButton = target.closest<HTMLButtonElement>(".serving-adjust");
     if (servingButton) {
       const stepper = servingButton.closest<HTMLElement>(".serving-stepper");
@@ -664,19 +836,19 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
           elements,
           (combo.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
           value,
-          safe$<HTMLInputElement>("input", combo),
+          getMainComboInput(combo),
         );
       return;
     }
     const button = target.closest<HTMLButtonElement>(".combo-picker");
     if (button) {
-      const input = safe$<HTMLInputElement>("input", button.closest(".combo") ?? document);
+      const input = safe$<HTMLInputElement>(".combo-input", button.closest(".combo") ?? document);
       if (input) openSuggestions(state, input);
       return;
     }
     const combo = target.closest<HTMLElement>(".combo");
     if (combo) {
-      const input = safe$<HTMLInputElement>("input", combo);
+      const input = getMainComboInput(combo);
       if (input) openSuggestions(state, input);
     } else {
       closeSuggestions();
@@ -684,20 +856,21 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
   });
 
   elements.form.addEventListener("change", (event) => {
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
     if (input) commitComboInput(state, elements, input);
     else markHasInput(state, elements);
   });
 
   elements.form.addEventListener("compositionstart", (event) => {
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
     if (input) {
-      input.dataset["composing"] = "true";
+      const dataset = input.dataset as ImeDataset;
+      dataset.composing = "true";
     }
   });
 
   elements.form.addEventListener("compositionend", (event) => {
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
     if (!input) {
       return;
     }
@@ -709,7 +882,7 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
   elements.form.addEventListener(
     "blur",
     (event) => {
-      const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
+      const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
       if (!input) return;
       window.setTimeout(() => {
         if (!input.closest(".combo")?.contains(document.activeElement)) {
@@ -721,8 +894,8 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
   );
 
   elements.form.addEventListener("input", (event) => {
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
-    if (input && input.dataset["composing"] !== "true") showSuggestions(state, input);
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
+    if (input && (input.dataset as ImeDataset).composing !== "true") showSuggestions(state, input);
     markHasInput(state, elements);
   });
 

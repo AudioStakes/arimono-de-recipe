@@ -27,7 +27,9 @@ describe("data", () => {
   });
 
   test("候補データに必要な値が含まれている", () => {
-    expect(optionSets.materials).toEqual(expect.arrayContaining(["卵", "豆腐", "もやし", "しめじ", "しろ菜"]));
+    expect(optionSets.materials).toEqual(
+      expect.arrayContaining(["卵", "豆腐", "もやし", "しめじ", "しろ菜"]),
+    );
     expect(optionSets.dishTypes).toEqual(expect.arrayContaining(["主菜", "副菜", "汁物"]));
     expect(optionSets.cookingTools).toEqual(
       expect.arrayContaining(["電子レンジ", "フライパン", "鍋", "ホットクック"]),

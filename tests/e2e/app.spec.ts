@@ -62,8 +62,8 @@ test("詳細条件の件数表示が入力に応じて変わる", async ({ page 
   });
   await expect(page.locator("#advancedCount")).toHaveText("(1件指定中)");
 
-  await page.locator('[data-combo="difficulty"] input').fill("時短");
-  await page.locator('[data-combo="difficulty"] input').press("Enter");
+  await page.locator('[data-combo="difficulty"] .combo-input').fill("時短");
+  await page.locator('[data-combo="difficulty"] .combo-input').press("Enter");
   await expect(page.locator("#advancedCount")).toHaveText("(2件指定中)");
 
   await page.locator("#supplementalNotes").fill("子ども用に辛くしない。");

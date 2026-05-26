@@ -6,7 +6,7 @@ test("固定フッターは入力後に表示され、本文ボタンが見え�
   const footer = page.locator("#bottomActions");
   await expect(footer).toHaveClass(/suppress/);
 
-  const input = page.locator('[data-combo="materials"] input');
+  const input = page.locator('[data-combo="materials"] .combo-input');
   await input.fill("豆腐");
   await input.press("Enter");
 

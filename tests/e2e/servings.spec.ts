@@ -45,7 +45,9 @@ test("人数・分量は4区分のステッパーUIで増減できる", async ({
   await expect(page.locator("#output")).toHaveValue(
     /【人数・分量】[\s\S]*大人2人、子供\(12歳以下\)1人、幼児\(5歳以下\)1人/,
   );
-  await expect(page.locator(".chips")).toContainText("大人2人、子供(12歳以下)1人、幼児(5歳以下)1人");
+  await expect(page.locator(".chips")).toContainText(
+    "大人2人、子供(12歳以下)1人、幼児(5歳以下)1人",
+  );
   await expect(page.locator("select")).toHaveCount(0);
 
   for (let index = 0; index < 8; index += 1) {
