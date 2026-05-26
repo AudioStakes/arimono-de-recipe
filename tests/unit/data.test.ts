@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { chipOrder, combos, cookTimeOptions, optionSets, servingGroups } from "../../src/data";
-import { comboOptionValues } from "../../src/ui";
+import { comboOptionValues } from "../../src/combo-field";
 
 describe("data", () => {
   test("調理時間候補は期待した順で並ぶ", () => {

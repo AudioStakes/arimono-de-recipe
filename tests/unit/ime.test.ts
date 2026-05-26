@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isImeComposing } from "../../src/ui";
+import { isImeComposing } from "../../src/combo-field";
 
 describe("isImeComposing", () => {
   test("IME変換中のEnterはピル化しない判定になる", () => {
