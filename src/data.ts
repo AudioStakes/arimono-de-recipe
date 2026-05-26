@@ -19,7 +19,7 @@ export const servingGroups = [
   { id: "toddlerCount", label: "幼児(5歳以下)", icon: "baby" },
 ] as const satisfies readonly ServingGroup[];
 
-export const optionSets: Record<OptionSetKey, string[]> = {
+export const comboOptionSets: Record<OptionSetKey, string[]> = {
   materials: [
     "米",
     "ご飯",
@@ -383,7 +383,7 @@ export const combos: ComboConfig[] = [
   },
 ];
 
-export const advancedComboOrder = [
+export const advancedConditionOrder = [
   "difficulty",
   "health",
   "flavors",
@@ -393,7 +393,7 @@ export const advancedComboOrder = [
   "ngSeasonings",
 ] as const;
 
-export const chipOrder = [
+export const conditionChipOrder = [
   "materials",
   "dishTypes",
   "cookingTools",

@@ -1,25 +1,25 @@
-import type { ComboId, PromptData } from "./types";
 import type { ComboRegistry } from "./combo-registry";
+import type { ComboId, PromptData } from "./types";
 
-type ConditionReadServices = {
+type PromptDataReadServices = {
   getComboValues: (group: ComboId) => string[];
   getServingsText: () => string;
   getCookTimeText: () => string;
   getSupplementalNotes: () => string;
 };
 
-export type ConditionReader = {
+export type PromptDataReader = {
   read: () => PromptData;
 };
 
-export type ConditionInputs = {
+export type PromptDataInputs = {
   comboRegistry: Pick<ComboRegistry, "getValues">;
   getServingsText: () => string;
   getCookTimeText: () => string;
   getSupplementalNotes: () => string;
 };
 
-const advancedComboIds: ComboId[] = [
+const advancedConditionIds: ComboId[] = [
   "difficulty",
   "health",
   "flavors",
@@ -29,7 +29,7 @@ const advancedComboIds: ComboId[] = [
   "ngSeasonings",
 ];
 
-export function createConditionReader(services: ConditionReadServices): ConditionReader {
+export function createPromptDataReader(services: PromptDataReadServices): PromptDataReader {
   return {
     read: () => ({
       materials: services.getComboValues("materials"),
@@ -50,8 +50,8 @@ export function createConditionReader(services: ConditionReadServices): Conditio
   };
 }
 
-export function createConditionReaderFromInputs(inputs: ConditionInputs): ConditionReader {
-  return createConditionReader({
+export function createPromptDataReaderFromInputs(inputs: PromptDataInputs): PromptDataReader {
+  return createPromptDataReader({
     getComboValues: (group) => inputs.comboRegistry.getValues(group),
     getServingsText: inputs.getServingsText,
     getCookTimeText: inputs.getCookTimeText,
@@ -61,7 +61,7 @@ export function createConditionReaderFromInputs(inputs: ConditionInputs): Condit
 
 export function countAdvancedConditions(data: PromptData): number {
   return (
-    advancedComboIds.reduce((count, id) => count + data[id].length, 0) +
+    advancedConditionIds.reduce((count, id) => count + data[id].length, 0) +
     (data.cookTime ? 1 : 0) +
     (data.supplementalNotes ? 1 : 0)
   );

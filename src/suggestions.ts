@@ -1,4 +1,4 @@
-export const searchAliases: Record<string, string> = {
+export const searchSynonyms: Record<string, string> = {
   卵: "たまご 玉子 タマゴ",
   豆腐: "とうふ",
   厚揚げ: "あつあげ",
@@ -30,11 +30,11 @@ export function normalizeSearchText(text: string): string {
     .replace(/[ぁ-ゖ]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 96));
 }
 
-export function optionSearchText(value: string): string {
-  return normalizeSearchText(`${value} ${searchAliases[value] ?? ""}`);
+export function getOptionSearchText(value: string): string {
+  return normalizeSearchText(`${value} ${searchSynonyms[value] ?? ""}`);
 }
 
-export function filterComboOptions(
+export function filterAvailableComboOptions(
   options: readonly string[],
   query: string,
   selected: Iterable<string> = [],
@@ -45,6 +45,6 @@ export function filterComboOptions(
 
   return options
     .filter((value) => !excluded.has(value))
-    .filter((value) => !normalizedQuery || optionSearchText(value).includes(normalizedQuery))
+    .filter((value) => !normalizedQuery || getOptionSearchText(value).includes(normalizedQuery))
     .slice(0, limit);
 }

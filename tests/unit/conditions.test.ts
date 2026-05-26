@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
   countAdvancedConditions,
-  createConditionReader,
-  createConditionReaderFromInputs,
+  createPromptDataReader,
+  createPromptDataReaderFromInputs,
 } from "../../src/conditions";
 
-describe("createConditionReader", () => {
+describe("createPromptDataReader", () => {
   test("現在の条件を1つの読み取りモデルへ集約する", () => {
     const comboValues = {
       materials: ["豆腐", "しめじ"],
@@ -21,7 +21,7 @@ describe("createConditionReader", () => {
       ngSeasonings: [],
     } as const;
 
-    const reader = createConditionReader({
+    const reader = createPromptDataReader({
       getComboValues: (group) => [...comboValues[group]],
       getServingsText: () => "大人2人",
       getCookTimeText: () => "15分以内",
@@ -60,7 +60,7 @@ describe("countAdvancedConditions", () => {
   });
 });
 
-describe("createConditionReaderFromInputs", () => {
+describe("createPromptDataReaderFromInputs", () => {
   test("combo registry adapter から条件を読める", () => {
     const comboValues = {
       materials: ["豆腐"],
@@ -76,7 +76,7 @@ describe("createConditionReaderFromInputs", () => {
       ngSeasonings: ["にんにく"],
     } as const;
 
-    const reader = createConditionReaderFromInputs({
+    const reader = createPromptDataReaderFromInputs({
       comboRegistry: {
         getValues: (group) => [...comboValues[group]],
       },

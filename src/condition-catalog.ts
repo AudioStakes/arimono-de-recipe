@@ -21,10 +21,10 @@ export type ConditionChipSpec =
 
 const comboLookup = new Map(combos.map((combo) => [combo.id, combo] as const));
 
-const bulletList = (items: string[]): string => items.map((item) => `- ${item}`).join(NL);
+const bulletList = (items: string[]): string => items.map((item) => `- ${item}`).join(NEWLINE);
 const inlineList = (items: string[]): string => items.join("、");
 
-export const NL = String.fromCharCode(10);
+export const NEWLINE = String.fromCharCode(10);
 
 const promptRules: Array<[(data: PromptData) => boolean, string]> = [
   [(data) => data.materials.length > 0, "指定された材料を中心に使ってください。"],
@@ -35,10 +35,7 @@ const promptRules: Array<[(data: PromptData) => boolean, string]> = [
   ],
   [(data) => Boolean(data.cookTime), "指定された調理時間に収まる現実的な手順にしてください。"],
   [(data) => data.ngMaterials.length > 0, "「NG材料」に指定されたものは使わないでください。"],
-  [
-    (data) => data.ngSeasonings.length > 0,
-    "「NG調味料」に指定されたものは使わないでください。",
-  ],
+  [(data) => data.ngSeasonings.length > 0, "「NG調味料」に指定されたものは使わないでください。"],
   [
     (data) => data.pairingTargets.length > 0,
     "「一緒に出す料理、合わせたい料理」に合う味・食感・量のレシピにしてください。",
@@ -98,9 +95,7 @@ export function buildPromptSections(data: PromptData): PromptSection[] {
 }
 
 export function buildPromptRules(data: PromptData): string[] {
-  return promptRules
-    .filter(([predicate]) => predicate(data))
-    .map(([, text]) => text);
+  return promptRules.filter(([predicate]) => predicate(data)).map(([, text]) => text);
 }
 
 export function buildConditionChipSpecs(data: PromptData): ConditionChipSpec[] {

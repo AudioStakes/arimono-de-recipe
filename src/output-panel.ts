@@ -4,7 +4,7 @@ import { buildPrompt } from "./prompt";
 import { getStickyFooterView } from "./sticky-footer";
 import type { ChipItem, ComboId, PromptData } from "./types";
 
-type Elements = {
+type PromptPanelElements = {
   output: HTMLTextAreaElement;
   bottom: HTMLElement;
   chips: Element;
@@ -14,13 +14,13 @@ type Elements = {
   advancedCount: HTMLElement;
 };
 
-type StateReader = {
+type PromptPanelState = {
   hasUserInput: boolean;
   inlineVisible: boolean;
   nearBottom: boolean;
 };
 
-type Runtime = {
+type ViewportMetrics = {
   scrollY: number;
   innerHeight: number;
   documentHeight: number;
@@ -101,8 +101,8 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
 }
 
 export function refreshPromptPanel(
-  state: StateReader,
-  elements: Elements,
+  state: PromptPanelState,
+  elements: PromptPanelElements,
   services: PromptPanelServices,
 ): void {
   const data = services.readConditions();
@@ -127,9 +127,9 @@ export function refreshPromptPanel(
 }
 
 export function syncStickyFooter(
-  state: StateReader,
-  elements: Elements,
-  viewport: Runtime,
+  state: PromptPanelState,
+  elements: PromptPanelElements,
+  viewport: ViewportMetrics,
 ): void {
   const sticky = getStickyFooterView(state, viewport);
   state.nearBottom = sticky.nearBottom;
@@ -137,9 +137,9 @@ export function syncStickyFooter(
   elements.bottom.classList.toggle("suppress", sticky.suppress);
 }
 
-export function markPromptHasInput(
-  state: StateReader,
-  elements: Elements,
+export function markUserHasInput(
+  state: PromptPanelState,
+  elements: PromptPanelElements,
   services: PromptPanelServices,
 ): void {
   services.setHasUserInput(true);
@@ -147,20 +147,20 @@ export function markPromptHasInput(
 }
 
 export function scrollToPrompt(
-  state: StateReader,
-  elements: Elements,
+  state: PromptPanelState,
+  elements: PromptPanelElements,
   services: PromptPanelServices,
 ): void {
   refreshPromptPanel(state, elements, services);
   elements.output.scrollIntoView({ behavior: "smooth", block: "start" });
   elements.output.focus();
   elements.output.setSelectionRange(0, 0);
-  markPromptHasInput(state, elements, services);
+  markUserHasInput(state, elements, services);
 }
 
 export async function copyPrompt(
-  state: StateReader,
-  elements: Elements,
+  state: PromptPanelState,
+  elements: PromptPanelElements,
   services: PromptPanelServices,
   event: Event,
 ): Promise<void> {

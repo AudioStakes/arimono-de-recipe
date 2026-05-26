@@ -1,11 +1,10 @@
+import { getComboOptionValues, isImeComposing } from "./combo-registry";
 import { cookTimeOptions } from "./data";
-import { comboOptionValues, isImeComposing } from "./combo-registry";
 
 const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
   root.querySelector<T>(selector);
 
-export { isImeComposing };
-export { comboOptionValues };
+export { getComboOptionValues, isImeComposing };
 
 export function getCookTimeValue(): string {
   const range = safe$<HTMLInputElement>("#cookTimeRange");

@@ -1,16 +1,16 @@
 import { servingGroups } from "./data";
-import { buildServingsText, clampServingCount, type ServingGroupId } from "./servings";
+import { clampServingCount, formatServingsText, type ServingGroupId } from "./servings";
 
 const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
   root.querySelector<T>(selector);
 
-function getCountValue(id: string): number {
+function getStepperCount(id: string): number {
   const stepper = safe$<HTMLElement>(`[data-serving-id="${id}"]`);
   const dataset = stepper?.dataset as DOMStringMap & { count?: string };
   return Number(dataset?.count ?? 0);
 }
 
-function setCountValue(id: ServingGroupId, value: number): void {
+function setStepperCount(id: ServingGroupId, value: number): void {
   const stepper = safe$<HTMLElement>(`[data-serving-id="${id}"]`);
   if (!stepper) return;
 
@@ -30,21 +30,21 @@ function setCountValue(id: ServingGroupId, value: number): void {
 export function getServingCounts(): Partial<Record<ServingGroupId, number>> {
   const counts: Partial<Record<ServingGroupId, number>> = {};
   for (const { id } of servingGroups) {
-    counts[id] = getCountValue(id);
+    counts[id] = getStepperCount(id);
   }
   return counts;
 }
 
 export function getServingsValue(): string {
-  return buildServingsText(getServingCounts());
+  return formatServingsText(getServingCounts());
 }
 
 export function updateServingSteppers(): void {
   for (const { id } of servingGroups) {
-    setCountValue(id, getCountValue(id));
+    setStepperCount(id, getStepperCount(id));
   }
 }
 
 export function adjustServingValue(id: ServingGroupId, delta: number): void {
-  setCountValue(id, getCountValue(id) + delta);
+  setStepperCount(id, getStepperCount(id) + delta);
 }

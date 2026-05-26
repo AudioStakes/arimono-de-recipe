@@ -1,17 +1,17 @@
-import { advancedComboOrder, combos, cookTimeOptions, servingGroups } from "./data";
-import { icon } from "./icons";
-import { createComboRegistry, type ComboRegistry } from "./combo-registry";
-import { createConditionReaderFromInputs } from "./conditions";
-import { getServingsValue, updateServingSteppers } from "./serving-controls";
-import { getCookTimeValue, updateCookTimeDisplay } from "./combo-field";
+import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
+import { getCookTimeValue, updateCookTimeDisplay } from "./combo-field";
+import { type ComboRegistry, createComboRegistry } from "./combo-registry";
+import { createPromptDataReaderFromInputs } from "./conditions";
+import { advancedConditionOrder, combos, cookTimeOptions, servingGroups } from "./data";
+import { icon } from "./icons";
 import type { PromptPanelServices } from "./output-panel";
 import {
-  markPromptHasInput as markPromptHasInputPanel,
+  markUserHasInput as markUserHasInputPanel,
   refreshPromptPanel as refreshPromptPanelPanel,
 } from "./output-panel";
+import { getServingsValue, updateServingSteppers } from "./serving-controls";
 import type { AppState, ComboConfig, ComboId } from "./types";
-import type { AppElements } from "./app-elements";
 
 const createInitialState = (): AppState => {
   return {
@@ -22,34 +22,37 @@ const createInitialState = (): AppState => {
   };
 };
 
-const $ = <T extends Element>(selector: string, root: ParentNode = document): T => {
+const queryElement = <T extends Element>(selector: string, root: ParentNode = document): T => {
   const element = root.querySelector<T>(selector);
   if (!element) throw new Error(`Element not found: ${selector}`);
   return element;
 };
 
-const $$ = <T extends Element>(selector: string, root: ParentNode = document): T[] => [
-  ...root.querySelectorAll<T>(selector),
-];
+const queryAllElements = <T extends Element>(
+  selector: string,
+  root: ParentNode = document,
+): T[] => [...root.querySelectorAll<T>(selector)];
 
-const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
-  root.querySelector<T>(selector);
+const queryMaybeElement = <T extends Element>(
+  selector: string,
+  root: ParentNode = document,
+): T | null => root.querySelector<T>(selector);
 
-const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
+const fieldLabelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
 
-let activeOutputPanel: PromptPanelServices | null = null;
+let outputPanelServices: PromptPanelServices | null = null;
 
 export function initializeApp(root: HTMLElement): void {
   root.innerHTML = renderAppShell();
 
   const state = createInitialState();
-  const elements = getElements();
+  const elements = getAppElements();
   renderFields();
   const comboRegistry = createComboRegistry(elements.form);
   comboRegistry.bind(elements.form);
-  activeOutputPanel = createOutputPanelServices(state, elements, comboRegistry);
-  const outputPanel = activeOutputPanel;
+  outputPanelServices = createOutputPanelServices(state, elements, comboRegistry);
+  const outputPanel = outputPanelServices;
   if (!outputPanel) {
     throw new Error("Output panel was not initialized.");
   }
@@ -106,35 +109,35 @@ function renderAppShell(): string {
   `;
 }
 
-function getElements(): AppElements {
+function getAppElements(): AppElements {
   return {
-    form: $("#recipeForm"),
-    output: $("#output") as HTMLTextAreaElement,
-    bottom: $("#bottomActions") as HTMLElement,
-    inlineButton: $("#generatePromptInline") as HTMLButtonElement,
-    stickyButton: $("#generatePromptSticky") as HTMLButtonElement,
-    chips: $("#conditionChips") as HTMLElement,
-    stickyChips: $("#stickyChips") as HTMLElement,
-    advancedDetails: $("#advancedDetails") as HTMLDetailsElement,
-    advancedTitle: $("#advancedTitle") as HTMLElement,
-    advancedCount: $("#advancedCount") as HTMLElement,
+    form: queryElement("#recipeForm"),
+    output: queryElement("#output") as HTMLTextAreaElement,
+    bottom: queryElement("#bottomActions") as HTMLElement,
+    inlineButton: queryElement("#generatePromptInline") as HTMLButtonElement,
+    stickyButton: queryElement("#generatePromptSticky") as HTMLButtonElement,
+    chips: queryElement("#conditionChips") as HTMLElement,
+    stickyChips: queryElement("#stickyChips") as HTMLElement,
+    advancedDetails: queryElement("#advancedDetails") as HTMLDetailsElement,
+    advancedTitle: queryElement("#advancedTitle") as HTMLElement,
+    advancedCount: queryElement("#advancedCount") as HTMLElement,
   };
 }
 
 function renderFields(): void {
-  $("#basicFields").innerHTML = [
+  queryElement("#basicFields").innerHTML = [
     renderComboField(getCombo("materials")),
     renderServingsField(),
     ...combos.filter((combo) => combo.basic && combo.id !== "materials").map(renderComboField),
   ].join("");
 
-  $("#advancedFields").innerHTML = [
+  queryElement("#advancedFields").innerHTML = [
     renderCookTimeField(),
-    ...advancedComboOrder.map((id) => renderComboField(getCombo(id))),
-    `<div class="field"><label for="supplementalNotes">${labelHtml("補足", "note")}</label><textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea></div>`,
+    ...advancedConditionOrder.map((id) => renderComboField(getCombo(id))),
+    `<div class="field"><label for="supplementalNotes">${fieldLabelHtml("補足", "note")}</label><textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea></div>`,
   ].join("");
 
-  $$<HTMLElement>("[data-icon]").forEach((element) => {
+  queryAllElements<HTMLElement>("[data-icon]").forEach((element) => {
     const iconName = (element.dataset as DOMStringMap & { icon?: ComboConfig["icon"] }).icon;
     if (iconName) element.innerHTML = icon(iconName as ComboConfig["icon"]);
   });
@@ -143,7 +146,7 @@ function renderFields(): void {
 function renderComboField(combo: ComboConfig): string {
   return `
     <div class="field">
-      <div class="field-title">${labelHtml(combo.label, combo.icon)}</div>
+      <div class="field-title">${fieldLabelHtml(combo.label, combo.icon)}</div>
       <div class="combo" data-combo="${combo.id}">
         <input class="combo-input" type="text" placeholder="${combo.placeholder}" aria-label="${combo.label}" autocomplete="off" role="combobox" aria-expanded="false" />
         <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示"></button>
@@ -169,13 +172,13 @@ function renderServingsField(): string {
     )
     .join("");
 
-  return `<div class="field"><div class="field-title">${labelHtml("人数・分量", "users")}</div><div class="serving-grid" aria-label="人数・分量">${controls}</div></div>`;
+  return `<div class="field"><div class="field-title">${fieldLabelHtml("人数・分量", "users")}</div><div class="serving-grid" aria-label="人数・分量">${controls}</div></div>`;
 }
 
 function renderCookTimeField(): string {
   return `
     <div class="field">
-      <label for="cookTimeRange">${labelHtml("調理時間", "clock")}</label>
+      <label for="cookTimeRange">${fieldLabelHtml("調理時間", "clock")}</label>
       <div class="range-card">
         <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
         <input id="cookTimeRange" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
@@ -192,20 +195,20 @@ function getCombo(id: ComboId): ComboConfig {
 
 function createOutputPanelServices(
   state: AppState,
-  elements: ReturnType<typeof getElements>,
+  elements: ReturnType<typeof getAppElements>,
   comboRegistry: ComboRegistry,
 ): PromptPanelServices {
   const notifyOutputChange = (): void => {
-    if (!activeOutputPanel) return;
-    markPromptHasInputPanel(state, elements, activeOutputPanel);
+    if (!outputPanelServices) return;
+    markUserHasInputPanel(state, elements, outputPanelServices);
   };
 
-  const conditionReader = createConditionReaderFromInputs({
+  const conditionReader = createPromptDataReaderFromInputs({
     comboRegistry,
     getServingsText: getServingsValue,
     getCookTimeText: getCookTimeValue,
     getSupplementalNotes: () =>
-      safe$<HTMLTextAreaElement>("#supplementalNotes")?.value.trim() ?? "",
+      queryMaybeElement<HTMLTextAreaElement>("#supplementalNotes")?.value.trim() ?? "",
   });
 
   comboRegistry.setOnChange(notifyOutputChange);
@@ -222,11 +225,11 @@ function createOutputPanelServices(
       comboRegistry.clear(group);
     },
     clearCookTime: () => {
-      const range = safe$<HTMLInputElement>("#cookTimeRange");
+      const range = queryMaybeElement<HTMLInputElement>("#cookTimeRange");
       if (range) range.value = "0";
     },
     clearSupplementalNotes: () => {
-      const textarea = safe$<HTMLTextAreaElement>("#supplementalNotes");
+      const textarea = queryMaybeElement<HTMLTextAreaElement>("#supplementalNotes");
       if (textarea) textarea.value = "";
     },
     onChange: notifyOutputChange,

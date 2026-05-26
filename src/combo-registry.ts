@@ -1,6 +1,6 @@
-import { combos, optionSets } from "./data";
-import { filterComboOptions } from "./suggestions";
 import { updateComboValues } from "./combo-values";
+import { comboOptionSets, combos } from "./data";
+import { filterAvailableComboOptions } from "./suggestions";
 import type { ComboId } from "./types";
 
 type ImeDataset = DOMStringMap & {
@@ -26,7 +26,7 @@ const $$ = <T extends Element>(selector: string, root: ParentNode = document): T
 const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
   root.querySelector<T>(selector);
 
-function suggestionLabel(value: string): string {
+function getSuggestionAriaLabel(value: string): string {
   return value === "高野豆腐" ? "高野とうふ" : value;
 }
 
@@ -68,12 +68,12 @@ function markCompositionEnded(input: HTMLInputElement | null): void {
   }, 80);
 }
 
-export function comboOptionValues(group: ComboId): string[] {
+export function getComboOptionValues(group: ComboId): string[] {
   const combo = combos.find((item) => item.id === group);
   if (!combo) {
     throw new Error(`Combo not found: ${group}`);
   }
-  const values = optionSets[combo.optionSet] ?? [];
+  const values = comboOptionSets[combo.optionSet] ?? [];
   return combo.optionSet === "materials"
     ? [...values].sort((a, b) => a.localeCompare(b, "ja"))
     : values;
@@ -127,13 +127,13 @@ function createComboController(
 
   function renderSuggestions(): HTMLButtonElement[] {
     const query = comboInput.value.trim();
-    const options = filterComboOptions(comboOptionValues(group), query, values);
+    const options = filterAvailableComboOptions(getComboOptionValues(group), query, values);
 
     suggestionPanel.innerHTML = options.length
       ? options
           .map(
             (value) =>
-              `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" role="option" aria-label="${suggestionLabel(value)}">${value}</button>`,
+              `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" role="option" aria-label="${getSuggestionAriaLabel(value)}">${value}</button>`,
           )
           .join("")
       : '<div class="suggestion-empty">候補がありません</div>';
@@ -547,10 +547,8 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   const controllerFromTarget = (target: EventTarget | null): ComboController | null => {
     const element = target as Element | null;
     const combo = element?.closest<HTMLElement>(".combo");
-    const id = combo
-      ? (combo.dataset as DOMStringMap & { combo?: ComboId }).combo
-      : undefined;
-    return id ? controllers.get(id) ?? null : null;
+    const id = combo ? (combo.dataset as DOMStringMap & { combo?: ComboId }).combo : undefined;
+    return id ? (controllers.get(id) ?? null) : null;
   };
 
   const handleKeydown = (event: KeyboardEvent): boolean => {

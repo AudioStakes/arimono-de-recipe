@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { clampServingCount, formatServings } from "../../src/servings";
 
-describe("buildServingsText", () => {
+describe("formatServings", () => {
   test("人数・分量が未指定なら空文字になる", () => {
     expect(formatServings({})).toBe("");
   });

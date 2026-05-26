@@ -15,4 +15,4 @@ export function formatServings(counts: ServingCounts): string {
     .join("、");
 }
 
-export const buildServingsText = formatServings;
+export const formatServingsText = formatServings;
