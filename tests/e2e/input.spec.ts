@@ -42,6 +42,88 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await expect(materialField.getByRole("option", { name: "卵" })).toHaveCount(0);
 });
 
+test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く", async ({ page }) => {
+  await page.goto("/");
+
+  const materialField = page.locator('[data-combo="materials"]');
+  const input = materialField.locator(".combo-input");
+
+  await input.fill("豆");
+  await input.press("ArrowDown");
+
+  const firstOption = materialField.locator(".suggestion-option").first();
+  const secondOption = materialField.locator(".suggestion-option").nth(1);
+
+  await expect(firstOption).toBeFocused();
+  await firstOption.press("ArrowDown");
+  await expect(secondOption).toBeFocused();
+  await secondOption.press("ArrowUp");
+  await expect(firstOption).toBeFocused();
+  await firstOption.press("ArrowUp");
+  await expect(input).toBeFocused();
+
+  const cursorPosition = await input.evaluate((element) => {
+    const target = element as HTMLInputElement;
+    return { start: target.selectionStart, end: target.selectionEnd, value: target.value };
+  });
+  expect(cursorPosition).toEqual({ start: 1, end: 1, value: "豆" });
+  await expect(materialField.locator(".pill")).toHaveCount(0);
+
+  await input.fill("卵");
+  await input.press("ArrowDown");
+  await expect(firstOption).toBeFocused();
+  await firstOption.press("Enter");
+  await expect(materialField.locator(".pill-label")).toHaveText("卵");
+  await expect(input).toHaveValue("");
+  await expect(materialField.locator(".suggestions")).not.toBeVisible();
+
+  await input.fill("豆");
+  await input.press("ArrowDown");
+  await expect(firstOption).toBeFocused();
+  await firstOption.press("Escape");
+  await expect(materialField.locator(".suggestions")).not.toBeVisible();
+  await expect(input).toBeFocused();
+});
+
+test("読み検索とIME変換中の絞り込みが更新される", async ({ page }) => {
+  await page.goto("/");
+
+  const materialField = page.locator('[data-combo="materials"]');
+  const pairingField = page.locator('[data-combo="pairingTargets"]');
+  const toolsField = page.locator('[data-combo="cookingTools"]');
+  const materialInput = materialField.locator(".combo-input");
+  const pairingInput = pairingField.locator(".combo-input");
+  const toolsInput = toolsField.locator(".combo-input");
+
+  await materialInput.fill("たまご");
+  await expect(materialField.getByRole("option", { name: "卵" })).toBeVisible();
+
+  await pairingInput.fill("ぎょうざ");
+  await expect(pairingField.getByRole("option", { name: "餃子" })).toBeVisible();
+
+  await pairingInput.fill("はんばーぐ");
+  await expect(pairingField.getByRole("option", { name: "ハンバーグ" })).toBeVisible();
+
+  await toolsInput.fill("でんしれんじ");
+  await toolsInput.evaluate((element) => {
+    const target = element as HTMLInputElement;
+    target.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true, data: "で" }));
+    target.value = "でんしれんじ";
+    target.dispatchEvent(
+      new InputEvent("input", {
+        bubbles: true,
+        data: "でんしれんじ",
+        inputType: "insertCompositionText",
+      }),
+    );
+    target.dispatchEvent(
+      new CompositionEvent("compositionupdate", { bubbles: true, data: "でんしれんじ" }),
+    );
+  });
+
+  await expect(toolsField.getByRole("option", { name: "電子レンジ" })).toBeVisible();
+});
+
 test("候補クリック、自由入力Enter、blur でピル化し、重複追加しない", async ({ page }, testInfo) => {
   test.skip(
     true,
@@ -134,6 +216,7 @@ test("空入力欄のBackspace/Deleteで直前ピルが選択され、再押下�
   const input = page.locator('[data-combo="materials"] .combo-input');
   await input.fill("豆腐");
   await input.press("Enter");
+  await expect(input).toHaveValue("");
 
   await input.press("Backspace");
   const pill = page.locator('[data-combo="materials"] .pill').first();
@@ -146,6 +229,7 @@ test("空入力欄のBackspace/Deleteで直前ピルが選択され、再押下�
 
   await input.fill("しめじ");
   await input.press("Enter");
+  await expect(input).toHaveValue("");
   await input.press("Delete");
   await expect(page.locator('[data-combo="materials"] .pill')).toHaveCount(1);
   await expect(page.locator('[data-combo="materials"] .pill').first()).toHaveClass(

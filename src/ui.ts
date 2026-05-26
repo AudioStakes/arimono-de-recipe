@@ -4,6 +4,7 @@ import { advancedComboOrder, combos, cookTimeOptions, optionSets, servingGroups 
 import { icon } from "./icons";
 import { buildPrompt } from "./prompt";
 import { buildServingsText, clampServingCount, type ServingGroupId } from "./servings";
+import { filterComboOptions } from "./suggestions";
 import type { AppState, ChipItem, ComboConfig, ComboId, PromptData } from "./types";
 
 const createInitialState = (): AppState => {
@@ -40,11 +41,69 @@ const SERVING_MAX = 10;
 type ImeDataset = DOMStringMap & {
   composing?: string;
   justComposed?: string;
+  skipBlurCommit?: string;
 };
 
 const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
 const suggestionLabel = (value: string): string => (value === "高野豆腐" ? "高野とうふ" : value);
+
+function getComboBox(input: HTMLInputElement): HTMLElement | null {
+  return input.closest<HTMLElement>(".combo");
+}
+
+function getSuggestionOptions(panel: HTMLElement): HTMLButtonElement[] {
+  return $$<HTMLButtonElement>(".suggestion-option", panel);
+}
+
+function focusInputAtEnd(input: HTMLInputElement): void {
+  input.focus({ preventScroll: true });
+  const length = input.value.length;
+  try {
+    input.setSelectionRange(length, length);
+  } catch {
+    // 一部の環境では選択範囲設定ができないことがあるので無視する。
+  }
+}
+
+function focusSuggestionOption(input: HTMLInputElement, option: HTMLButtonElement): void {
+  const dataset = input.dataset as ImeDataset;
+  dataset.skipBlurCommit = "true";
+  option.focus({ preventScroll: true });
+  window.requestAnimationFrame(() => {
+    dataset.skipBlurCommit = "false";
+  });
+}
+
+function focusAdjacentSuggestion(
+  input: HTMLInputElement,
+  current: HTMLButtonElement,
+  delta: number,
+): boolean {
+  const panel = current.closest<HTMLElement>(".suggestions");
+  if (!panel) return false;
+  const options = getSuggestionOptions(panel);
+  const index = options.indexOf(current);
+  if (index < 0) return false;
+
+  if (delta < 0 && index === 0) {
+    focusInputAtEnd(input);
+    return true;
+  }
+
+  let nextIndex = index + delta;
+  if (delta > 0 && nextIndex >= options.length) {
+    nextIndex = 0;
+  }
+  if (nextIndex < 0 || nextIndex >= options.length) {
+    return false;
+  }
+
+  const next = options[nextIndex];
+  if (!next) return false;
+  focusSuggestionOption(input, next);
+  return true;
+}
 
 export function isImeComposing(
   input: HTMLInputElement | null | undefined,
@@ -283,24 +342,21 @@ function closeSuggestions(except?: HTMLElement | null): void {
   }
 }
 
-function showSuggestions(state: AppState, input: HTMLInputElement): void {
-  const box = input.closest<HTMLElement>(".combo");
-  if (!box) return;
+function showSuggestions(state: AppState, input: HTMLInputElement): HTMLButtonElement[] {
+  const box = getComboBox(input);
+  if (!box) return [];
   const group = (box.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId;
   const panel = safe$<HTMLElement>(".suggestions", box);
-  if (!panel) return;
+  if (!panel) return [];
 
   const query = input.value.trim();
-  const selected = new Set(comboValues(state, group));
-  const options = comboOptionValues(group)
-    .filter((value) => !selected.has(value) && (!query || value.includes(query)))
-    .slice(0, 40);
+  const options = filterComboOptions(comboOptionValues(group), query, comboValues(state, group));
 
   panel.innerHTML = options.length
     ? options
         .map(
           (value) =>
-            `<button type="button" class="suggestion-option" data-value="${value}" role="option" aria-label="${suggestionLabel(value)}">${value}</button>`,
+            `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" role="option" aria-label="${suggestionLabel(value)}">${value}</button>`,
         )
         .join("")
     : '<div class="suggestion-empty">候補がありません</div>';
@@ -308,6 +364,7 @@ function showSuggestions(state: AppState, input: HTMLInputElement): void {
   closeSuggestions(panel);
   panel.classList.add("show");
   input.setAttribute("aria-expanded", "true");
+  return getSuggestionOptions(panel);
 }
 
 function addComboValue(
@@ -316,6 +373,7 @@ function addComboValue(
   group: ComboId,
   value: string,
   input?: HTMLInputElement | null,
+  options: { refocusInput?: boolean } = {},
 ): void {
   const text = value.trim();
   if (!text) return;
@@ -323,6 +381,9 @@ function addComboValue(
   if (input) input.value = "";
   renderCombo(state, elements, group);
   closeSuggestions();
+  if (input && options.refocusInput) {
+    focusInputAtEnd(input);
+  }
   markHasInput(state, elements);
 }
 
@@ -540,7 +601,6 @@ function commitComboInput(
     elements,
     (box.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
     input.value,
-    input,
   );
   requestAnimationFrame(() => {
     input.value = "";
@@ -745,12 +805,12 @@ function scrollToPrompt(state: AppState, elements: ReturnType<typeof getElements
 }
 
 async function copyPrompt(
-  state: AppState,
+  _state: AppState,
   elements: ReturnType<typeof getElements>,
   event: Event,
 ): Promise<void> {
   const button = event.currentTarget as HTMLElement | null;
-  if (!elements.output.value.trim()) updatePromptPreview(state, elements);
+  if (!elements.output.value.trim()) updatePromptPreview(_state, elements);
   try {
     await navigator.clipboard.writeText(String(elements.output.value || ""));
   } catch {
@@ -772,8 +832,50 @@ function showCopyToast(button: HTMLElement | null): void {
 function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): void {
   elements.form.addEventListener("keydown", (event) => {
     const keyboardEvent = event as KeyboardEvent;
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
+    const target = event.target as Element | null;
+    const option = target?.closest<HTMLButtonElement>(".suggestion-option");
+    const combo = target?.closest<HTMLElement>(".combo");
+    const input =
+      target?.closest<HTMLInputElement>(".combo-input") ??
+      (combo ? getMainComboInput(combo) : null);
+
+    if (option && input) {
+      if (keyboardEvent.key === "Enter") {
+        keyboardEvent.preventDefault();
+        const optionCombo = option.closest<HTMLElement>(".combo");
+        const value = (option.dataset as DOMStringMap & { value?: string }).value;
+        if (optionCombo && value) {
+          addComboValue(
+            state,
+            elements,
+            (optionCombo.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
+            value,
+            input,
+            { refocusInput: true },
+          );
+        }
+        return;
+      }
+      if (keyboardEvent.key === "ArrowDown") {
+        keyboardEvent.preventDefault();
+        focusAdjacentSuggestion(input, option, 1);
+        return;
+      }
+      if (keyboardEvent.key === "ArrowUp") {
+        keyboardEvent.preventDefault();
+        focusAdjacentSuggestion(input, option, -1);
+        return;
+      }
+      if (keyboardEvent.key === "Escape") {
+        keyboardEvent.preventDefault();
+        closeSuggestions();
+        focusInputAtEnd(input);
+        return;
+      }
+    }
+
     if (!input) return;
+
     if (keyboardEvent.key === "Enter") {
       if (isImeComposing(input, keyboardEvent)) {
         return;
@@ -784,7 +886,10 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     }
     if (keyboardEvent.key === "ArrowDown") {
       keyboardEvent.preventDefault();
-      showSuggestions(state, input);
+      const options = showSuggestions(state, input);
+      if (options[0]) {
+        focusSuggestionOption(input, options[0]);
+      }
       return;
     }
     if (keyboardEvent.key === "Escape") {
@@ -837,6 +942,7 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
           (combo.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
           value,
           getMainComboInput(combo),
+          { refocusInput: true },
         );
       return;
     }
@@ -855,10 +961,8 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     }
   });
 
-  elements.form.addEventListener("change", (event) => {
-    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
-    if (input) commitComboInput(state, elements, input);
-    else markHasInput(state, elements);
+  elements.form.addEventListener("change", () => {
+    markHasInput(state, elements);
   });
 
   elements.form.addEventListener("compositionstart", (event) => {
@@ -879,23 +983,46 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     showSuggestions(state, input);
   });
 
-  elements.form.addEventListener(
-    "blur",
-    (event) => {
-      const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
-      if (!input) return;
-      window.setTimeout(() => {
-        if (!input.closest(".combo")?.contains(document.activeElement)) {
-          commitComboInput(state, elements, input);
-        }
-      }, 120);
-    },
-    true,
-  );
+  elements.form.addEventListener("compositionupdate", (event) => {
+    const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
+    if (!input) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      showSuggestions(state, input);
+    });
+  });
+
+  elements.form.addEventListener("focusout", (event) => {
+    const focusEvent = event as FocusEvent;
+    const combo = (event.target as Element | null)?.closest<HTMLElement>(".combo");
+    if (!combo) return;
+
+    const relatedTarget = focusEvent.relatedTarget as Node | null;
+    if (relatedTarget && combo.contains(relatedTarget)) {
+      return;
+    }
+
+    const input = getMainComboInput(combo);
+    if (!input) return;
+
+    window.setTimeout(() => {
+      const dataset = input.dataset as ImeDataset;
+      if (dataset.skipBlurCommit === "true") {
+        dataset.skipBlurCommit = "false";
+        return;
+      }
+      if (!combo.contains(document.activeElement)) {
+        commitComboInput(state, elements, input);
+        closeSuggestions();
+      }
+    }, 120);
+  });
 
   elements.form.addEventListener("input", (event) => {
     const input = (event.target as Element).closest<HTMLInputElement>(".combo-input");
-    if (input && (input.dataset as ImeDataset).composing !== "true") showSuggestions(state, input);
+    if (input) showSuggestions(state, input);
     markHasInput(state, elements);
   });
 
