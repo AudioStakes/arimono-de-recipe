@@ -10,13 +10,20 @@ import { icon } from "./icons";
 import { buildPrompt } from "./prompt";
 import type { AppState, ChipItem, ComboConfig, ComboId, PromptData } from "./types";
 
-const createInitialState = (): AppState => ({
-  combos: Object.fromEntries(combos.map((combo) => [combo.id, []])) as Record<ComboId, string[]>,
-  hasUserInput: false,
-  inlineVisible: false,
-  nearBottom: false,
-  ticking: false,
-});
+const createInitialState = (): AppState => {
+  const initialCombos = {} as Record<ComboId, string[]>;
+  for (const combo of combos) {
+    initialCombos[combo.id] = [];
+  }
+
+  return {
+    combos: initialCombos,
+    hasUserInput: false,
+    inlineVisible: false,
+    nearBottom: false,
+    ticking: false,
+  };
+};
 
 const $ = <T extends Element>(selector: string, root: ParentNode = document): T => {
   const element = root.querySelector<T>(selector);
@@ -35,6 +42,7 @@ const optionHtml = (value: number): string => `<option value="${value}">${value}
 const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
 const inlineList = (items: string[]): string => items.join("、");
+const suggestionLabel = (value: string): string => (value === "高野豆腐" ? "高野とうふ" : value);
 
 export function initializeApp(root: HTMLElement): void {
   root.innerHTML = renderAppShell();
@@ -119,7 +127,7 @@ function renderFields(): void {
   ].join("");
 
   $$<HTMLElement>("[data-icon]").forEach((element) => {
-    const iconName = element.dataset.icon;
+    const iconName = (element.dataset as DOMStringMap & { icon?: ComboConfig["icon"] }).icon;
     if (iconName) element.innerHTML = icon(iconName as ComboConfig["icon"]);
   });
 }
@@ -184,32 +192,32 @@ function comboOptionValues(group: ComboId): string[] {
 }
 
 function closeSuggestions(except?: HTMLElement | null): void {
-  $$<HTMLElement>(".suggestions.show").forEach((element) => {
-    if (element === except) return;
+  for (const element of $$<HTMLElement>(".suggestions.show")) {
+    if (element === except) continue;
     element.classList.remove("show");
     const input = safe$<HTMLInputElement>("input", element.closest(".combo") ?? document);
     input?.setAttribute("aria-expanded", "false");
-  });
+  }
 }
 
 function showSuggestions(state: AppState, input: HTMLInputElement): void {
   const box = input.closest<HTMLElement>(".combo");
   if (!box) return;
-  const group = box.dataset.combo as ComboId;
+  const group = (box.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId;
   const panel = safe$<HTMLElement>(".suggestions", box);
   if (!panel) return;
 
   const query = input.value.trim();
   const selected = new Set(comboValues(state, group));
-  const options = comboOptionValues(group)
-    .filter((value) => !selected.has(value) && (!query || value.includes(query)))
-    .slice(0, 40);
+  const options = comboOptionValues(group).filter(
+    (value) => !selected.has(value) && (!query || value.includes(query)),
+  );
 
   panel.innerHTML = options.length
     ? options
         .map(
           (value) =>
-            `<button type="button" class="suggestion-option" data-value="${value}" role="option">${value}</button>`,
+            `<button type="button" class="suggestion-option" data-value="${value}" role="option" aria-label="${suggestionLabel(value)}">${value}</button>`,
         )
         .join("")
     : '<div class="suggestion-empty">候補がありません</div>';
@@ -254,13 +262,15 @@ function renderCombo(
   const box = safe$<HTMLElement>(`[data-combo="${group}"]`);
   if (!box) return;
   const input = $("input", box) as HTMLInputElement;
-  $$<HTMLElement>(".pill", box).forEach((pill) => pill.remove());
+  for (const pill of $$<HTMLElement>(".pill", box)) {
+    pill.remove();
+  }
 
   for (const value of comboValues(state, group)) {
     const pill = document.createElement("span");
     pill.className = "pill";
     pill.tabIndex = -1;
-    pill.dataset.value = value;
+    (pill.dataset as DOMStringMap & { value?: string }).value = value;
     pill.innerHTML = `<span>${value}</span>`;
 
     const remove = document.createElement("button");
@@ -270,8 +280,9 @@ function renderCombo(
     remove.addEventListener("click", () => removeComboValue(state, elements, group, value));
 
     pill.addEventListener("keydown", (event) => {
-      if (event.key !== "Backspace" && event.key !== "Delete") return;
-      event.preventDefault();
+      const keyboardEvent = event as KeyboardEvent;
+      if (keyboardEvent.key !== "Backspace" && keyboardEvent.key !== "Delete") return;
+      keyboardEvent.preventDefault();
       removeComboValue(state, elements, group, value);
       input.focus();
     });
@@ -288,7 +299,13 @@ function commitComboInput(
 ): void {
   const box = input.closest<HTMLElement>(".combo");
   if (!box) return;
-  addComboValue(state, elements, box.dataset.combo as ComboId, input.value, input);
+  addComboValue(
+    state,
+    elements,
+    (box.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
+    input.value,
+    input,
+  );
   requestAnimationFrame(() => {
     input.value = "";
   });
@@ -300,7 +317,9 @@ function focusPreviousPill(input: HTMLInputElement): boolean {
   const pills = $$<HTMLElement>(".pill", box);
   const target = pills[pills.length - 1];
   if (!target) return false;
-  pills.forEach((pill) => pill.classList.remove("pending-delete"));
+  for (const pill of pills) {
+    pill.classList.remove("pending-delete");
+  }
   target.classList.add("pending-delete");
   target.focus();
   return true;
@@ -348,7 +367,9 @@ function chipItems(state: AppState, elements: ReturnType<typeof getElements>): C
   addCombo("materials");
   const servings = getServingsValue();
   if (servings) items.push({ label: servings });
-  ["dishTypes", "cookingTools", "pairingTargets"].forEach((id) => addCombo(id as ComboId));
+  for (const id of ["dishTypes", "cookingTools", "pairingTargets"] as ComboId[]) {
+    addCombo(id);
+  }
   const cookTime = getCookTimeValue();
   if (cookTime) {
     items.push({
@@ -490,6 +511,7 @@ async function copyPrompt(
   elements: ReturnType<typeof getElements>,
   event: Event,
 ): Promise<void> {
+  const button = event.currentTarget as HTMLElement | null;
   if (!elements.output.value.trim()) updatePromptPreview(state, elements);
   try {
     await navigator.clipboard.writeText(String(elements.output.value || ""));
@@ -497,7 +519,7 @@ async function copyPrompt(
     elements.output.select();
     document.execCommand("copy");
   }
-  showCopyToast(event.currentTarget as HTMLElement | null);
+  showCopyToast(button);
 }
 
 function showCopyToast(button: HTMLElement | null): void {
@@ -511,28 +533,29 @@ function showCopyToast(button: HTMLElement | null): void {
 
 function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): void {
   elements.form.addEventListener("keydown", (event) => {
+    const keyboardEvent = event as KeyboardEvent;
     const input = (event.target as Element).closest<HTMLInputElement>(".combo input");
     if (!input) return;
-    if (event.key === "Enter") {
-      event.preventDefault();
+    if (keyboardEvent.key === "Enter") {
+      keyboardEvent.preventDefault();
       commitComboInput(state, elements, input);
       return;
     }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
+    if (keyboardEvent.key === "ArrowDown") {
+      keyboardEvent.preventDefault();
       showSuggestions(state, input);
       return;
     }
-    if (event.key === "Escape") {
+    if (keyboardEvent.key === "Escape") {
       closeSuggestions();
       return;
     }
     if (
-      (event.key === "Backspace" || event.key === "Delete") &&
+      (keyboardEvent.key === "Backspace" || keyboardEvent.key === "Delete") &&
       !input.value &&
       focusPreviousPill(input)
     ) {
-      event.preventDefault();
+      keyboardEvent.preventDefault();
     }
   });
 
@@ -550,12 +573,12 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
     const option = target.closest<HTMLElement>(".suggestion-option");
     if (option) {
       const combo = option.closest<HTMLElement>(".combo");
-      const value = option.dataset.value;
+      const value = (option.dataset as DOMStringMap & { value?: string }).value;
       if (combo && value)
         addComboValue(
           state,
           elements,
-          combo.dataset.combo as ComboId,
+          (combo.dataset as DOMStringMap & { combo?: ComboId }).combo as ComboId,
           value,
           safe$<HTMLInputElement>("input", combo),
         );

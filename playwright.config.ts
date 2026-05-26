@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+declare const process: {
+  env: {
+    CI?: string;
+  };
+};
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
