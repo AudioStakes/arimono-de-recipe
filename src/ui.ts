@@ -55,9 +55,15 @@ export function initializeApp(root: HTMLElement): void {
 function renderAppShell(): string {
   return `
     <header>
-      <h1>
-        <span class="title-main"><span class="title-accent">ありもの</span> <span class="title-de">de</span> <span class="title-accent">レシピ</span></span>
-        <span class="title-sub">プロンプトメーカー</span>
+      <h1 class="site-title">
+        <img
+          class="title-image"
+          src="/title-banner.webp"
+          alt="ありもの de レシピ プロンプトメーカー"
+          width="1200"
+          height="300"
+          decoding="async"
+        />
       </h1>
       <p class="lead">冷蔵庫にある材料と条件から、AI にレシピ提案を依頼する文章を作ります。</p>
     </header>
