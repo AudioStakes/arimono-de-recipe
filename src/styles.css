@@ -171,32 +171,14 @@ button:active {
 }
 
 .combo,
-.range-card,
-.select-wrap select {
+.range-card {
+  position: relative;
   background: rgba(255, 253, 250, 0.52);
   border-radius: 18px;
   box-shadow: var(--inner);
 }
 
 .combo,
-.select-wrap {
-  position: relative;
-}
-
-.select-wrap::after {
-  position: absolute;
-  top: 50%;
-  right: 18px;
-  width: 10px;
-  height: 10px;
-  pointer-events: none;
-  content: "";
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  opacity: 0.78;
-  transform: translateY(-62%) rotate(45deg);
-}
-
 .combo {
   display: flex;
   flex-wrap: wrap;
@@ -329,9 +311,71 @@ button:active {
   height: 1.15em;
 }
 
-.serving-grid select {
-  padding: 11px 34px 11px 12px;
+.serving-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.serving-stepper {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(255, 253, 250, 0.52);
+  border: 1px solid rgba(151, 111, 73, 0.16);
   border-radius: 14px;
+  box-shadow: var(--inner);
+}
+
+.serving-adjust {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  color: var(--accent-dark);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  background: rgba(226, 116, 59, 0.1);
+  border: 1px solid rgba(226, 116, 59, 0.12);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.serving-adjust:hover:not(:disabled) {
+  color: var(--accent-dark);
+  background: rgba(226, 116, 59, 0.18);
+  box-shadow: none;
+}
+
+.serving-adjust:disabled {
+  color: var(--muted);
+  opacity: 0.34;
+  cursor: not-allowed;
+  background: rgba(117, 107, 96, 0.08);
+  box-shadow: none;
+}
+
+.serving-adjust:disabled:hover {
+  background: rgba(117, 107, 96, 0.08);
+  box-shadow: none;
+}
+
+.serving-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 38px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  background: rgba(255, 255, 255, 0.68);
+  border-radius: 12px;
 }
 
 .pill,

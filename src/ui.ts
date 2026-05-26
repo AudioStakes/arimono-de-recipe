@@ -33,7 +33,9 @@ const $$ = <T extends Element>(selector: string, root: ParentNode = document): T
 const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
   root.querySelector<T>(selector);
 
-const optionHtml = (value: number): string => `<option value="${value}">${value}人</option>`;
+const SERVING_MIN = 0;
+const SERVING_MAX = 10;
+
 const labelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
   `<span class="field-icon" aria-hidden="true">${icon(iconName)}</span>${text}`;
 const suggestionLabel = (value: string): string => (value === "高野豆腐" ? "高野とうふ" : value);
@@ -47,6 +49,7 @@ export function initializeApp(root: HTMLElement): void {
   renderFields();
   bindEvents(state, elements);
   updateCookTimeDisplay();
+  updateServingSteppers();
   updateConditionChips(state, elements);
   updatePromptPreview(state, elements);
   updateStickyState(state, elements);
@@ -146,13 +149,16 @@ function renderComboField(combo: ComboConfig): string {
 }
 
 function renderServingsField(): string {
-  const options = Array.from({ length: 11 }, (_, index) => optionHtml(index)).join("");
   const controls = servingGroups
     .map(
       ({ id, label, icon: iconName }) => `
-        <div>
-          <label class="serving-label" for="${id}"><span aria-hidden="true">${icon(iconName)}</span>${label}</label>
-          <div class="select-wrap"><select id="${id}" aria-label="${label}の人数">${options}</select></div>
+        <div class="serving-card">
+          <div class="serving-label" id="${id}Label"><span aria-hidden="true">${icon(iconName)}</span>${label}</div>
+          <div class="serving-stepper" data-serving-id="${id}" data-count="0" aria-labelledby="${id}Label">
+            <button class="serving-adjust serving-minus" type="button" aria-label="${label}を1人減らす">−</button>
+            <span class="serving-count" aria-live="polite">0人</span>
+            <button class="serving-adjust serving-plus" type="button" aria-label="${label}を1人増やす">+</button>
+          </div>
         </div>
       `,
     )
@@ -197,6 +203,33 @@ function getServingsCounts(): Partial<Record<ServingGroupId, number>> {
     counts[id] = getCountValue(id);
   }
   return counts;
+}
+
+function setCountValue(id: ServingGroupId, value: number): void {
+  const stepper = safe$<HTMLElement>(`[data-serving-id="${id}"]`);
+  if (!stepper) return;
+
+  const count = Math.max(SERVING_MIN, Math.min(SERVING_MAX, Number(value) || 0));
+  const dataset = stepper.dataset as DOMStringMap & { count?: string };
+  dataset.count = String(count);
+
+  const countLabel = safe$<HTMLElement>(".serving-count", stepper);
+  if (countLabel) countLabel.textContent = `${count}人`;
+
+  const minus = safe$<HTMLButtonElement>(".serving-minus", stepper);
+  const plus = safe$<HTMLButtonElement>(".serving-plus", stepper);
+  if (minus) minus.disabled = count <= SERVING_MIN;
+  if (plus) plus.disabled = count >= SERVING_MAX;
+}
+
+function updateServingSteppers(): void {
+  for (const { id } of servingGroups) {
+    setCountValue(id, getCountValue(id));
+  }
+}
+
+function adjustServingValue(id: ServingGroupId, delta: number): void {
+  setCountValue(id, getCountValue(id) + delta);
 }
 
 function closeSuggestions(except?: HTMLElement | null): void {
@@ -344,7 +377,9 @@ function updateCookTimeDisplay(): void {
 }
 
 function getCountValue(id: string): number {
-  return Number(safe$<HTMLSelectElement>(`#${id}`)?.value ?? 0);
+  const stepper = safe$<HTMLElement>(`[data-serving-id="${id}"]`);
+  const dataset = stepper?.dataset as DOMStringMap & { count?: string };
+  return Number(dataset?.count ?? 0);
 }
 
 function getServingsValue(): string {
@@ -486,6 +521,7 @@ function updateConditionChips(state: AppState, elements: ReturnType<typeof getEl
 function markHasInput(state: AppState, elements: ReturnType<typeof getElements>): void {
   state.hasUserInput = true;
   updateCookTimeDisplay();
+  updateServingSteppers();
   updateConditionChips(state, elements);
   updatePromptPreview(state, elements);
 }
@@ -567,6 +603,18 @@ function bindEvents(state: AppState, elements: ReturnType<typeof getElements>): 
 
   elements.form.addEventListener("click", (event) => {
     const target = event.target as Element;
+    const servingButton = target.closest<HTMLButtonElement>(".serving-adjust");
+    if (servingButton) {
+      const stepper = servingButton.closest<HTMLElement>(".serving-stepper");
+      const id = (stepper?.dataset as DOMStringMap & { servingId?: ServingGroupId }).servingId;
+      const delta = servingButton.classList.contains("serving-plus") ? 1 : -1;
+      if (id) {
+        adjustServingValue(id, delta);
+        markHasInput(state, elements);
+      }
+      return;
+    }
+
     const option = target.closest<HTMLElement>(".suggestion-option");
     if (option) {
       const combo = option.closest<HTMLElement>(".combo");
