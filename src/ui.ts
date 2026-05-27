@@ -96,25 +96,19 @@ function renderAppShell(): string {
           </div>
         </details>
       </form>
-      <section class="prompt-section" aria-labelledby="promptSectionTitle">
-        <div class="prompt-section-header">
-          <h2 id="promptSectionTitle">プロンプト</h2>
-        </div>
-        <div class="prompt-card">
-          <div class="prompt-toolbar">
-            <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
-            <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
-              <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
-            </button>
-          </div>
-          <div class="output-shell">
-            <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
-          </div>
-          <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
-          <div id="conditionChips" class="chips" aria-live="polite"></div>
-          <div class="output-actions"><button id="generatePromptInline" type="button">プロンプトを見る</button></div>
+      <section class="prompt-section" aria-label="プロンプト">
+        <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
+        <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
+          <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
+        </button>
+        <div class="output-shell">
+          <textarea id="output" class="output" readonly></textarea>
         </div>
       </section>
+      <div id="conditionChips" class="chips" aria-live="polite"></div>
+      <div class="prompt-actions">
+        <button id="generatePromptInline" type="button">プロンプトを見る</button>
+      </div>
     </div>
     <div class="bottom-actions" id="bottomActions">
       <div class="bottom-actions-inner">
