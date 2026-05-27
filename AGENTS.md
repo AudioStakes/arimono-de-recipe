@@ -64,6 +64,14 @@ If `npm run check` is too broad for the change, run the smallest relevant subset
 - 不要になった旧 UI、旧文言、未使用コードは残さない。
 - HTML と JavaScript が構文エラーなく実行される状態を常に保つ。
 
+## YAGNI
+
+- 将来必要になるかもしれないだけの抽象化は追加しない。
+- 候補値データは、まずレシピ項目ごとの単純な `CandidateValue[]` として管理する。
+- 候補値に `CandidateValueGroup`、`keywords`、`itemTypes` は持たせない。
+- `NG食材・調味料` は、`食材・材料` と `調味料` の候補値から合成する。
+- グルーピング、関連語検索、複数項目への所属管理は、実際に必要になった時点で追加する。
+
 ## Before finishing
 
 - `CONTEXT.md` の用語と矛盾していないか確認する。
