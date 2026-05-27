@@ -79,28 +79,43 @@ function renderAppShell(): string {
       </h1>
       <p class="lead" id="appLead">冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。</p>
     </header>
-    <form class="form" id="recipeForm" novalidate aria-describedby="appLead">
-      <div id="basicFields"></div>
-      <details class="advanced" id="advancedDetails">
-        <summary aria-controls="advancedFields">
-          <span class="summary-title" id="advancedTitle">こだわり条件を追加</span>
-          <span id="advancedCount"></span>
-        </summary>
-        <div id="advancedFields"></div>
-      </details>
-      <div class="field result-field">
-        <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
-        <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
-        <div class="output-shell">
-          <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
-          <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
-            <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
-          </button>
+    <div class="app-layout">
+      <form class="form" id="recipeForm" novalidate aria-describedby="appLead">
+        <div id="basicFields"></div>
+        <details class="advanced" id="advancedDetails">
+          <summary aria-controls="advancedFields">
+            <span class="summary-title" id="advancedTitle">こだわり条件を追加</span>
+            <span id="advancedCount"></span>
+          </summary>
+          <div class="advanced-body">
+            <div class="advanced-intro">
+              <span class="section-kicker">こだわり条件</span>
+              <p>必要なときだけ追加する条件です。開くと、ここから下がこだわり条件だと分かるようにしています。</p>
+            </div>
+            <div id="advancedFields"></div>
+          </div>
+        </details>
+      </form>
+      <section class="prompt-section" aria-labelledby="promptSectionTitle">
+        <div class="prompt-section-header">
+          <span class="section-kicker">フォームの成果物</span>
+          <h2 id="promptSectionTitle">プロンプト</h2>
+          <p class="prompt-section-note">フォームで指定した内容を、AI に貼り付ける文章としてまとめます。</p>
         </div>
-        <div id="conditionChips" class="chips" aria-live="polite"></div>
-        <div class="output-actions"><button id="generatePromptInline" type="button">プロンプトを見る</button></div>
-      </div>
-    </form>
+        <div class="prompt-card">
+          <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
+          <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
+          <div class="output-shell">
+            <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
+            <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
+              <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
+            </button>
+          </div>
+          <div id="conditionChips" class="chips" aria-live="polite"></div>
+          <div class="output-actions"><button id="generatePromptInline" type="button">プロンプトを見る</button></div>
+        </div>
+      </section>
+    </div>
     <div class="bottom-actions" id="bottomActions">
       <div class="bottom-actions-inner">
         <div id="stickyChips" class="sticky-chips" aria-live="polite"></div>
