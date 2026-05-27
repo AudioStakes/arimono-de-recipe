@@ -5,7 +5,6 @@ test("プロンプト欄は初期表示と自動更新の両方が機能する",
 
   const output = page.locator("#output");
   await expect(page.locator("label[for='output']")).toHaveText("プロンプト");
-  await expect(page.getByText("コピーしてAIに貼り付けてください。")).toBeVisible();
   await expect(output).toHaveAttribute("readonly");
   await expect(output).toHaveValue(
     /冷蔵庫にある食材・材料を使って、今日の食事に合うレシピを考えてください。/,

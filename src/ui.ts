@@ -98,19 +98,19 @@ function renderAppShell(): string {
       </form>
       <section class="prompt-section" aria-labelledby="promptSectionTitle">
         <div class="prompt-section-header">
-          <span class="section-kicker">フォームの成果物</span>
           <h2 id="promptSectionTitle">プロンプト</h2>
-          <p class="prompt-section-note">フォームで指定した内容を、AI に貼り付ける文章としてまとめます。</p>
         </div>
         <div class="prompt-card">
-          <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
-          <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
-          <div class="output-shell">
-            <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
+          <div class="prompt-toolbar">
+            <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
             <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
               <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
             </button>
           </div>
+          <div class="output-shell">
+            <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
+          </div>
+          <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
           <div id="conditionChips" class="chips" aria-live="polite"></div>
           <div class="output-actions"><button id="generatePromptInline" type="button">プロンプトを見る</button></div>
         </div>
