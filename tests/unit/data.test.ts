@@ -38,7 +38,7 @@ describe("data", () => {
     );
     expect(comboOptionSets.dishTypes).toEqual(expect.arrayContaining(["主菜", "副菜", "汁物"]));
     expect(comboOptionSets.cookingTools).toEqual(
-      expect.arrayContaining(["電子レンジ", "フライパン", "鍋", "ホットクック"]),
+      expect.arrayContaining(["電子レンジ", "フライパン", "鍋", "ヘルシオ ホットクック"]),
     );
     expect(comboOptionSets.pairingTargets).toEqual(
       expect.arrayContaining(["カレー", "餃子", "焼き魚", "肉じゃが"]),
@@ -46,8 +46,11 @@ describe("data", () => {
     expect(comboOptionSets.difficulty).toEqual(
       expect.arrayContaining(["時短", "節約", "洗い物少なめ", "ボリューム重視"]),
     );
-    expect(comboOptionSets.ngSeasonings).toEqual(
-      expect.arrayContaining(["にんにく", "唐辛子", "砂糖", "しょうゆ"]),
+    expect(comboOptionSets.recipeDirections).toEqual(
+      expect.arrayContaining(["あっさり", "和風", "野菜たっぷり", "平日夕食"]),
+    );
+    expect(comboOptionSets.ngFoodsAndSeasonings).toEqual(
+      expect.arrayContaining(["にんじん", "にんにく", "唐辛子", "砂糖", "しょうゆ"]),
     );
   });
 
@@ -58,19 +61,15 @@ describe("data", () => {
       "cookingTools",
       "pairingTargets",
       "difficulty",
-      "health",
-      "flavors",
-      "genres",
-      "scenes",
-      "ngMaterials",
-      "ngSeasonings",
+      "recipeDirections",
+      "ngFoodsAndSeasonings",
     ]);
   });
 
   test("フォーム定義は先頭と末尾の想定どおりになっている", () => {
     expect(combos[0]?.id).toBe("materials");
     expect(combos[0]?.basic).toBe(true);
-    expect(combos.at(-1)?.id).toBe("ngSeasonings");
+    expect(combos.at(-1)?.id).toBe("ngFoodsAndSeasonings");
   });
 
   test("材料候補は表示用に五十音順で並ぶ", () => {
@@ -83,6 +82,8 @@ describe("data", () => {
   test("食材以外の候補は設定配列の順番を維持する", () => {
     expect(getComboOptionValues("difficulty")).toEqual(comboOptionSets.difficulty);
     expect(getComboOptionValues("cookingTools")).toEqual(comboOptionSets.cookingTools);
-    expect(getComboOptionValues("ngSeasonings")).toEqual(comboOptionSets.ngSeasonings);
+    expect(getComboOptionValues("ngFoodsAndSeasonings")).toEqual(
+      comboOptionSets.ngFoodsAndSeasonings,
+    );
   });
 });

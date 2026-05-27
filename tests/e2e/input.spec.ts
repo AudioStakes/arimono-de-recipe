@@ -25,7 +25,7 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await expect(materialField.locator(".suggestions")).toBeVisible();
 
   await input.fill("豆腐");
-  await expect(materialField.getByRole("option", { name: "豆腐" })).toBeVisible();
+  await expect(materialField.getByRole("option", { name: "豆腐", exact: true })).toBeVisible();
   await input.fill("存在しない材料");
   await expect(materialField.getByText("候補がありません")).toBeVisible();
 
@@ -34,12 +34,12 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await expect(materialField.locator(".suggestion-option")).toHaveCount(40);
 
   await input.fill("卵");
-  await materialField.locator(".suggestion-option").first().click();
+  await materialField.getByRole("option", { name: "卵", exact: true }).click();
   await expect(materialField.locator(".pill")).toContainText("卵");
 
   await input.fill("");
   await input.press("ArrowDown");
-  await expect(materialField.getByRole("option", { name: "卵" })).toHaveCount(0);
+  await expect(materialField.getByRole("option", { name: "卵", exact: true })).toHaveCount(0);
 });
 
 test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く", async ({ page }) => {
@@ -69,18 +69,19 @@ test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く
   expect(cursorPosition).toEqual({ start: 1, end: 1, value: "豆" });
   await expect(materialField.locator(".pill")).toHaveCount(0);
 
-  await input.fill("卵");
+  await input.fill("豆");
   await input.press("ArrowDown");
-  await expect(firstOption).toBeFocused();
-  await firstOption.press("Enter");
-  await expect(materialField.locator(".pill-label")).toHaveText("卵");
+  const momenOption = materialField.locator(".suggestion-option").first();
+  await expect(momenOption).toBeFocused();
+  await momenOption.press("Enter");
+  await expect(materialField.locator(".pill-label")).toHaveText("絹ごし豆腐");
   await expect(input).toHaveValue("");
   await expect(materialField.locator(".suggestions")).not.toBeVisible();
 
   await input.fill("豆");
   await input.press("ArrowDown");
-  await expect(firstOption).toBeFocused();
-  await firstOption.press("Escape");
+  await expect(momenOption).toBeFocused();
+  await momenOption.press("Escape");
   await expect(materialField.locator(".suggestions")).not.toBeVisible();
   await expect(input).toBeFocused();
 });
@@ -96,13 +97,13 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   const toolsInput = toolsField.locator(".combo-input");
 
   await materialInput.fill("たまご");
-  await expect(materialField.getByRole("option", { name: "卵" })).toBeVisible();
+  await expect(materialField.getByRole("option", { name: "卵", exact: true })).toBeVisible();
 
   await pairingInput.fill("ぎょうざ");
   await expect(pairingField.getByRole("option", { name: "餃子" })).toBeVisible();
 
   await pairingInput.fill("はんばーぐ");
-  await expect(pairingField.getByRole("option", { name: "ハンバーグ" })).toBeVisible();
+  await expect(pairingField.getByRole("option", { name: "ハンバーグ", exact: true })).toBeVisible();
 
   await toolsInput.fill("でんしれんじ");
   await toolsInput.evaluate((element) => {
@@ -121,7 +122,7 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
     );
   });
 
-  await expect(toolsField.getByRole("option", { name: "電子レンジ" })).toBeVisible();
+  await expect(toolsField.getByRole("option", { name: "電子レンジ", exact: true })).toBeVisible();
 });
 
 test("候補クリック、自由入力Enter、blur でピル化し、重複追加しない", async ({ page }, testInfo) => {
@@ -264,8 +265,8 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await editInput.fill("デミグラスハンバーグ");
   await editInput.press("Enter");
   await expect(materialField.locator(".pill-label")).toHaveText("デミグラスハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- デミグラスハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("材料: デミグラスハンバーグ");
+  await expect(output).toHaveValue(/【食材・材料】\n- デミグラスハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText("食材・材料: デミグラスハンバーグ");
 
   await materialField.locator(".pill-label").click();
   const secondEditInput = materialField.locator(".pill-edit-input");
@@ -273,8 +274,8 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await secondEditInput.fill("和風ハンバーグ");
   await output.click();
   await expect(materialField.locator(".pill-label")).toHaveText("和風ハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- 和風ハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("材料: 和風ハンバーグ");
+  await expect(output).toHaveValue(/【食材・材料】\n- 和風ハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText("食材・材料: 和風ハンバーグ");
 });
 
 test("編集中の空欄Enterとblurはキャンセルになる", async ({ page }, testInfo) => {

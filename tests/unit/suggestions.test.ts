@@ -14,6 +14,7 @@ describe("suggestion search helpers", () => {
     expect(getOptionSearchText("卵")).toContain(normalizeSearchText("たまご"));
     expect(getOptionSearchText("餃子")).toContain(normalizeSearchText("ぎょうざ"));
     expect(getOptionSearchText("電子レンジ")).toContain(normalizeSearchText("でんしれんじ"));
+    expect(getOptionSearchText("和風")).toContain(normalizeSearchText("washoku"));
   });
 
   test("読み入力で漢字候補を絞り込める", () => {
@@ -21,6 +22,10 @@ describe("suggestion search helpers", () => {
     expect(filterAvailableComboOptions(["餃子", "焼き魚"], "ぎょうざ")).toEqual(["餃子"]);
     expect(filterAvailableComboOptions(["電子レンジ", "炊飯器"], "でんしれんじ")).toEqual([
       "電子レンジ",
+    ]);
+    expect(filterAvailableComboOptions(["和風", "中華風"], "washoku")).toEqual(["和風"]);
+    expect(filterAvailableComboOptions(["ヘルシオ ホットクック", "炊飯器"], "hotcook")).toEqual([
+      "ヘルシオ ホットクック",
     ]);
   });
 

@@ -1,7 +1,11 @@
 import type { CandidateValue } from "./types";
 
 export const cookingMethodAndToolCandidates = [
-  { value: "電子レンジ", aliases: ["レンジ"], romaji: ["renji", "microwave"] },
+  {
+    value: "電子レンジ",
+    aliases: ["レンジ", "でんしれんじ"],
+    romaji: ["renji", "microwave"],
+  },
   { value: "オーブンレンジ", aliases: ["レンジオーブン"], romaji: ["oven range"] },
   { value: "スチームオーブンレンジ", aliases: ["スチームオーブン"], romaji: ["steam oven"] },
   { value: "フライパン", romaji: ["furaipan"] },
@@ -21,7 +25,11 @@ export const cookingMethodAndToolCandidates = [
   { value: "無水鍋", aliases: ["むすいなべ"], romaji: ["musuinabe"] },
   { value: "低温調理器", aliases: ["低温調理機"], romaji: ["teion choriki", "sous vide"] },
   { value: "スロークッカー", aliases: ["電気煮込み鍋"], romaji: ["slow cooker"] },
-  { value: "炊飯器", aliases: ["すいはんき"], romaji: ["suihanki", "rice cooker"] },
+  {
+    value: "炊飯器",
+    aliases: ["すいはんき", "炊飯ジャー"],
+    romaji: ["suihanki", "rice cooker"],
+  },
   { value: "ホームベーカリー", aliases: ["パン焼き機"], romaji: ["home bakery", "bread maker"] },
   { value: "ホットプレート", romaji: ["hotplate"] },
   { value: "たこ焼き器", aliases: ["たこ焼きプレート"], romaji: ["takoyakiki"] },

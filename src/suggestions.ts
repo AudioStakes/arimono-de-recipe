@@ -1,26 +1,22 @@
+import {
+  buildCandidateSearchSynonyms,
+  cookingMethodAndToolCandidates,
+  dishTypeCandidates,
+  easeCandidates,
+  foodMaterialCandidates,
+  ngFoodAndSeasoningCandidates,
+  pairingTargetCandidates,
+  recipeDirectionCandidates,
+} from "./candidate-values";
+
 export const searchSynonyms: Record<string, string> = {
-  卵: "たまご 玉子 タマゴ",
-  豆腐: "とうふ",
-  厚揚げ: "あつあげ",
-  油揚げ: "あぶらあげ",
-  納豆: "なっとう",
-  高野豆腐: "こうやどうふ こうや 豆腐",
-  玉ねぎ: "たまねぎ タマネギ",
-  長ねぎ: "ながねぎ ネギ",
-  餃子: "ぎょうざ ギョウザ",
-  焼き魚: "やきざかな",
-  肉じゃが: "にくじゃが",
-  電子レンジ: "でんしれんじ レンジ",
-  炊飯器: "すいはんき",
-  主菜: "しゅさい",
-  副菜: "ふくさい",
-  汁物: "しるもの",
-  和食: "わしょく",
-  中華: "ちゅうか",
-  洋食: "ようしょく",
-  時短: "じたん",
-  節約: "せつやく",
-  味噌汁: "みそしる",
+  ...buildCandidateSearchSynonyms(foodMaterialCandidates),
+  ...buildCandidateSearchSynonyms(dishTypeCandidates),
+  ...buildCandidateSearchSynonyms(cookingMethodAndToolCandidates),
+  ...buildCandidateSearchSynonyms(pairingTargetCandidates),
+  ...buildCandidateSearchSynonyms(easeCandidates),
+  ...buildCandidateSearchSynonyms(recipeDirectionCandidates),
+  ...buildCandidateSearchSynonyms(ngFoodAndSeasoningCandidates),
 };
 
 export function normalizeSearchText(text: string): string {
@@ -30,8 +26,10 @@ export function normalizeSearchText(text: string): string {
     .replace(/[ぁ-ゖ]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 96));
 }
 
+const normalizeSearchKey = (text: string): string => normalizeSearchText(text).replace(/\s+/g, "");
+
 export function getOptionSearchText(value: string): string {
-  return normalizeSearchText(`${value} ${searchSynonyms[value] ?? ""}`);
+  return normalizeSearchKey(`${value} ${searchSynonyms[value] ?? ""}`);
 }
 
 export function filterAvailableComboOptions(
@@ -40,7 +38,7 @@ export function filterAvailableComboOptions(
   selected: Iterable<string> = [],
   limit = 40,
 ): string[] {
-  const normalizedQuery = normalizeSearchText(query).trim();
+  const normalizedQuery = normalizeSearchKey(query).trim();
   const excluded = new Set(selected);
 
   return options

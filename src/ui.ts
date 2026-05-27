@@ -76,7 +76,7 @@ function renderAppShell(): string {
           decoding="async"
         />
       </h1>
-      <p class="lead">冷蔵庫にある材料と条件から、AI にレシピ提案を依頼する文章を作ります。</p>
+      <p class="lead">冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。</p>
     </header>
     <div class="form" id="recipeForm">
       <div id="basicFields"></div>
@@ -134,7 +134,7 @@ function renderFields(): void {
   queryElement("#advancedFields").innerHTML = [
     renderCookTimeField(),
     ...advancedConditionOrder.map((id) => renderComboField(getCombo(id))),
-    `<div class="field"><label for="supplementalNotes">${fieldLabelHtml("補足", "note")}</label><textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea></div>`,
+    `<div class="field"><label for="supplementalNotes">${fieldLabelHtml("その他の要望", "note")}</label><textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea></div>`,
   ].join("");
 
   queryAllElements<HTMLElement>("[data-icon]").forEach((element) => {

@@ -12,12 +12,8 @@ export function makeEmptyPromptData(overrides: Partial<PromptData> = {}): Prompt
     cookingTools: [],
     pairingTargets: [],
     difficulty: [],
-    health: [],
-    flavors: [],
-    genres: [],
-    scenes: [],
-    ngMaterials: [],
-    ngSeasonings: [],
+    recipeDirections: [],
+    ngFoodsAndSeasonings: [],
     servings: "",
     cookTime: "",
     supplementalNotes: "",
@@ -26,9 +22,10 @@ export function makeEmptyPromptData(overrides: Partial<PromptData> = {}): Prompt
 }
 
 export function buildPrompt(data: PromptData): string {
-  let prompt = ["冷蔵庫にある材料を使って、今日の食事に合うレシピを考えてください。", ""].join(
-    NEWLINE,
-  );
+  let prompt = [
+    "冷蔵庫にある食材・材料を使って、今日の食事に合うレシピを考えてください。",
+    "",
+  ].join(NEWLINE);
   prompt += NEWLINE;
 
   for (const { title, value } of buildPromptSections(data)) {

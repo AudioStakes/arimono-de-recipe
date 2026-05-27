@@ -11,7 +11,7 @@ test("ページ基本表示と詳細条件の開閉が現在仕様どおり", as
     "ありもの de レシピ プロンプトメーカー",
   );
   await expect(
-    page.getByText("冷蔵庫にある材料と条件から、AI にレシピ提案を依頼する文章を作ります。"),
+    page.getByText("冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。"),
   ).toBeVisible();
   await expect(page.getByText("Recipe Prompt Maker")).toHaveCount(0);
   await expect(page.getByText("入力内容は外部送信されません。")).toHaveCount(0);
@@ -19,11 +19,11 @@ test("ページ基本表示と詳細条件の開閉が現在仕様どおり", as
 
   await expect(page.locator("#basicFields .field")).toHaveCount(5);
   await expect(page.locator("#basicFields .field-title")).toHaveText([
-    "材料",
+    "食材・材料",
     "人数・分量",
-    "作りたいもの",
-    "調理方法・器具",
-    "一緒に出す料理、合わせたい料理",
+    "料理区分・作りたいもの",
+    "調理方法・調理器具",
+    "合わせたい料理・一緒に出す料理",
   ]);
 
   await expect(page.locator("details.advanced")).toHaveCount(1);
@@ -35,13 +35,9 @@ test("ページ基本表示と詳細条件の開閉が現在仕様どおり", as
   await expect(page.locator("#advancedFields .field-title, #advancedFields label")).toHaveText([
     "調理時間",
     "作りやすさ",
-    "栄養・健康",
-    "味つけ",
-    "ジャンル",
-    "シーン",
-    "NG材料",
-    "NG調味料",
-    "補足",
+    "レシピの方向性",
+    "NG食材・調味料",
+    "その他の要望",
   ]);
 
   await page.locator("#advancedDetails summary").click();
@@ -75,7 +71,7 @@ test("基本項目の DOM 順序がフォーム定義と一致する", async ({ 
 
   const labels = await page.locator("#basicFields .field-title").allTextContents();
   expect(labels.map((text) => text.trim())).toEqual([
-    "材料",
+    "食材・材料",
     "人数・分量",
     ...combos
       .filter((combo) => combo.basic && combo.id !== "materials")

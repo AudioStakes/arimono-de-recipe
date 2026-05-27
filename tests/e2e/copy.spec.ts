@@ -14,12 +14,12 @@ test("コピーアイコンは本文をクリップボードに書き込み、�
   await expect(page.locator("#copyPrompt .copy-toast")).toHaveClass(/show/);
   await expect(page.locator("#copyPrompt .copy-toast")).toHaveText("コピーしました");
   const clipboardText1 = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText1).toContain("【材料】");
+  expect(clipboardText1).toContain("【食材・材料】");
 
   await page.locator("#copyPromptSticky").dispatchEvent("click");
   await expect(page.locator("#copyPromptSticky .copy-toast")).toHaveClass(/show/);
   const clipboardText2 = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText2).toContain("【材料】");
+  expect(clipboardText2).toContain("【食材・材料】");
 
   await page.waitForTimeout(1600);
   await expect(page.locator("#copyPrompt .copy-toast")).not.toHaveClass(/show/);

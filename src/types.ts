@@ -4,12 +4,8 @@ export type ComboId =
   | "cookingTools"
   | "pairingTargets"
   | "difficulty"
-  | "health"
-  | "flavors"
-  | "genres"
-  | "scenes"
-  | "ngMaterials"
-  | "ngSeasonings";
+  | "recipeDirections"
+  | "ngFoodsAndSeasonings";
 
 export type OptionSetKey =
   | "materials"
@@ -17,11 +13,8 @@ export type OptionSetKey =
   | "cookingTools"
   | "pairingTargets"
   | "difficulty"
-  | "health"
-  | "flavors"
-  | "genres"
-  | "scenes"
-  | "ngSeasonings";
+  | "recipeDirections"
+  | "ngFoodsAndSeasonings";
 
 export type IconName =
   | "leaf"

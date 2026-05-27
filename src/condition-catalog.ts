@@ -27,26 +27,27 @@ const inlineList = (items: string[]): string => items.join("、");
 export const NEWLINE = String.fromCharCode(10);
 
 const promptRules: Array<[(data: PromptData) => boolean, string]> = [
-  [(data) => data.materials.length > 0, "指定された材料を中心に使ってください。"],
-  [(data) => data.dishTypes.length > 0, "指定された「作りたいもの」だけを提案してください。"],
+  [(data) => data.materials.length > 0, "指定された食材・材料を中心に使ってください。"],
+  [
+    (data) => data.dishTypes.length > 0,
+    "指定された「料理区分・作りたいもの」だけを提案してください。",
+  ],
   [
     (data) => data.cookingTools.length > 0,
-    "指定された調理方法・器具だけで作れる手順にしてください。",
+    "指定された調理方法・調理器具だけで作れる手順にしてください。",
   ],
   [(data) => Boolean(data.cookTime), "指定された調理時間に収まる現実的な手順にしてください。"],
-  [(data) => data.ngMaterials.length > 0, "「NG材料」に指定されたものは使わないでください。"],
-  [(data) => data.ngSeasonings.length > 0, "「NG調味料」に指定されたものは使わないでください。"],
   [
     (data) => data.pairingTargets.length > 0,
-    "「一緒に出す料理、合わせたい料理」に合う味・食感・量のレシピにしてください。",
+    "「合わせたい料理・一緒に出す料理」に合う味・食感・量のレシピにしてください。",
   ],
+  [(data) => data.difficulty.length > 0, "指定された「作りやすさ」を反映してください。"],
+  [(data) => data.recipeDirections.length > 0, "指定された「レシピの方向性」を反映してください。"],
   [
-    (data) =>
-      ["scenes", "flavors", "genres", "health", "difficulty"].some(
-        (key) => data[key as keyof PromptData].length > 0,
-      ) || Boolean(data.supplementalNotes),
-    "指定されたこだわり条件を反映してください。",
+    (data) => data.ngFoodsAndSeasonings.length > 0,
+    "「NG食材・調味料」に指定されたものは使わないでください。",
   ],
+  [(data) => Boolean(data.supplementalNotes), "指定された「その他の要望」を反映してください。"],
 ];
 
 const comboChipLabel = (id: ComboId): string => {
@@ -88,7 +89,7 @@ export function buildPromptSections(data: PromptData): PromptSection[] {
   }
 
   if (data.supplementalNotes) {
-    sections.push({ title: "補足", value: data.supplementalNotes });
+    sections.push({ title: "その他の要望", value: data.supplementalNotes });
   }
 
   return sections;
@@ -123,22 +124,14 @@ export function buildConditionChipSpecs(data: PromptData): ConditionChipSpec[] {
     });
   }
 
-  for (const id of [
-    "difficulty",
-    "health",
-    "flavors",
-    "genres",
-    "scenes",
-    "ngMaterials",
-    "ngSeasonings",
-  ] as ComboId[]) {
+  for (const id of ["difficulty", "recipeDirections", "ngFoodsAndSeasonings"] as ComboId[]) {
     appendComboChip(chips, data, id);
   }
 
   if (data.supplementalNotes) {
     chips.push({
       kind: "supplementalNotes",
-      label: "補足あり",
+      label: "その他の要望あり",
       removable: true,
     });
   }

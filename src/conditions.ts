@@ -19,15 +19,7 @@ export type PromptDataInputs = {
   getSupplementalNotes: () => string;
 };
 
-const advancedConditionIds: ComboId[] = [
-  "difficulty",
-  "health",
-  "flavors",
-  "genres",
-  "scenes",
-  "ngMaterials",
-  "ngSeasonings",
-];
+const advancedConditionIds: ComboId[] = ["difficulty", "recipeDirections", "ngFoodsAndSeasonings"];
 
 export function createPromptDataReader(services: PromptDataReadServices): PromptDataReader {
   return {
@@ -37,12 +29,8 @@ export function createPromptDataReader(services: PromptDataReadServices): Prompt
       cookingTools: services.getComboValues("cookingTools"),
       pairingTargets: services.getComboValues("pairingTargets"),
       difficulty: services.getComboValues("difficulty"),
-      health: services.getComboValues("health"),
-      flavors: services.getComboValues("flavors"),
-      genres: services.getComboValues("genres"),
-      scenes: services.getComboValues("scenes"),
-      ngMaterials: services.getComboValues("ngMaterials"),
-      ngSeasonings: services.getComboValues("ngSeasonings"),
+      recipeDirections: services.getComboValues("recipeDirections"),
+      ngFoodsAndSeasonings: services.getComboValues("ngFoodsAndSeasonings"),
       servings: services.getServingsText(),
       cookTime: services.getCookTimeText(),
       supplementalNotes: services.getSupplementalNotes(),

@@ -13,12 +13,8 @@ describe("createPromptDataReader", () => {
       cookingTools: ["電子レンジ"],
       pairingTargets: ["餃子"],
       difficulty: ["時短"],
-      health: [],
-      flavors: ["あっさり"],
-      genres: [],
-      scenes: ["平日夕食"],
-      ngMaterials: ["にんじん"],
-      ngSeasonings: [],
+      recipeDirections: ["あっさり"],
+      ngFoodsAndSeasonings: ["にんじん"],
     } as const;
 
     const reader = createPromptDataReader({
@@ -46,12 +42,8 @@ describe("countAdvancedConditions", () => {
         cookingTools: [],
         pairingTargets: [],
         difficulty: ["時短"],
-        health: ["野菜多め"],
-        flavors: [],
-        genres: ["和食"],
-        scenes: [],
-        ngMaterials: ["にんじん"],
-        ngSeasonings: [],
+        recipeDirections: ["和風"],
+        ngFoodsAndSeasonings: ["にんじん", "にんにく"],
         servings: "大人2人",
         cookTime: "15分以内",
         supplementalNotes: "子ども用に辛くしない。",
@@ -68,12 +60,8 @@ describe("createPromptDataReaderFromInputs", () => {
       cookingTools: ["電子レンジ"],
       pairingTargets: [],
       difficulty: [],
-      health: [],
-      flavors: [],
-      genres: ["和食"],
-      scenes: [],
-      ngMaterials: [],
-      ngSeasonings: ["にんにく"],
+      recipeDirections: ["和風"],
+      ngFoodsAndSeasonings: ["にんにく"],
     } as const;
 
     const reader = createPromptDataReaderFromInputs({
