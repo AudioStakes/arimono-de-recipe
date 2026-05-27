@@ -125,15 +125,7 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   await expect(toolsField.getByRole("option", { name: "電子レンジ", exact: true })).toBeVisible();
 });
 
-test("候補クリック、自由入力Enter、blur でピル化し、重複追加しない", async ({ page }, testInfo) => {
-  test.skip(
-    true,
-    "FIXME: blur による確定がPlaywrightの並列実行で不安定なため、安定化後に再有効化する",
-  );
-  if (testInfo.project.name === "mobile-chrome") {
-    test.skip(true, "mobile-chrome では blur の commit が不安定なため chromium で確認する");
-  }
-
+test("候補クリック、自由入力Enter、blur でピル化し、重複追加しない", async ({ page }) => {
   await page.goto("/");
 
   const materialField = page.locator('[data-combo="materials"]');
@@ -141,7 +133,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
 
   await materialField.locator(".combo-picker").click();
   await input.fill("豆腐");
-  await materialField.locator(".suggestion-option").first().click();
+  await materialField.getByRole("option", { name: "豆腐", exact: true }).click();
   await expect(materialField.locator(".pill")).toContainText("豆腐");
   await expect(input).toHaveValue("");
 
@@ -153,9 +145,11 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
   await input.fill("しめじ");
   await input.press("Enter");
   await expect(materialField.locator(".pill")).toHaveCount(2);
+  await page.waitForTimeout(50);
 
   await input.fill("しろ菜");
-  await input.blur();
+  await expect(input).toHaveValue("しろ菜");
+  await page.locator("#output").click();
   await expect(materialField.locator(".pill-label")).toHaveText(["豆腐", "しめじ", "しろ菜"], {
     timeout: 10000,
   });
@@ -243,11 +237,7 @@ test("空入力欄のBackspace/Deleteで直前ピルが選択され、再押下�
   await expect(input).toBeFocused();
 });
 
-test("ピルのラベルから編集でき、Enterとblurで保存される", async ({ page }, testInfo) => {
-  if (testInfo.project.name === "mobile-chrome") {
-    test.skip(true, "mobile-chrome では blur の commit が不安定なため chromium で確認する");
-  }
-
+test("ピルのラベルから編集でき、Enterとblurで保存される", async ({ page }) => {
   await page.goto("/");
 
   const materialField = page.locator('[data-combo="materials"]');
@@ -278,12 +268,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await expect(page.locator("#conditionChips")).toContainText("食材・材料: 和風ハンバーグ");
 });
 
-test("編集中の空欄Enterとblurはキャンセルになる", async ({ page }, testInfo) => {
-  test.skip(true, "FIXME: 空欄保存のEnter/blurはPlaywrightで不安定なため、安定化後に再有効化する");
-  if (testInfo.project.name === "mobile-chrome") {
-    test.skip(true, "mobile-chrome では blur の commit が不安定なため chromium で確認する");
-  }
-
+test("編集中の空欄Enterとblurはキャンセルになる", async ({ page }) => {
   await page.goto("/");
 
   const materialField = page.locator('[data-combo="materials"]');
@@ -321,15 +306,7 @@ test("編集中の空欄Enterとblurはキャンセルになる", async ({ page 
   await expect(materialField.locator(".pill-label")).toHaveText("ハンバーグ");
 });
 
-test("編集中のEscape、重複統合、IME Enter、×削除が動く", async ({ page }, testInfo) => {
-  test.skip(
-    true,
-    "FIXME: 複数ピルの編集切り替えと重複統合がPlaywrightで不安定なため、安定化後に再有効化する",
-  );
-  if (testInfo.project.name === "mobile-chrome") {
-    test.skip(true, "mobile-chrome では blur の commit が不安定なため chromium で確認する");
-  }
-
+test("編集中のEscape、重複統合、IME Enter、×削除が動く", async ({ page }) => {
   await page.goto("/");
 
   const materialField = page.locator('[data-combo="materials"]');
@@ -338,7 +315,7 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   await input.fill("ハンバーグ");
   await input.press("Enter");
   await input.fill("卵");
-  await materialField.locator(".suggestion-option").first().click();
+  await materialField.getByRole("option", { name: "卵", exact: true }).click();
 
   await materialField.locator(".pill-label").nth(1).click();
   const editInput = materialField.locator(".pill-edit-input");

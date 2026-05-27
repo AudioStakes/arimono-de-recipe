@@ -16,11 +16,7 @@ test.describe("combo controller harness", () => {
     await expect(page.locator("#values")).toHaveText("豆腐");
   });
 
-  test("blur で確定する", async ({ page }, testInfo) => {
-    if (testInfo.project.name === "mobile-chrome") {
-      test.skip(true, "mobile-chrome では blur の順序が安定しない");
-    }
-
+  test("blur で確定する", async ({ page }) => {
     const input = page.locator(".combo-input");
 
     await input.fill("しめじ");
@@ -97,11 +93,7 @@ test.describe("combo controller harness", () => {
     await expect(page.locator(".pill")).toHaveCount(0);
   });
 
-  test("ピル編集のEnter保存、Escape cancel、blur保存が動く", async ({ page }, testInfo) => {
-    if (testInfo.project.name === "mobile-chrome") {
-      test.skip(true, "mobile-chrome では blur の順序が安定しない");
-    }
-
+  test("ピル編集のEnter保存、Escape cancel、blur保存が動く", async ({ page }) => {
     const input = page.locator(".combo-input");
 
     await input.fill("豆腐");

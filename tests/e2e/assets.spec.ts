@@ -9,7 +9,7 @@ test("タイトルロゴ画像とビルド済みアセットが参照できる",
   await expect(page.locator('img[src="/title-banner.webp"]')).toHaveCount(1);
 });
 
-test.skip("TODO: OGP 画像と meta は未実装のため、実装後に検証する", async ({ page }) => {
+test("OGP 画像と meta が出力される", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
