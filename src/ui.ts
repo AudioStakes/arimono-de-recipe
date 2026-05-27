@@ -74,21 +74,25 @@ function renderAppShell(): string {
           width="1200"
           height="300"
           decoding="async"
+          fetchpriority="high"
         />
       </h1>
-      <p class="lead">冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。</p>
+      <p class="lead" id="appLead">冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。</p>
     </header>
-    <div class="form" id="recipeForm">
+    <form class="form" id="recipeForm" novalidate aria-describedby="appLead">
       <div id="basicFields"></div>
       <details class="advanced" id="advancedDetails">
-        <summary><span class="summary-title" id="advancedTitle">こだわり条件を追加</span><span id="advancedCount"></span></summary>
+        <summary aria-controls="advancedFields">
+          <span class="summary-title" id="advancedTitle">こだわり条件を追加</span>
+          <span id="advancedCount"></span>
+        </summary>
         <div id="advancedFields"></div>
       </details>
       <div class="field result-field">
         <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
-        <p class="result-note">コピーしてAIに貼り付けてください。</p>
+        <p class="result-note" id="outputHelp">コピーしてAIに貼り付けてください。</p>
         <div class="output-shell">
-          <textarea id="output" class="output" readonly placeholder="ここにプロンプトが表示されます。"></textarea>
+          <textarea id="output" class="output" readonly aria-describedby="outputHelp"></textarea>
           <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
             <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
           </button>
@@ -96,7 +100,7 @@ function renderAppShell(): string {
         <div id="conditionChips" class="chips" aria-live="polite"></div>
         <div class="output-actions"><button id="generatePromptInline" type="button">プロンプトを見る</button></div>
       </div>
-    </div>
+    </form>
     <div class="bottom-actions" id="bottomActions">
       <div class="bottom-actions-inner">
         <div id="stickyChips" class="sticky-chips" aria-live="polite"></div>
@@ -144,13 +148,29 @@ function renderFields(): void {
 }
 
 function renderComboField(combo: ComboConfig): string {
+  const inputId = `${combo.id}Input`;
+  const suggestionsId = `${combo.id}Suggestions`;
   return `
     <div class="field">
-      <div class="field-title">${fieldLabelHtml(combo.label, combo.icon)}</div>
+      <label class="field-title" for="${inputId}">${fieldLabelHtml(combo.label, combo.icon)}</label>
       <div class="combo" data-combo="${combo.id}">
-        <input class="combo-input" type="text" placeholder="${combo.placeholder}" aria-label="${combo.label}" autocomplete="off" role="combobox" aria-expanded="false" />
-        <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示"></button>
-        <div class="suggestions" role="listbox" aria-label="${combo.label}の候補"></div>
+        <input
+          id="${inputId}"
+          class="combo-input"
+          type="text"
+          placeholder="${combo.placeholder}"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          enterkeyhint="done"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="${suggestionsId}"
+          aria-haspopup="listbox"
+        />
+        <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示" aria-controls="${suggestionsId}"></button>
+        <div id="${suggestionsId}" class="suggestions" role="listbox" aria-label="${combo.label}の候補"></div>
       </div>
     </div>
   `;
@@ -172,7 +192,12 @@ function renderServingsField(): string {
     )
     .join("");
 
-  return `<div class="field"><div class="field-title">${fieldLabelHtml("人数・分量", "users")}</div><div class="serving-grid" aria-label="人数・分量">${controls}</div></div>`;
+  return `
+    <fieldset class="field fieldset">
+      <legend class="field-title">${fieldLabelHtml("人数・分量", "users")}</legend>
+      <div class="serving-grid" aria-label="人数・分量">${controls}</div>
+    </fieldset>
+  `;
 }
 
 function renderCookTimeField(): string {

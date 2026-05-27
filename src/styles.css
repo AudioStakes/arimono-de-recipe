@@ -1,6 +1,8 @@
 :root {
-  --bg: #fff8ef;
-  --card: rgba(255, 255, 255, 0.78);
+  color-scheme: light;
+  --bg: #fff6eb;
+  --bg-accent: rgba(226, 116, 59, 0.16);
+  --card: rgba(255, 255, 255, 0.8);
   --text: #25211d;
   --muted: #756b60;
   --line: rgba(151, 111, 73, 0.18);
@@ -9,32 +11,49 @@
   --shadow: 0 24px 70px rgba(86, 56, 28, 0.14);
   --inner: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   --radius: 24px;
+  --focus-ring: rgba(224, 120, 63, 0.26);
+  --page-gutter: clamp(16px, 3vw, 28px);
+  --sticky-footer-space: 122px;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  padding-bottom: 122px;
+  padding-bottom: calc(var(--sticky-footer-space) + env(safe-area-inset-bottom));
   color: var(--text);
   font-family:
     "Zen Kaku Gothic New", "Noto Sans JP", "M PLUS Rounded 1c", system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.6;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 520px at 12% -10%, rgba(255, 255, 255, 0.78), transparent 58%),
+    radial-gradient(900px 540px at 100% 0%, var(--bg-accent), transparent 52%),
+    linear-gradient(180deg, #fffaf3 0%, var(--bg) 42%, #fff2e4 100%);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 main {
-  width: min(760px, 100%);
+  width: min(780px, 100%);
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: clamp(20px, 4vw, 40px) var(--page-gutter) 48px;
+  display: grid;
+  gap: clamp(18px, 2.8vw, 24px);
 }
 
 header {
-  margin: 12px 0 24px;
+  margin: 4px 0 8px;
+  display: grid;
+  gap: 14px;
 }
 
 .site-title {
@@ -50,21 +69,33 @@ header {
 
 .lead {
   max-width: 40rem;
-  margin: 10px auto 0;
+  margin: 0 auto;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 650;
   text-align: center;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .form {
-  padding: 18px;
-  background: var(--card);
+  padding: clamp(18px, 3vw, 28px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 252, 247, 0.72)), var(--card);
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: var(--radius);
-  box-shadow: var(--shadow), var(--inner);
-  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 20px 56px rgba(86, 56, 28, 0.11),
+    var(--shadow),
+    var(--inner);
+  backdrop-filter: blur(24px) saturate(145%);
+  isolation: isolate;
+}
+
+fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .field {
@@ -83,6 +114,14 @@ label,
   margin: 0 0 8px;
   font-weight: 850;
   letter-spacing: -0.02em;
+}
+
+.field-title {
+  width: 100%;
+}
+
+legend.field-title {
+  padding: 0;
 }
 
 .icon {
@@ -112,6 +151,7 @@ textarea,
 select {
   width: 100%;
   padding: 13px 14px;
+  min-height: 48px;
   color: var(--text);
   font: inherit;
   background: rgba(255, 253, 250, 0.82);
@@ -135,13 +175,17 @@ select {
 textarea {
   min-height: 96px;
   resize: vertical;
+  line-height: 1.65;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
+.form :where(input, textarea, select, button, summary):focus-visible {
   border-color: var(--accent);
-  outline: 3px solid rgba(224, 120, 63, 0.22);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.form :where(input, textarea, select, button, summary) {
+  touch-action: manipulation;
 }
 
 button {
@@ -155,6 +199,7 @@ button {
   border: 0;
   border-radius: 999px;
   box-shadow: 0 12px 24px rgba(226, 116, 59, 0.24);
+  min-height: 48px;
   transition:
     transform 0.1s ease,
     background 0.16s ease,
@@ -178,7 +223,6 @@ button:active {
   box-shadow: var(--inner);
 }
 
-.combo,
 .combo {
   display: flex;
   flex-wrap: wrap;
@@ -192,6 +236,7 @@ button:active {
 .combo input {
   flex: 1 1 140px;
   min-width: 120px;
+  min-height: 48px;
   padding: 10px 12px;
   background-color: rgba(255, 255, 255, 0.74);
   border: 0;
@@ -258,8 +303,8 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   color: var(--muted);
   background: transparent;
@@ -321,7 +366,7 @@ button:active {
 
 .serving-stepper {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
   align-items: center;
   gap: 6px;
   padding: 6px;
@@ -334,8 +379,8 @@ button:active {
 .serving-adjust {
   display: inline-grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   color: var(--accent-dark);
   font-size: 1.35rem;
@@ -371,7 +416,7 @@ button:active {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  height: 38px;
+  height: 48px;
   padding: 0 8px;
   color: var(--text);
   font-size: 1rem;
@@ -530,10 +575,15 @@ details.advanced > summary {
   box-shadow:
     var(--inner),
     0 10px 20px rgba(86, 56, 28, 0.05);
+  min-height: 56px;
 }
 
 details.advanced > summary::-webkit-details-marker {
   display: none;
+}
+
+details.advanced > summary:hover {
+  background: rgba(255, 250, 244, 0.92);
 }
 
 .summary-title {
@@ -649,8 +699,10 @@ details.advanced[open] > summary {
 .output {
   min-height: 280px;
   padding: 18px 96px 18px 18px;
+  font-feature-settings: "palt";
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.92rem;
+  line-height: 1.7;
   white-space: pre-wrap;
   background: rgba(255, 253, 250, 0.88);
 }
@@ -709,6 +761,7 @@ details.advanced[open] > summary {
   border-top: 1px solid rgba(255, 255, 255, 0.58);
   box-shadow: 0 -18px 50px rgba(86, 56, 28, 0.1);
   backdrop-filter: blur(22px) saturate(140%);
+  contain: paint;
 }
 
 .bottom-actions.show {
@@ -750,6 +803,7 @@ details.advanced[open] > summary {
   gap: 6px;
   padding-bottom: 2px;
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .sticky-chips.show {
@@ -764,7 +818,7 @@ details.advanced[open] > summary {
 
 @media (min-width: 720px) {
   body {
-    padding-bottom: 118px;
+    --sticky-footer-space: 118px;
   }
 
   main {
@@ -781,5 +835,19 @@ details.advanced[open] > summary {
 
   .serving-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  button {
+    transition: none;
+  }
+
+  .copy-toast.show {
+    animation: none;
   }
 }

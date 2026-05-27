@@ -56,6 +56,32 @@ const renderChips = (container: Element, items: ChipItem[], readOnly = false): v
   }
 };
 
+const prefersReducedMotion = (): boolean =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const fallback = document.createElement("textarea");
+  fallback.value = text;
+  fallback.setAttribute("readonly", "");
+  fallback.style.position = "fixed";
+  fallback.style.inset = "0";
+  fallback.style.opacity = "0";
+  document.body.appendChild(fallback);
+  fallback.focus();
+  fallback.select();
+  const copied = document.execCommand("copy");
+  fallback.remove();
+
+  if (!copied) {
+    throw new Error("Clipboard copy failed.");
+  }
+}
+
 function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[] {
   const specs = buildConditionChipSpecs(data);
 
@@ -152,7 +178,10 @@ export function scrollToPrompt(
   services: PromptPanelServices,
 ): void {
   refreshPromptPanel(state, elements, services);
-  elements.output.scrollIntoView({ behavior: "smooth", block: "start" });
+  elements.output.scrollIntoView({
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+    block: "start",
+  });
   elements.output.focus();
   elements.output.setSelectionRange(0, 0);
   markUserHasInput(state, elements, services);
@@ -167,7 +196,7 @@ export async function copyPrompt(
   const button = event.currentTarget as HTMLElement | null;
   if (!elements.output.value.trim()) refreshPromptPanel(state, elements, services);
   try {
-    await navigator.clipboard.writeText(String(elements.output.value || ""));
+    await copyText(String(elements.output.value || ""));
   } catch {
     elements.output.select();
     document.execCommand("copy");
