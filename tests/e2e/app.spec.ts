@@ -52,9 +52,9 @@ test("折りたたみ項目は開いた中で入力できる", async ({ page }) 
 
   await page.locator('[data-collapsible="supplementalNotes"] .field-toggle').click();
   await page.locator("#supplementalNotes").fill("子ども用に辛くしない。");
-  await expect(page.locator("#output")).toHaveValue(/【調理時間】\n15分以内/);
-  await expect(page.locator("#output")).toHaveValue(/【作りやすさ・手軽さ】\n時短/);
-  await expect(page.locator("#output")).toHaveValue(/【その他の要望】\n子ども用に辛くしない。/);
+  await expect(page.locator("#output")).toHaveValue(/### 調理時間\n\n15分以内/);
+  await expect(page.locator("#output")).toHaveValue(/### 作りやすさ・手軽さ\n\n- 時短/);
+  await expect(page.locator("#output")).toHaveValue(/### その他の要望\n\n子ども用に辛くしない。/);
 });
 
 test("基本項目の DOM 順序がフォーム定義と一致する", async ({ page }) => {
