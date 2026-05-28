@@ -15,7 +15,7 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
     "コピーしました。AIへ渡してください",
   );
   const clipboardText1 = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText1).toContain("【材料】");
+  expect(clipboardText1).toContain("### 家にある食材");
 
   await page.setViewportSize({ width: 390, height: 700 });
   await page.reload();
@@ -26,7 +26,7 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
     "コピーしました。AIへ渡してください",
   );
   const clipboardText2 = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText2).toContain("【材料】");
+  expect(clipboardText2).toContain("### 家にある食材");
 
   await page.waitForTimeout(1900);
   await expect(page.locator("#copyPrompt .copy-label")).toHaveText("依頼文をコピー");

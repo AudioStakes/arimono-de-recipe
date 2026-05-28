@@ -257,7 +257,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await editInput.fill("デミグラスハンバーグ");
   await editInput.press("Enter");
   await expect(materialField.locator(".pill-label")).toHaveText("デミグラスハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- デミグラスハンバーグ/);
+  await expect(output).toHaveValue(/### 家にある食材\n\n- デミグラスハンバーグ/);
   await expect(page.locator("#conditionChips")).toContainText("家にある食材: デミグラスハンバーグ");
 
   await materialField.locator(".pill-label").click();
@@ -266,7 +266,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await secondEditInput.fill("和風ハンバーグ");
   await page.locator("header").click();
   await expect(materialField.locator(".pill-label")).toHaveText("和風ハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- 和風ハンバーグ/);
+  await expect(output).toHaveValue(/### 家にある食材\n\n- 和風ハンバーグ/);
   await expect(page.locator("#conditionChips")).toContainText("家にある食材: 和風ハンバーグ");
 });
 
