@@ -90,11 +90,13 @@ function createComboController(
 
   const input = safe$<HTMLInputElement>(".combo-input", root);
   const panel = safe$<HTMLElement>(".suggestions", root);
-  if (!input || !panel) {
+  const chipRow = safe$<HTMLElement>(".floating-chip-row", root);
+  if (!input || !panel || !chipRow) {
     throw new Error(`Combo UI is incomplete: ${group}`);
   }
   const comboInput = input;
   const suggestionPanel = panel;
+  const floatingChipRow = chipRow;
 
   function isEditing(value: string): boolean {
     return editingValue === value;
@@ -106,8 +108,10 @@ function createComboController(
     }
 
     for (const value of values) {
-      root.insertBefore(createPill(value), comboInput);
+      floatingChipRow.appendChild(createPill(value));
     }
+
+    root.classList.toggle("has-values", values.length > 0);
   }
 
   function focusComboValue(value: string): void {

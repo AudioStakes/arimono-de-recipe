@@ -7,7 +7,7 @@ describe("buildConditionChipSpecs", () => {
     const chips = buildConditionChipSpecs(
       makeEmptyPromptData({
         materials: ["豆腐", "しめじ"],
-        servings: "大人2人、子供(12歳以下)1人、幼児(5歳以下)1人",
+        servings: "大人2人、子供1人、幼児1人",
         dishTypes: ["副菜", "汁物"],
         cookingTools: ["電子レンジ"],
         pairingTargets: ["餃子", "カレー"],
@@ -20,14 +20,14 @@ describe("buildConditionChipSpecs", () => {
     );
 
     expect(chips.map((chip) => chip.label)).toEqual([
-      "食材・材料: 豆腐、しめじ",
-      "大人2人、子供(12歳以下)1人、幼児(5歳以下)1人",
+      "家にある食材: 豆腐、しめじ",
+      "大人2人、子供1人、幼児1人",
       "料理区分・作りたいもの: 副菜、汁物",
-      "調理方法・調理器具: 電子レンジ",
+      "使いたい調理器具・調理方法: 電子レンジ",
       "一緒に出す: 餃子、カレー",
       "調理時間: 20分以内",
-      "作りやすさ: 時短",
-      "レシピの方向性: あっさり、和風、平日夕食",
+      "作りやすさ・手軽さ: 時短",
+      "味や雰囲気: あっさり、和風、平日夕食",
       "NG食材・調味料: にんじん、にんにく",
       "その他の要望あり",
     ]);

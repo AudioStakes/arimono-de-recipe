@@ -24,12 +24,7 @@ describe("data", () => {
   });
 
   test("人数グループは表示順とラベルが揃っている", () => {
-    expect(servingGroups.map(({ label }) => label)).toEqual([
-      "大人",
-      "シニア(60歳以上)",
-      "子供(12歳以下)",
-      "幼児(5歳以下)",
-    ]);
+    expect(servingGroups.map(({ label }) => label)).toEqual(["大人", "シニア", "子供", "幼児"]);
   });
 
   test("候補データに必要な値が含まれている", () => {

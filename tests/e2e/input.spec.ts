@@ -99,12 +99,14 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   await materialInput.fill("たまご");
   await expect(materialField.getByRole("option", { name: "卵", exact: true })).toBeVisible();
 
+  await page.locator('[data-collapsible="pairingTargets"] .field-toggle').click();
   await pairingInput.fill("ぎょうざ");
   await expect(pairingField.getByRole("option", { name: "餃子" })).toBeVisible();
 
   await pairingInput.fill("はんばーぐ");
   await expect(pairingField.getByRole("option", { name: "ハンバーグ", exact: true })).toBeVisible();
 
+  await page.locator('[data-collapsible="cookingTools"] .field-toggle').click();
   await toolsInput.fill("でんしれんじ");
   await toolsInput.evaluate((element) => {
     const target = element as HTMLInputElement;
@@ -131,7 +133,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
   const materialField = page.locator('[data-combo="materials"]');
   const input = materialField.locator(".combo-input");
 
-  await materialField.locator(".combo-picker").click();
+  await input.click();
   await input.fill("豆腐");
   await materialField.getByRole("option", { name: "豆腐", exact: true }).click();
   await expect(materialField.locator(".pill")).toContainText("豆腐");
@@ -149,7 +151,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
 
   await input.fill("しろ菜");
   await expect(input).toHaveValue("しろ菜");
-  await page.locator("#output").click();
+  await page.locator("header").click();
   await expect(materialField.locator(".pill-label")).toHaveText(["豆腐", "しめじ", "しろ菜"], {
     timeout: 10000,
   });
@@ -255,17 +257,17 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await editInput.fill("デミグラスハンバーグ");
   await editInput.press("Enter");
   await expect(materialField.locator(".pill-label")).toHaveText("デミグラスハンバーグ");
-  await expect(output).toHaveValue(/【食材・材料】\n- デミグラスハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("食材・材料: デミグラスハンバーグ");
+  await expect(output).toHaveValue(/【材料】\n- デミグラスハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText("家にある食材: デミグラスハンバーグ");
 
   await materialField.locator(".pill-label").click();
   const secondEditInput = materialField.locator(".pill-edit-input");
   await expect(secondEditInput).toBeVisible();
   await secondEditInput.fill("和風ハンバーグ");
-  await output.click();
+  await page.locator("header").click();
   await expect(materialField.locator(".pill-label")).toHaveText("和風ハンバーグ");
-  await expect(output).toHaveValue(/【食材・材料】\n- 和風ハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("食材・材料: 和風ハンバーグ");
+  await expect(output).toHaveValue(/【材料】\n- 和風ハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText("家にある食材: 和風ハンバーグ");
 });
 
 test("編集中の空欄Enterとblurはキャンセルになる", async ({ page }) => {

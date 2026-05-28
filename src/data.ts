@@ -15,9 +15,9 @@ export const cookTimeOptions = cookTimeCandidates;
 
 export const servingGroups = [
   { id: "adultCount", label: "大人", icon: "adult" },
-  { id: "seniorCount", label: "シニア(60歳以上)", icon: "senior" },
-  { id: "childCount", label: "子供(12歳以下)", icon: "child" },
-  { id: "toddlerCount", label: "幼児(5歳以下)", icon: "baby" },
+  { id: "seniorCount", label: "シニア", icon: "senior" },
+  { id: "childCount", label: "子供", icon: "child" },
+  { id: "toddlerCount", label: "幼児", icon: "baby" },
 ] as const satisfies readonly ServingGroup[];
 
 export const comboOptionSets: Record<OptionSetKey, string[]> = {
@@ -33,11 +33,11 @@ export const comboOptionSets: Record<OptionSetKey, string[]> = {
 export const combos: ComboConfig[] = [
   {
     id: "materials",
-    label: "食材・材料",
+    label: "家にある食材",
     icon: "leaf",
     optionSet: "materials",
     placeholder: "例: 卵、豆腐、もやし",
-    prompt: "食材・材料",
+    prompt: "材料",
     bullets: true,
     basic: true,
   },
@@ -52,12 +52,11 @@ export const combos: ComboConfig[] = [
   },
   {
     id: "cookingTools",
-    label: "調理方法・調理器具",
+    label: "使いたい調理器具・調理方法",
     icon: "pot",
     optionSet: "cookingTools",
     placeholder: "例: 電子レンジ",
-    prompt: "調理方法・調理器具",
-    basic: true,
+    prompt: "使いたい調理器具・調理方法",
   },
   {
     id: "pairingTargets",
@@ -66,24 +65,23 @@ export const combos: ComboConfig[] = [
     optionSet: "pairingTargets",
     placeholder: "例: カレー",
     prompt: "合わせたい料理・一緒に出す料理",
-    basic: true,
     chip: "一緒に出す",
   },
   {
     id: "difficulty",
-    label: "作りやすさ",
+    label: "作りやすさ・手軽さ",
     icon: "zap",
     optionSet: "difficulty",
     placeholder: "例: 時短",
-    prompt: "作りやすさ",
+    prompt: "作りやすさ・手軽さ",
   },
   {
     id: "recipeDirections",
-    label: "レシピの方向性",
+    label: "味や雰囲気",
     icon: "heart",
     optionSet: "recipeDirections",
     placeholder: "例: あっさり",
-    prompt: "レシピの方向性",
+    prompt: "味や雰囲気",
   },
   {
     id: "ngFoodsAndSeasonings",

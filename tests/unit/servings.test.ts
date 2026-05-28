@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { clampServingCount, formatServings } from "../../src/servings";
 
 describe("formatServings", () => {
-  test("人数・分量が未指定なら空文字になる", () => {
+  test("人数が未指定なら空文字になる", () => {
     expect(formatServings({})).toBe("");
   });
 
@@ -14,7 +14,7 @@ describe("formatServings", () => {
         childCount: 1,
         seniorCount: 3,
       }),
-    ).toBe("大人2人、シニア(60歳以上)3人、子供(12歳以下)1人、幼児(5歳以下)1人");
+    ).toBe("大人2人、シニア3人、子供1人、幼児1人");
   });
 
   test("0人指定は出力しない", () => {
@@ -23,7 +23,7 @@ describe("formatServings", () => {
         adultCount: 0,
         seniorCount: 3,
       }),
-    ).toBe("シニア(60歳以上)3人");
+    ).toBe("シニア3人");
   });
 
   test("人数は0未満にならず10人を超えない", () => {

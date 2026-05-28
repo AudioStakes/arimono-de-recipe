@@ -3,7 +3,6 @@ import type { PromptPanelServices } from "./output-panel";
 import {
   copyPrompt as copyPromptPanel,
   markUserHasInput,
-  scrollToPrompt as scrollToPromptPanel,
   syncStickyFooter as syncStickyFooterPanel,
 } from "./output-panel";
 import { adjustServingValue } from "./serving-controls";
@@ -16,12 +15,6 @@ const $ = <T extends Element>(selector: string, root: ParentNode = document): T 
   return element;
 };
 
-function syncAdvancedTitle(elements: AppElements): void {
-  elements.advancedTitle.textContent = elements.advancedDetails.open
-    ? "こだわり条件"
-    : "こだわり条件を追加";
-}
-
 function syncStickyFooterState(
   state: AppState,
   elements: AppElements,
@@ -31,6 +24,7 @@ function syncStickyFooterState(
     scrollY: window.scrollY,
     innerHeight: window.innerHeight,
     documentHeight: document.documentElement.scrollHeight,
+    innerWidth: window.innerWidth,
   });
   void services;
 }
@@ -43,6 +37,68 @@ function markUserInput(
   markUserHasInput(state, elements, services);
 }
 
+function setCollapsibleState(button: HTMLButtonElement, expanded: boolean): void {
+  button.setAttribute("aria-expanded", String(expanded));
+  const chevron = button.querySelector<HTMLElement>(".field-toggle-chevron");
+  if (chevron) {
+    chevron.textContent = expanded ? "⌃" : "⌄";
+  }
+  const panelId = button.getAttribute("aria-controls");
+  if (!panelId) return;
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    panel.hidden = !expanded;
+  }
+  button.closest(".field-collapsible")?.classList.toggle("is-open", expanded);
+}
+
+function setMobileSheetState(state: AppState, elements: AppElements, open: boolean): void {
+  state.mobileSheetOpen = open;
+  elements.bottom.classList.toggle("is-open", open);
+  elements.bottomBackdrop.hidden = !open;
+  elements.bottomBackdrop.classList.toggle("show", open);
+  elements.sheetToggle.setAttribute("aria-expanded", String(open));
+  elements.sheetExpand.setAttribute("aria-expanded", String(open));
+  elements.sheetExpand.setAttribute(
+    "aria-label",
+    open ? "レシピ依頼文全文を閉じる" : "レシピ依頼文全文を表示",
+  );
+  $("#mobilePromptPanel").setAttribute("aria-hidden", String(!open));
+}
+
+function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
+  const dragTarget = elements.bottomInner;
+  let startY = 0;
+  let deltaY = 0;
+  let dragging = false;
+
+  dragTarget.addEventListener("pointerdown", (event) => {
+    startY = event.clientY;
+    deltaY = 0;
+    dragging = true;
+  });
+
+  dragTarget.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    deltaY = event.clientY - startY;
+  });
+
+  const finishDrag = (): void => {
+    if (!dragging) return;
+    dragging = false;
+    if (deltaY < -36) {
+      setMobileSheetState(state, elements, true);
+      return;
+    }
+    if (deltaY > 36) {
+      setMobileSheetState(state, elements, false);
+    }
+  };
+
+  dragTarget.addEventListener("pointerup", finishDrag);
+  dragTarget.addEventListener("pointercancel", finishDrag);
+}
+
 export function bindAppEvents(
   state: AppState,
   elements: AppElements,
@@ -53,6 +109,7 @@ export function bindAppEvents(
     if (target.closest(".pill")) {
       return;
     }
+
     const servingButton = target.closest<HTMLButtonElement>(".serving-adjust");
     if (servingButton) {
       const stepper = servingButton.closest<HTMLElement>(".serving-stepper");
@@ -64,37 +121,36 @@ export function bindAppEvents(
       }
       return;
     }
+
+    const fieldToggle = target.closest<HTMLButtonElement>(".field-toggle");
+    if (fieldToggle) {
+      const expanded = fieldToggle.getAttribute("aria-expanded") === "true";
+      setCollapsibleState(fieldToggle, !expanded);
+    }
   });
 
   elements.form.addEventListener("change", () => {
     markUserInput(state, elements, services);
   });
 
-  elements.form.addEventListener("input", (_event) => {
+  elements.form.addEventListener("input", () => {
     markUserInput(state, elements, services);
   });
 
-  window.addEventListener(
-    "scroll",
-    () => {
-      if (state.ticking) return;
-      state.ticking = true;
-      requestAnimationFrame(() => {
-        syncStickyFooterState(state, elements, services);
-        state.ticking = false;
-      });
-    },
-    { passive: true },
+  window.addEventListener("resize", () => {
+    if (window.innerWidth >= 1024) {
+      setMobileSheetState(state, elements, false);
+    }
+    syncStickyFooterState(state, elements, services);
+  });
+
+  elements.sheetToggle.addEventListener("click", () => setMobileSheetState(state, elements, true));
+  elements.sheetExpand.addEventListener("click", () => setMobileSheetState(state, elements, true));
+  elements.sheetClose.addEventListener("click", () => setMobileSheetState(state, elements, false));
+  elements.bottomBackdrop.addEventListener("click", () =>
+    setMobileSheetState(state, elements, false),
   );
 
-  window.addEventListener("resize", () => syncStickyFooterState(state, elements, services));
-  elements.advancedDetails.addEventListener("toggle", () => syncAdvancedTitle(elements));
-  elements.inlineButton.addEventListener("click", () =>
-    scrollToPromptPanel(state, elements, services),
-  );
-  elements.stickyButton.addEventListener("click", () =>
-    scrollToPromptPanel(state, elements, services),
-  );
   $("#copyPrompt").addEventListener(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),
@@ -104,13 +160,6 @@ export function bindAppEvents(
     (event) => void copyPromptPanel(state, elements, services, event),
   );
 
-  if ("IntersectionObserver" in window) {
-    new IntersectionObserver(
-      (entries) => {
-        state.inlineVisible = entries.some((entry) => entry.isIntersecting);
-        syncStickyFooterState(state, elements, services);
-      },
-      { threshold: 0.08 },
-    ).observe(elements.inlineButton);
-  }
+  attachBottomSheetDrag(state, elements);
+  syncStickyFooterState(state, elements, services);
 }

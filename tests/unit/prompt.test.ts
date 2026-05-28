@@ -6,14 +6,14 @@ describe("buildPrompt", () => {
     const prompt = buildPrompt(makeEmptyPromptData());
 
     for (const text of [
-      "【食材・材料】",
-      "【人数・分量】",
+      "【材料】",
+      "【人数】",
       "【料理区分・作りたいもの】",
-      "【調理方法・調理器具】",
+      "【使いたい調理器具・調理方法】",
       "【合わせたい料理・一緒に出す料理】",
       "【調理時間】",
-      "【作りやすさ】",
-      "【レシピの方向性】",
+      "【作りやすさ・手軽さ】",
+      "【味や雰囲気】",
       "【NG食材・調味料】",
       "【その他の要望】",
       "【必ず使いたい材料】",
@@ -36,28 +36,30 @@ describe("buildPrompt", () => {
         difficulty: ["時短"],
         recipeDirections: ["あっさり", "和風", "野菜たっぷり", "平日夕食"],
         ngFoodsAndSeasonings: ["にんじん", "にんにく"],
-        servings: "大人2人、子供(12歳以下)1人",
+        servings: "大人2人、子供1人",
         cookTime: "20分以内",
         supplementalNotes: "子ども用に辛くしない。",
       }),
     );
 
-    expect(prompt).toContain("【食材・材料】\n- 豆腐\n- しめじ");
-    expect(prompt).toContain("【人数・分量】\n大人2人、子供(12歳以下)1人");
+    expect(prompt).toContain("【材料】\n- 豆腐\n- しめじ");
+    expect(prompt).toContain("【人数】\n大人2人、子供1人");
     expect(prompt).toContain("【料理区分・作りたいもの】\n副菜");
-    expect(prompt).toContain("【調理方法・調理器具】\n電子レンジ");
+    expect(prompt).toContain("【使いたい調理器具・調理方法】\n電子レンジ");
     expect(prompt).toContain("【合わせたい料理・一緒に出す料理】\n餃子");
     expect(prompt).toContain("【調理時間】\n20分以内");
-    expect(prompt).toContain("【作りやすさ】\n時短");
-    expect(prompt).toContain("【レシピの方向性】\nあっさり、和風、野菜たっぷり、平日夕食");
+    expect(prompt).toContain("【作りやすさ・手軽さ】\n時短");
+    expect(prompt).toContain("【味や雰囲気】\nあっさり、和風、野菜たっぷり、平日夕食");
     expect(prompt).toContain("【NG食材・調味料】\nにんじん、にんにく");
     expect(prompt).toContain("【その他の要望】\n子ども用に辛くしない。");
     expect(prompt).toContain("指定された食材・材料を中心に使ってください。");
     expect(prompt).toContain("指定された「料理区分・作りたいもの」だけを提案してください。");
-    expect(prompt).toContain("指定された調理方法・調理器具だけで作れる手順にしてください。");
+    expect(prompt).toContain(
+      "指定された使いたい調理器具・調理方法だけで作れる手順にしてください。",
+    );
     expect(prompt).toContain("指定された調理時間に収まる現実的な手順にしてください。");
-    expect(prompt).toContain("指定された「作りやすさ」を反映してください。");
-    expect(prompt).toContain("指定された「レシピの方向性」を反映してください。");
+    expect(prompt).toContain("指定された「作りやすさ・手軽さ」を反映してください。");
+    expect(prompt).toContain("指定された「味や雰囲気」を反映してください。");
     expect(prompt).toContain("「NG食材・調味料」に指定されたものは使わないでください。");
     expect(prompt).toContain("指定された「その他の要望」を反映してください。");
     expect(prompt).toContain(
@@ -87,8 +89,8 @@ describe("buildPrompt", () => {
       }),
     );
 
-    expect(prompt).not.toContain("指定された「作りやすさ」を反映してください。");
-    expect(prompt).not.toContain("指定された「レシピの方向性」を反映してください。");
+    expect(prompt).not.toContain("指定された「作りやすさ・手軽さ」を反映してください。");
+    expect(prompt).not.toContain("指定された「味や雰囲気」を反映してください。");
     expect(prompt).not.toContain("「NG食材・調味料」に指定されたものは使わないでください。");
     expect(prompt).not.toContain("指定された「その他の要望」を反映してください。");
   });

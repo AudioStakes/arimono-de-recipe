@@ -8,17 +8,25 @@
   <body>
     <form id="harnessForm">
       <div class="combo" data-combo="materials">
-        <input
-          class="combo-input"
-          type="text"
-          placeholder="食材・材料を入力"
-          aria-label="食材・材料"
-          autocomplete="off"
-          role="combobox"
-          aria-expanded="false"
-        />
-        <button class="combo-picker" type="button" aria-label="食材・材料の候補を表示"></button>
-        <div class="suggestions" role="listbox" aria-label="食材・材料の候補"></div>
+        <div class="floating-chip-row" aria-live="polite"></div>
+        <div class="underlined-field">
+          <input
+            class="combo-input"
+            type="text"
+            placeholder="食材・材料を入力"
+            aria-label="食材・材料"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+          />
+          <button
+            class="combo-picker"
+            type="button"
+            aria-label="食材・材料の候補を表示"
+            hidden
+          ></button>
+          <div class="suggestions" role="listbox" aria-label="食材・材料の候補"></div>
+        </div>
       </div>
       <button id="outside" type="button">outside</button>
     </form>

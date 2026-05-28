@@ -4,6 +4,7 @@ export type StickyViewport = {
   scrollY: number;
   innerHeight: number;
   documentHeight: number;
+  innerWidth?: number;
   threshold?: number;
 };
 
@@ -24,6 +25,14 @@ export function getStickyFooterView(
   state: StickyFooterState,
   viewport: StickyViewport,
 ): StickyFooterView {
+  if ((viewport.innerWidth ?? window.innerWidth) < 1024) {
+    return {
+      show: true,
+      suppress: false,
+      nearBottom: false,
+    };
+  }
+
   const nearBottom = isNearBottom(viewport);
   const show = state.hasUserInput && !state.inlineVisible && !nearBottom;
 

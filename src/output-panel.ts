@@ -1,17 +1,14 @@
 import { buildConditionChipSpecs } from "./chips";
-import { countAdvancedConditions } from "./conditions";
 import { buildPrompt } from "./prompt";
 import { getStickyFooterView } from "./sticky-footer";
 import type { ChipItem, ComboId, PromptData } from "./types";
 
 type PromptPanelElements = {
   output: HTMLTextAreaElement;
+  mobileOutput: HTMLTextAreaElement;
   bottom: HTMLElement;
   chips: Element;
   stickyChips: Element;
-  advancedDetails: HTMLDetailsElement;
-  advancedTitle: HTMLElement;
-  advancedCount: HTMLElement;
 };
 
 type PromptPanelState = {
@@ -24,6 +21,7 @@ type ViewportMetrics = {
   scrollY: number;
   innerHeight: number;
   documentHeight: number;
+  innerWidth: number;
 };
 
 export type PromptPanelServices = {
@@ -126,29 +124,49 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
   });
 }
 
+function buildMobileSummaryChips(data: PromptData): ChipItem[] {
+  const summaries = [
+    data.materials.length ? data.materials.slice(0, 3).join("・") : "",
+    data.servings,
+    data.dishTypes[0] ?? "",
+    data.cookingTools[0] ?? "",
+    data.pairingTargets[0] ?? "",
+    data.cookTime || "",
+    data.difficulty[0] ?? "",
+    data.recipeDirections[0] ?? "",
+    data.ngFoodsAndSeasonings[0] ? `NG: ${data.ngFoodsAndSeasonings[0]}` : "",
+    data.supplementalNotes ? "その他の要望あり" : "",
+  ].filter(Boolean);
+
+  const visible = summaries.slice(0, 5).map((label) => ({ label }));
+  const remaining = summaries.length - visible.length;
+
+  if (remaining > 0) {
+    visible.push({ label: `+${remaining}項目` });
+  }
+
+  return visible;
+}
+
 export function refreshPromptPanel(
   state: PromptPanelState,
   elements: PromptPanelElements,
   services: PromptPanelServices,
 ): void {
   const data = services.readConditions();
-  elements.output.value = buildPrompt(data);
+  const prompt = buildPrompt(data);
+  elements.output.value = prompt;
+  elements.mobileOutput.value = prompt;
 
   const chips = buildChips(data, services);
   renderChips(elements.chips, chips);
-  renderChips(elements.stickyChips, chips.slice(0, 8), true);
-
-  const advancedCount = countAdvancedConditions(data);
-
-  elements.advancedCount.textContent = advancedCount ? `(${advancedCount}件指定中)` : "";
-  elements.advancedTitle.textContent = elements.advancedDetails.open
-    ? "こだわり条件"
-    : "こだわり条件を追加";
+  renderChips(elements.stickyChips, buildMobileSummaryChips(data), true);
 
   syncStickyFooter(state, elements, {
     scrollY: window.scrollY,
     innerHeight: window.innerHeight,
     documentHeight: document.documentElement.scrollHeight,
+    innerWidth: window.innerWidth,
   });
 }
 
@@ -201,14 +219,28 @@ export async function copyPrompt(
     elements.output.select();
     document.execCommand("copy");
   }
-  showCopyToast(button);
+  showCopyFeedback(button);
 }
 
-function showCopyToast(button: HTMLElement | null): void {
-  const toast = button?.querySelector<HTMLElement>(".copy-toast");
-  if (!toast) return;
-  toast.classList.remove("show");
-  void toast.offsetWidth;
-  toast.classList.add("show");
-  window.setTimeout(() => toast.classList.remove("show"), 1500);
+function showCopyFeedback(button: HTMLElement | null): void {
+  if (!button) return;
+
+  const label = button.querySelector<HTMLElement>(".copy-label");
+  const status = button.querySelector<HTMLElement>(".copy-status");
+  const dataset = button.dataset as DOMStringMap & {
+    defaultLabel?: string;
+    successLabel?: string;
+  };
+  const defaultLabel = dataset.defaultLabel ?? label?.textContent ?? "";
+  const successLabel = dataset.successLabel ?? "コピーしました。AIへ渡してください";
+
+  button.classList.add("is-copied");
+  if (label) label.textContent = successLabel;
+  if (status) status.textContent = successLabel;
+
+  window.setTimeout(() => {
+    button.classList.remove("is-copied");
+    if (label) label.textContent = defaultLabel;
+    if (status) status.textContent = "";
+  }, 1800);
 }

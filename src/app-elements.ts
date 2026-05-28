@@ -1,12 +1,13 @@
 export type AppElements = {
   form: HTMLFormElement;
   output: HTMLTextAreaElement;
+  mobileOutput: HTMLTextAreaElement;
   bottom: HTMLElement;
-  inlineButton: HTMLButtonElement;
-  stickyButton: HTMLButtonElement;
+  bottomInner: HTMLElement;
+  bottomBackdrop: HTMLElement;
+  sheetToggle: HTMLButtonElement;
+  sheetExpand: HTMLButtonElement;
+  sheetClose: HTMLButtonElement;
   chips: HTMLElement;
   stickyChips: HTMLElement;
-  advancedDetails: HTMLDetailsElement;
-  advancedTitle: HTMLElement;
-  advancedCount: HTMLElement;
 };

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("人数・分量は4区分のステッパーUIで増減できる", async ({ page }) => {
+test("食べる人数は4区分のステッパーUIで増減できる", async ({ page }) => {
   await page.goto("/");
 
   const groups = [
@@ -11,18 +11,18 @@ test("人数・分量は4区分のステッパーUIで増減できる", async ({
     },
     {
       id: "seniorCount",
-      label: "シニア(60歳以上)",
-      aria: "シニア(60歳以上)を1人増やす",
+      label: "シニア",
+      aria: "シニアを1人増やす",
     },
     {
       id: "childCount",
-      label: "子供(12歳以下)",
-      aria: "子供(12歳以下)を1人増やす",
+      label: "子供",
+      aria: "子供を1人増やす",
     },
     {
       id: "toddlerCount",
-      label: "幼児(5歳以下)",
-      aria: "幼児(5歳以下)を1人増やす",
+      label: "幼児",
+      aria: "幼児を1人増やす",
     },
   ] as const;
 
@@ -42,12 +42,8 @@ test("人数・分量は4区分のステッパーUIで増減できる", async ({
   await expect(page.locator('[data-serving-id="adultCount"] .serving-count')).toHaveText("2人");
   await expect(page.locator('[data-serving-id="childCount"] .serving-count')).toHaveText("1人");
   await expect(page.locator('[data-serving-id="toddlerCount"] .serving-count')).toHaveText("1人");
-  await expect(page.locator("#output")).toHaveValue(
-    /【人数・分量】[\s\S]*大人2人、子供\(12歳以下\)1人、幼児\(5歳以下\)1人/,
-  );
-  await expect(page.locator(".chips")).toContainText(
-    "大人2人、子供(12歳以下)1人、幼児(5歳以下)1人",
-  );
+  await expect(page.locator("#output")).toHaveValue(/【人数】[\s\S]*大人2人、子供1人、幼児1人/);
+  await expect(page.locator(".chips")).toContainText("大人2人、子供1人、幼児1人");
   await expect(page.locator("select")).toHaveCount(0);
 
   for (let index = 0; index < 8; index += 1) {
@@ -56,7 +52,5 @@ test("人数・分量は4区分のステッパーUIで増減できる", async ({
 
   await expect(page.locator('[data-serving-id="adultCount"] .serving-count')).toHaveText("10人");
   await expect(page.locator('[data-serving-id="adultCount"] .serving-plus')).toBeDisabled();
-  await expect(page.locator("#output")).toHaveValue(
-    /【人数・分量】[\s\S]*大人10人、子供\(12歳以下\)1人、幼児\(5歳以下\)1人/,
-  );
+  await expect(page.locator("#output")).toHaveValue(/【人数】[\s\S]*大人10人、子供1人、幼児1人/);
 });

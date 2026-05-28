@@ -20,7 +20,7 @@ describe("sticky-footer", () => {
     ).toBe(false);
   });
 
-  test("入力済みで本文ボタンが見えておらず、下端でなければ表示する", () => {
+  test("モバイル幅では常に表示する", () => {
     expect(
       getStickyFooterView(
         {
@@ -32,6 +32,7 @@ describe("sticky-footer", () => {
           scrollY: 100,
           innerHeight: 300,
           documentHeight: 1100,
+          innerWidth: 390,
         },
       ),
     ).toEqual({
@@ -41,7 +42,7 @@ describe("sticky-footer", () => {
     });
   });
 
-  test("入力がないか本文ボタンが見えていれば隠す", () => {
+  test("デスクトップ幅では旧条件どおり表示判定する", () => {
     expect(
       getStickyFooterView(
         {
@@ -53,6 +54,7 @@ describe("sticky-footer", () => {
           scrollY: 100,
           innerHeight: 300,
           documentHeight: 1100,
+          innerWidth: 1280,
         },
       ),
     ).toEqual({
@@ -72,6 +74,7 @@ describe("sticky-footer", () => {
           scrollY: 100,
           innerHeight: 300,
           documentHeight: 1100,
+          innerWidth: 1280,
         },
       ),
     ).toEqual({

@@ -72,4 +72,5 @@ export type AppState = {
   inlineVisible: boolean;
   nearBottom: boolean;
   ticking: boolean;
+  mobileSheetOpen: boolean;
 };

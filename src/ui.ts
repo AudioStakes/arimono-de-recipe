@@ -19,6 +19,7 @@ const createInitialState = (): AppState => {
     inlineVisible: false,
     nearBottom: false,
     ticking: false,
+    mobileSheetOpen: false,
   };
 };
 
@@ -44,6 +45,7 @@ const fieldLabelHtml = (text: string, iconName: ComboConfig["icon"]): string =>
 let outputPanelServices: PromptPanelServices | null = null;
 
 export function initializeApp(root: HTMLElement): void {
+  document.title = "ありもの de レシピ";
   root.innerHTML = renderAppShell();
 
   const state = createInitialState();
@@ -67,56 +69,101 @@ function renderAppShell(): string {
   return `
     <header>
       <h1 class="site-title">
-        <img
-          class="title-image"
-          src="/title-banner.webp"
-          alt="ありもの de レシピ プロンプトメーカー"
-          width="1200"
-          height="300"
-          decoding="async"
-          fetchpriority="high"
-        />
+        <span class="brand-row">
+          <span class="brand-fridge" aria-hidden="true">
+            <span class="brand-fridge-item"></span>
+            <span class="brand-fridge-item"></span>
+            <span class="brand-fridge-item"></span>
+            <span class="brand-fridge-item"></span>
+          </span>
+          <span class="brand-title-text">ありもの de レシピ</span>
+        </span>
       </h1>
-      <p class="lead" id="appLead">冷蔵庫にある食材・材料と条件から、AI にレシピ依頼文を作ります。</p>
+      <p class="lead" id="appLead">「ありもので何作ろう？」を、AIへそのまま渡せるレシピ依頼文に。</p>
+      <p class="use-flow" aria-label="使い方">
+        <span class="flow-step">1. 条件を入力</span>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <span class="flow-step">2. 依頼文ができる</span>
+        <span class="flow-arrow" aria-hidden="true">→</span>
+        <span class="flow-step">3. コピーしてAIへ渡す</span>
+      </p>
     </header>
     <div class="app-layout">
       <form class="form" id="recipeForm" novalidate aria-describedby="appLead">
         <div id="basicFields"></div>
-        <details class="advanced" id="advancedDetails">
-          <summary aria-controls="advancedFields">
-            <span class="summary-title" id="advancedTitle">こだわり条件を追加</span>
-            <span id="advancedCount"></span>
-          </summary>
-          <div class="advanced-body">
-            <div class="advanced-intro">
-              <span class="section-kicker">こだわり条件</span>
-              <p>必要なときだけ追加する条件です。開くと、ここから下がこだわり条件だと分かるようにしています。</p>
-            </div>
-            <div id="advancedFields"></div>
-          </div>
-        </details>
+        <div id="advancedFields" class="advanced-fields"></div>
       </form>
-      <section class="prompt-section" aria-label="プロンプト">
-        <label for="output"><span class="field-icon" aria-hidden="true" data-icon="copy"></span>プロンプト</label>
-        <button id="copyPrompt" class="copy-icon-button" type="button" aria-label="プロンプトをコピー" title="コピー">
-          <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
+      <section class="prompt-section" aria-label="AIへ渡すレシピ依頼文">
+        <div class="prompt-heading">
+          <h2>AIへ渡すレシピ依頼文</h2>
+          <p>この文章をコピーして、ChatGPTなどのAIへ渡してください。</p>
+        </div>
+        <div id="conditionChips" class="chips" aria-live="polite"></div>
+        <button
+          id="copyPrompt"
+          class="copy-icon-button copy-button"
+          type="button"
+          aria-label="依頼文をコピー"
+          title="依頼文をコピー"
+          data-default-label="依頼文をコピー"
+          data-success-label="コピーしました。AIへ渡してください"
+        >
+          <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
+          <span class="copy-label">依頼文をコピー</span>
+          <span class="copy-status" aria-live="polite"></span>
         </button>
         <div class="output-shell">
           <textarea id="output" class="output" readonly></textarea>
         </div>
       </section>
-      <div id="conditionChips" class="chips" aria-live="polite"></div>
-      <div class="prompt-actions">
-        <button id="generatePromptInline" type="button">プロンプトを見る</button>
-      </div>
     </div>
+    <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions">
-      <div class="bottom-actions-inner">
-        <div id="stickyChips" class="sticky-chips" aria-live="polite"></div>
-        <button id="generatePromptSticky" type="button">プロンプトを見る</button>
-        <button id="copyPromptSticky" class="copy-icon-button sticky-copy" type="button" aria-label="プロンプトをコピー" title="コピー">
-          <span class="copy-toast" role="status">コピーしました</span><span data-icon="copy"></span>
+      <div class="bottom-actions-inner" id="bottomActionsInner">
+        <button
+          id="sheetExpand"
+          class="sheet-corner-expand-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobilePromptPanel"
+          aria-label="レシピ依頼文全文を表示"
+        >
+          ⌃
         </button>
+        <div id="stickyChips" class="sticky-chips" aria-live="polite"></div>
+        <div class="sheet-actions">
+          <button
+            id="sheetToggle"
+            class="sheet-toggle-button"
+            type="button"
+            aria-expanded="false"
+            aria-controls="mobilePromptPanel"
+          >
+            <span>レシピ依頼文を確認する</span>
+          </button>
+          <button
+            id="copyPromptSticky"
+            class="copy-icon-button copy-request-button"
+            type="button"
+            aria-label="AIへ渡す依頼文をコピーする"
+            title="AIへ渡す依頼文をコピーする"
+            data-default-label="AIへ渡す依頼文をコピーする"
+            data-success-label="コピーしました。AIへ渡してください"
+          >
+            <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
+            <span class="copy-label">AIへ渡す依頼文をコピーする</span>
+            <span class="copy-status" aria-live="polite"></span>
+          </button>
+        </div>
+        <div id="mobilePromptPanel" class="mobile-prompt-panel" aria-hidden="true">
+          <div class="mobile-prompt-head">
+            <h2>AIに渡す依頼文</h2>
+            <button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button>
+          </div>
+          <div class="output-shell mobile-output-shell">
+            <textarea id="mobileOutput" class="output mobile-output" readonly></textarea>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -126,14 +173,15 @@ function getAppElements(): AppElements {
   return {
     form: queryElement("#recipeForm"),
     output: queryElement("#output") as HTMLTextAreaElement,
+    mobileOutput: queryElement("#mobileOutput") as HTMLTextAreaElement,
     bottom: queryElement("#bottomActions") as HTMLElement,
-    inlineButton: queryElement("#generatePromptInline") as HTMLButtonElement,
-    stickyButton: queryElement("#generatePromptSticky") as HTMLButtonElement,
+    bottomInner: queryElement("#bottomActionsInner") as HTMLElement,
+    bottomBackdrop: queryElement("#bottomSheetBackdrop") as HTMLElement,
+    sheetToggle: queryElement("#sheetToggle") as HTMLButtonElement,
+    sheetExpand: queryElement("#sheetExpand") as HTMLButtonElement,
+    sheetClose: queryElement("#sheetClose") as HTMLButtonElement,
     chips: queryElement("#conditionChips") as HTMLElement,
     stickyChips: queryElement("#stickyChips") as HTMLElement,
-    advancedDetails: queryElement("#advancedDetails") as HTMLDetailsElement,
-    advancedTitle: queryElement("#advancedTitle") as HTMLElement,
-    advancedCount: queryElement("#advancedCount") as HTMLElement,
   };
 }
 
@@ -141,13 +189,15 @@ function renderFields(): void {
   queryElement("#basicFields").innerHTML = [
     renderComboField(getCombo("materials")),
     renderServingsField(),
-    ...combos.filter((combo) => combo.basic && combo.id !== "materials").map(renderComboField),
   ].join("");
 
   queryElement("#advancedFields").innerHTML = [
-    renderCookTimeField(),
-    ...advancedConditionOrder.map((id) => renderComboField(getCombo(id))),
-    `<div class="field"><label for="supplementalNotes">${fieldLabelHtml("その他の要望", "note")}</label><textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea></div>`,
+    renderCollapsibleComboField(getCombo("dishTypes")),
+    renderCollapsibleComboField(getCombo("cookingTools")),
+    renderCollapsibleComboField(getCombo("pairingTargets")),
+    renderCollapsibleCookTimeField(),
+    ...advancedConditionOrder.map((id) => renderCollapsibleComboField(getCombo(id))),
+    renderCollapsibleNotesField(),
   ].join("");
 
   queryAllElements<HTMLElement>("[data-icon]").forEach((element) => {
@@ -157,12 +207,21 @@ function renderFields(): void {
 }
 
 function renderComboField(combo: ComboConfig): string {
+  return `
+    <div class="field">
+      <label class="field-title" for="${combo.id}Input">${fieldLabelHtml(combo.label, combo.icon)}</label>
+      ${renderComboFieldControl(combo)}
+    </div>
+  `;
+}
+
+function renderComboFieldControl(combo: ComboConfig): string {
   const inputId = `${combo.id}Input`;
   const suggestionsId = `${combo.id}Suggestions`;
   return `
-    <div class="field">
-      <label class="field-title" for="${inputId}">${fieldLabelHtml(combo.label, combo.icon)}</label>
-      <div class="combo" data-combo="${combo.id}">
+    <div class="combo" data-combo="${combo.id}">
+      <div class="floating-chip-row" aria-live="polite"></div>
+      <div class="underlined-field">
         <input
           id="${inputId}"
           class="combo-input"
@@ -185,6 +244,65 @@ function renderComboField(combo: ComboConfig): string {
   `;
 }
 
+function renderCollapsibleComboField(combo: ComboConfig): string {
+  return renderCollapsibleField(combo.id, combo.label, combo.icon, renderComboFieldControl(combo));
+}
+
+function renderCollapsibleCookTimeField(): string {
+  return renderCollapsibleField(
+    "cookTime",
+    "調理時間",
+    "clock",
+    `
+      <div class="range-card">
+        <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
+        <input id="cookTimeRange" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
+      </div>
+    `,
+  );
+}
+
+function renderCollapsibleNotesField(): string {
+  return renderCollapsibleField(
+    "supplementalNotes",
+    "その他の要望",
+    "note",
+    `
+      <div class="textarea-field">
+        <textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea>
+      </div>
+    `,
+  );
+}
+
+function renderCollapsibleField(
+  id: string,
+  label: string,
+  iconName: ComboConfig["icon"],
+  body: string,
+): string {
+  const panelId = `${id}Panel`;
+  return `
+    <section class="field field-collapsible" data-collapsible="${id}">
+      <button
+        class="field-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="${panelId}"
+      >
+        <span class="field-toggle-main">
+          <span class="field-icon" aria-hidden="true">${icon(iconName)}</span>
+          <span class="field-toggle-label">${label}</span>
+        </span>
+        <span class="field-toggle-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div id="${panelId}" class="field-panel" hidden>
+        ${body}
+      </div>
+    </section>
+  `;
+}
+
 function renderServingsField(): string {
   const controls = servingGroups
     .map(
@@ -203,21 +321,9 @@ function renderServingsField(): string {
 
   return `
     <fieldset class="field fieldset">
-      <legend class="field-title">${fieldLabelHtml("人数・分量", "users")}</legend>
-      <div class="serving-grid" aria-label="人数・分量">${controls}</div>
+      <legend class="field-title">${fieldLabelHtml("食べる人数", "users")}</legend>
+      <div class="serving-grid" aria-label="食べる人数">${controls}</div>
     </fieldset>
-  `;
-}
-
-function renderCookTimeField(): string {
-  return `
-    <div class="field">
-      <label for="cookTimeRange">${fieldLabelHtml("調理時間", "clock")}</label>
-      <div class="range-card">
-        <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
-        <input id="cookTimeRange" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
-      </div>
-    </div>
   `;
 }
 

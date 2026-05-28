@@ -34,15 +34,15 @@ const promptRules: Array<[(data: PromptData) => boolean, string]> = [
   ],
   [
     (data) => data.cookingTools.length > 0,
-    "指定された調理方法・調理器具だけで作れる手順にしてください。",
+    "指定された使いたい調理器具・調理方法だけで作れる手順にしてください。",
   ],
   [(data) => Boolean(data.cookTime), "指定された調理時間に収まる現実的な手順にしてください。"],
   [
     (data) => data.pairingTargets.length > 0,
     "「合わせたい料理・一緒に出す料理」に合う味・食感・量のレシピにしてください。",
   ],
-  [(data) => data.difficulty.length > 0, "指定された「作りやすさ」を反映してください。"],
-  [(data) => data.recipeDirections.length > 0, "指定された「レシピの方向性」を反映してください。"],
+  [(data) => data.difficulty.length > 0, "指定された「作りやすさ・手軽さ」を反映してください。"],
+  [(data) => data.recipeDirections.length > 0, "指定された「味や雰囲気」を反映してください。"],
   [
     (data) => data.ngFoodsAndSeasonings.length > 0,
     "「NG食材・調味料」に指定されたものは使わないでください。",
@@ -81,7 +81,7 @@ export function buildPromptSections(data: PromptData): PromptSection[] {
   }
 
   if (data.servings) {
-    sections.push({ title: "人数・分量", value: data.servings });
+    sections.push({ title: "人数", value: data.servings });
   }
 
   if (data.cookTime) {
