@@ -1,0 +1,3 @@
+# Reorganize form around recipe request intent
+
+The form should start from the user's recipe request intent instead of presenting every recipe item at the same level. We split the old `料理区分・作りたいもの` idea into `料理の役割・量感` and `作りたい料理`, keep `合わせたい料理・一緒に出す料理` separate, add `作りたい品数` so requests can be one item or a small set of dishes, and model per-material use as `おまかせ` / `必ず使う` / `使い切る` on the existing `食材・材料` list. We chose this over a larger rewrite or automatic amount parsing because the app should preserve its lightweight static frontend, existing candidate/free-input flow, and short constraint-focused prompt output while making the main use cases clearer.
