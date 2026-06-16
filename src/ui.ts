@@ -46,6 +46,7 @@ let outputPanelServices: PromptPanelServices | null = null;
 
 export function initializeApp(root: HTMLElement): void {
   document.title = "ありもの de レシピ";
+  root.setAttribute("data-testid", "app-shell");
   root.innerHTML = renderAppShell();
 
   const state = createInitialState();
@@ -89,22 +90,23 @@ function renderAppShell(): string {
       </p>
     </header>
     <div class="app-layout">
-      <form class="form" id="recipeForm" novalidate aria-describedby="appLead">
-        <div id="basicFields"></div>
-        <div id="advancedFields" class="advanced-fields"></div>
+      <form class="form" id="recipeForm" data-testid="recipe-form" novalidate aria-describedby="appLead">
+        <div id="basicFields" data-testid="basic-fields"></div>
+        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
       </form>
       <section class="prompt-section" aria-label="AIへ渡すレシピ依頼文">
         <div class="prompt-heading">
           <h2>AIへ渡すレシピ依頼文</h2>
           <p>この文章をコピーして、ChatGPTなどのAIへ渡してください。</p>
         </div>
-        <div id="conditionChips" class="chips" aria-live="polite"></div>
+        <div id="conditionChips" class="chips" data-testid="condition-chips" aria-live="polite"></div>
         <button
           id="copyPrompt"
           class="copy-icon-button copy-button"
           type="button"
           aria-label="依頼文をコピー"
           title="依頼文をコピー"
+          data-testid="copy-prompt"
           data-default-label="依頼文をコピー"
           data-success-label="コピーしました。AIへ渡してください"
         >
@@ -113,12 +115,12 @@ function renderAppShell(): string {
           <span class="copy-status" aria-live="polite"></span>
         </button>
         <div class="output-shell">
-          <textarea id="output" class="output" readonly></textarea>
+          <textarea id="output" class="output" data-testid="prompt-output" readonly></textarea>
         </div>
       </section>
     </div>
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" hidden></div>
-    <div class="bottom-actions" id="bottomActions">
+    <div class="bottom-actions" id="bottomActions" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
         <button
           id="sheetExpand"
@@ -130,7 +132,7 @@ function renderAppShell(): string {
         >
           ⌃
         </button>
-        <div id="stickyChips" class="sticky-chips" aria-live="polite"></div>
+        <div id="stickyChips" class="sticky-chips" data-testid="sticky-condition-chips" aria-live="polite"></div>
         <div class="sheet-actions">
           <button
             id="sheetToggle"
@@ -147,6 +149,7 @@ function renderAppShell(): string {
             type="button"
             aria-label="AIへ渡す依頼文をコピーする"
             title="AIへ渡す依頼文をコピーする"
+            data-testid="copy-prompt-sticky"
             data-default-label="AIへ渡す依頼文をコピーする"
             data-success-label="コピーしました。AIへ渡してください"
           >
@@ -155,13 +158,19 @@ function renderAppShell(): string {
             <span class="copy-status" aria-live="polite"></span>
           </button>
         </div>
-        <div id="mobilePromptPanel" class="mobile-prompt-panel" aria-hidden="true">
+        <div
+          id="mobilePromptPanel"
+          class="mobile-prompt-panel"
+          data-testid="mobile-prompt-panel"
+          data-state="closed"
+          aria-hidden="true"
+        >
           <div class="mobile-prompt-head">
             <h2>AIに渡す依頼文</h2>
             <button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button>
           </div>
           <div class="output-shell mobile-output-shell">
-            <textarea id="mobileOutput" class="output mobile-output" readonly></textarea>
+            <textarea id="mobileOutput" class="output mobile-output" data-testid="mobile-prompt-output" readonly></textarea>
           </div>
         </div>
       </div>
@@ -208,7 +217,7 @@ function renderFields(): void {
 
 function renderComboField(combo: ComboConfig): string {
   return `
-    <div class="field">
+    <div class="field" data-testid="recipe-item-${combo.id}">
       <label class="field-title" for="${combo.id}Input">${fieldLabelHtml(combo.label, combo.icon)}</label>
       ${renderComboFieldControl(combo)}
     </div>
@@ -219,12 +228,13 @@ function renderComboFieldControl(combo: ComboConfig): string {
   const inputId = `${combo.id}Input`;
   const suggestionsId = `${combo.id}Suggestions`;
   return `
-    <div class="combo" data-combo="${combo.id}">
+    <div class="combo" data-combo="${combo.id}" data-testid="combo-${combo.id}">
       <div class="floating-chip-row" aria-live="polite"></div>
       <div class="underlined-field">
         <input
           id="${inputId}"
           class="combo-input"
+          data-testid="combo-input-${combo.id}"
           type="text"
           placeholder="${combo.placeholder}"
           autocomplete="off"
@@ -238,7 +248,7 @@ function renderComboFieldControl(combo: ComboConfig): string {
           aria-haspopup="listbox"
         />
         <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示" aria-controls="${suggestionsId}"></button>
-        <div id="${suggestionsId}" class="suggestions" role="listbox" aria-label="${combo.label}の候補"></div>
+        <div id="${suggestionsId}" class="suggestions" data-testid="combo-suggestions-${combo.id}" role="listbox" aria-label="${combo.label}の候補"></div>
       </div>
     </div>
   `;
@@ -256,7 +266,7 @@ function renderCollapsibleCookTimeField(): string {
     `
       <div class="range-card">
         <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
-        <input id="cookTimeRange" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
+        <input id="cookTimeRange" data-testid="cook-time-range" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
       </div>
     `,
   );
@@ -269,7 +279,7 @@ function renderCollapsibleNotesField(): string {
     "note",
     `
       <div class="textarea-field">
-        <textarea id="supplementalNotes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea>
+        <textarea id="supplementalNotes" data-testid="supplemental-notes" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea>
       </div>
     `,
   );
@@ -283,10 +293,11 @@ function renderCollapsibleField(
 ): string {
   const panelId = `${id}Panel`;
   return `
-    <section class="field field-collapsible" data-collapsible="${id}">
+    <section class="field field-collapsible" data-collapsible="${id}" data-testid="recipe-item-${id}" data-state="closed">
       <button
         class="field-toggle"
         type="button"
+        data-testid="recipe-item-toggle-${id}"
         aria-expanded="false"
         aria-controls="${panelId}"
       >
@@ -296,7 +307,7 @@ function renderCollapsibleField(
         </span>
         <span class="field-toggle-chevron" aria-hidden="true">⌄</span>
       </button>
-      <div id="${panelId}" class="field-panel" hidden>
+      <div id="${panelId}" class="field-panel" data-testid="recipe-item-panel-${id}" data-state="closed" hidden>
         ${body}
       </div>
     </section>
@@ -309,7 +320,7 @@ function renderServingsField(): string {
       ({ id, label, icon: iconName }) => `
         <div class="serving-card">
           <div class="serving-label" id="${id}Label"><span aria-hidden="true">${icon(iconName)}</span>${label}</div>
-          <div class="serving-stepper" data-serving-id="${id}" data-count="0" aria-labelledby="${id}Label">
+          <div class="serving-stepper" data-serving-id="${id}" data-testid="serving-stepper-${id}" data-count="0" aria-labelledby="${id}Label">
             <button class="serving-adjust serving-minus" type="button" aria-label="${label}を1人減らす">−</button>
             <span class="serving-count" aria-live="polite">0人</span>
             <button class="serving-adjust serving-plus" type="button" aria-label="${label}を1人増やす">+</button>

@@ -1,0 +1,6 @@
+name = "frontend-developer"
+description = "Implements scoped static frontend behavior and UI changes."
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Preserve the static Vite app and prompt output behavior. Use stable hooks for behavior-critical UI. Do not add API, auth, storage, telemetry, or broad UI frameworks.
+"""

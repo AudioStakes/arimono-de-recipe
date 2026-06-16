@@ -1,0 +1,41 @@
+name: Codex task
+description: Scoped implementation task for Codex-assisted work
+title: "[Codex] "
+labels: ["codex"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should change?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included and excluded?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How should reviewers verify the change?
+    validations:
+      required: true
+  - type: checkboxes
+    id: human-only
+    attributes:
+      label: Human-only decisions touched
+      options:
+        - label: Backend/server/API/AI integration
+        - label: Login/auth/user accounts
+        - label: External transmission/storage/analytics/telemetry
+        - label: Persistence
+        - label: Privacy model changes
+        - label: Prompt output source-of-truth changes
+        - label: Broad UI framework or design-system adoption
+        - label: Package manager/deployment changes
+        - label: Removing or weakening tests/gates
+        - label: Codex merge permission
