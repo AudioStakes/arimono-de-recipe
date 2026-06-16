@@ -1,4 +1,10 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
+
+async function getVisibleCopyButton(page: Page) {
+  const innerWidth = await page.evaluate(() => window.innerWidth);
+  return innerWidth >= 1024 ? page.locator("#copyPrompt") : page.locator("#copyPromptSticky");
+}
 
 test("コピー操作は本文をクリップボードに書き込み、一時的に成功文言へ変わる", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -34,4 +40,53 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
     "AIへ渡す依頼文をコピーする",
   );
   await expect(page.locator("#notice")).toHaveCount(0);
+});
+
+test("入力を変更したあとの再コピーでクリップボード内容が上書きされる", async ({ page }) => {
+  await page.goto("/");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: page.url(),
+  });
+
+  const input = page.locator('[data-combo="materials"] .combo-input');
+  const copyButton = await getVisibleCopyButton(page);
+
+  await input.fill("最初の食材");
+  await input.press("Enter");
+  await copyButton.click();
+  await expect
+    .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("最初の食材");
+
+  await input.fill("次の食材");
+  await input.press("Enter");
+  await copyButton.click();
+
+  await expect
+    .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("次の食材");
+});
+
+test("未確定の入力に変えた直後の再コピーでも最新内容が上書きされる", async ({ page }) => {
+  await page.goto("/");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: page.url(),
+  });
+
+  const input = page.locator('[data-combo="materials"] .combo-input');
+  const copyButton = await getVisibleCopyButton(page);
+
+  await input.fill("最初の食材");
+  await input.press("Enter");
+  await copyButton.click();
+  await expect
+    .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("最初の食材");
+
+  await input.fill("未確定の次の食材");
+  await copyButton.click();
+
+  await expect
+    .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("未確定の次の食材");
 });

@@ -26,6 +26,7 @@ type ViewportMetrics = {
 
 export type PromptPanelServices = {
   readConditions: () => PromptData;
+  flushPendingInputs: () => void;
   setHasUserInput: (value: boolean) => void;
   setNearBottom: (value: boolean) => void;
   clearCombo: (group: ComboId) => void;
@@ -212,7 +213,8 @@ export async function copyPrompt(
   event: Event,
 ): Promise<void> {
   const button = event.currentTarget as HTMLElement | null;
-  if (!elements.output.value.trim()) refreshPromptPanel(state, elements, services);
+  services.flushPendingInputs();
+  refreshPromptPanel(state, elements, services);
   try {
     await copyText(String(elements.output.value || ""));
   } catch {

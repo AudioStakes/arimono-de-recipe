@@ -355,6 +355,9 @@ function createOutputPanelServices(
 
   return {
     readConditions: () => conditionReader.read(),
+    flushPendingInputs: () => {
+      comboRegistry.flushPendingInputs();
+    },
     setHasUserInput: (value) => {
       state.hasUserInput = value;
     },
