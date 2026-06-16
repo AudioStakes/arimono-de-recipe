@@ -48,13 +48,19 @@ function setCollapsibleState(button: HTMLButtonElement, expanded: boolean): void
   const panel = document.getElementById(panelId);
   if (panel) {
     panel.hidden = !expanded;
+    panel.setAttribute("data-state", expanded ? "open" : "closed");
   }
-  button.closest(".field-collapsible")?.classList.toggle("is-open", expanded);
+  const field = button.closest<HTMLElement>(".field-collapsible");
+  field?.classList.toggle("is-open", expanded);
+  if (field) {
+    field.setAttribute("data-state", expanded ? "open" : "closed");
+  }
 }
 
 function setMobileSheetState(state: AppState, elements: AppElements, open: boolean): void {
   state.mobileSheetOpen = open;
   elements.bottom.classList.toggle("is-open", open);
+  elements.bottom.setAttribute("data-state", open ? "open" : "closed");
   elements.bottomBackdrop.hidden = !open;
   elements.bottomBackdrop.classList.toggle("show", open);
   elements.sheetToggle.setAttribute("aria-expanded", String(open));
@@ -63,7 +69,9 @@ function setMobileSheetState(state: AppState, elements: AppElements, open: boole
     "aria-label",
     open ? "レシピ依頼文全文を閉じる" : "レシピ依頼文全文を表示",
   );
-  $("#mobilePromptPanel").setAttribute("aria-hidden", String(!open));
+  const mobilePromptPanel = $("#mobilePromptPanel");
+  mobilePromptPanel.setAttribute("aria-hidden", String(!open));
+  mobilePromptPanel.setAttribute("data-state", open ? "open" : "closed");
 }
 
 function attachBottomSheetDrag(state: AppState, elements: AppElements): void {

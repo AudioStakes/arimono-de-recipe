@@ -1,0 +1,6 @@
+[subagents]
+max_depth = 1
+
+[workflow]
+draft_prs_only = true
+human_merges_only = true

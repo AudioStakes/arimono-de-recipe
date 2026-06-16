@@ -5,20 +5,26 @@ test("モバイルでは固定ボトムシートが表示され、展開と収�
   await page.goto("/");
 
   const footer = page.locator("#bottomActions");
+  const mobilePromptPanel = page.getByTestId("mobile-prompt-panel");
   await expect(footer).toHaveClass(/show/);
+  await expect(mobilePromptPanel).toHaveAttribute("data-state", "closed");
 
-  const input = page.locator('[data-combo="materials"] .combo-input');
+  const input = page.getByTestId("combo-input-materials");
   await input.fill("豆腐");
   await input.press("Enter");
 
-  await expect(page.locator("#stickyChips")).toHaveClass(/show/);
+  await expect(page.getByTestId("sticky-condition-chips")).toHaveClass(/show/);
   await expect(page.locator("#sheetToggle")).toContainText("レシピ依頼文を確認する");
   await expect(page.locator("#sheetExpand")).toHaveText("⌃");
   await page.locator("#sheetExpand").click();
+  await expect(footer).toHaveAttribute("data-state", "open");
+  await expect(mobilePromptPanel).toHaveAttribute("data-state", "open");
   await expect(footer).toHaveClass(/is-open/);
-  await expect(page.locator("#mobilePromptPanel")).toBeVisible();
+  await expect(mobilePromptPanel).toBeVisible();
   await expect(page.locator(".mobile-prompt-head h2")).toHaveText("AIに渡す依頼文");
-  await expect(page.locator("#copyPromptSticky")).toBeHidden();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeHidden();
   await page.locator("#sheetClose").click();
+  await expect(footer).toHaveAttribute("data-state", "closed");
+  await expect(mobilePromptPanel).toHaveAttribute("data-state", "closed");
   await expect(footer).not.toHaveClass(/is-open/);
 });

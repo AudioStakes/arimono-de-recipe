@@ -12,17 +12,19 @@
     "format:check": "biome ci .",
     "lint": "biome lint . && htmlhint index.html",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
+    "test": "npm run test:unit && npm run test:structure && npm run test:e2e",
+    "test:unit": "vitest run tests/unit",
+    "test:structure": "vitest run tests/structure",
+    "test:unit:watch": "vitest tests/unit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:ui": "npm run test:e2e:ui",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test:unit && npm run test:structure && npm run test:e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
     "@playwright/test": "latest",
+    "@types/node": "^25.9.3",
     "htmlhint": "latest",
     "typescript": "latest",
     "vite": "latest",

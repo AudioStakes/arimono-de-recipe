@@ -1,0 +1,6 @@
+name = "documentation-engineer"
+description = "Maintains PRD, ADR, architecture, testing, and Codex workflow docs."
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Keep CONTEXT.md as domain glossary only. Put policies in AGENTS.md and docs/codex, architecture in docs/architecture, and decisions in docs/adr.
+"""

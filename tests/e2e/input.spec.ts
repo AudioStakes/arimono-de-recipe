@@ -257,7 +257,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await editInput.fill("デミグラスハンバーグ");
   await editInput.press("Enter");
   await expect(materialField.locator(".pill-label")).toHaveText("デミグラスハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- デミグラスハンバーグ/);
+  await expect(output).toHaveValue(/### 家にある食材\n\n- デミグラスハンバーグ/);
   await expect(page.locator("#conditionChips")).toContainText("家にある食材: デミグラスハンバーグ");
 
   await materialField.locator(".pill-label").click();
@@ -266,7 +266,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await secondEditInput.fill("和風ハンバーグ");
   await page.locator("header").click();
   await expect(materialField.locator(".pill-label")).toHaveText("和風ハンバーグ");
-  await expect(output).toHaveValue(/【材料】\n- 和風ハンバーグ/);
+  await expect(output).toHaveValue(/### 家にある食材\n\n- 和風ハンバーグ/);
   await expect(page.locator("#conditionChips")).toContainText("家にある食材: 和風ハンバーグ");
 });
 
@@ -369,4 +369,76 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   await materialField.locator(".pill-remove").click();
   await expect(materialField.locator(".pill")).toHaveCount(0);
   await expect(input).toBeFocused();
+});
+
+test("自由入力した値の追加と削除が全項目で依頼文へ反映される", async ({ page }) => {
+  await page.goto("/");
+
+  const cases = [
+    {
+      comboId: "materials",
+      toggle: null,
+      value: "自由入力の食材",
+      heading: "家にある食材",
+    },
+    {
+      comboId: "dishTypes",
+      toggle: '[data-collapsible="dishTypes"] .field-toggle',
+      value: "自由入力の料理区分",
+      heading: "料理区分・作りたいもの",
+    },
+    {
+      comboId: "cookingTools",
+      toggle: '[data-collapsible="cookingTools"] .field-toggle',
+      value: "自由入力の調理方法",
+      heading: "使いたい調理器具・調理方法",
+    },
+    {
+      comboId: "pairingTargets",
+      toggle: '[data-collapsible="pairingTargets"] .field-toggle',
+      value: "自由入力の合わせ料理",
+      heading: "合わせたい料理・一緒に出す料理",
+    },
+    {
+      comboId: "difficulty",
+      toggle: '[data-collapsible="difficulty"] .field-toggle',
+      value: "自由入力の手軽さ",
+      heading: "作りやすさ・手軽さ",
+    },
+    {
+      comboId: "recipeDirections",
+      toggle: '[data-collapsible="recipeDirections"] .field-toggle',
+      value: "自由入力の味や雰囲気",
+      heading: "味や雰囲気",
+    },
+    {
+      comboId: "ngFoodsAndSeasonings",
+      toggle: '[data-collapsible="ngFoodsAndSeasonings"] .field-toggle',
+      value: "自由入力のNG条件",
+      heading: "NG食材・調味料",
+    },
+  ] as const;
+
+  const output = page.locator("#output");
+
+  for (const { comboId, toggle, value, heading } of cases) {
+    if (toggle) {
+      const toggleButton = page.locator(toggle);
+      if ((await toggleButton.getAttribute("aria-expanded")) !== "true") {
+        await toggleButton.click();
+      }
+    }
+
+    const field = page.locator(`[data-combo="${comboId}"]`);
+    const input = field.locator(".combo-input");
+    await input.fill(value);
+    await input.press("Enter");
+
+    await expect(field.locator(".pill-label")).toContainText(value);
+    await expect(output).toHaveValue(new RegExp(`### ${heading}[\\s\\S]*- ${value}`));
+
+    await field.locator(".pill-remove").click();
+    await expect(field.locator(".pill")).toHaveCount(0);
+    await expect(output).not.toHaveValue(new RegExp(`### ${heading}[\\s\\S]*- ${value}`));
+  }
 });

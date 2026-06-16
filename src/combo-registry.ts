@@ -148,7 +148,10 @@ function createComboController(
     return $$<HTMLButtonElement>(".suggestion-option", suggestionPanel);
   }
 
-  function addValue(value: string, options: { refocusInput?: boolean } = {}): void {
+  function addValue(
+    value: string,
+    options: { refocusInput?: boolean; notify?: boolean } = {},
+  ): void {
     const text = value.trim();
     if (!text) {
       return;
@@ -162,7 +165,9 @@ function createComboController(
     if (options.refocusInput) {
       focusInputAtEnd(comboInput);
     }
-    notifyChange();
+    if (options.notify !== false) {
+      notifyChange();
+    }
   }
 
   function removeValue(value: string): void {
@@ -518,6 +523,14 @@ function createComboController(
     handleInput(): void {
       renderSuggestions();
     },
+    flushPendingInput(): void {
+      const text = comboInput.value.trim();
+      const dataset = comboInput.dataset as ImeDataset;
+      if (!text || dataset.composing === "true" || dataset.justComposed === "true") {
+        return;
+      }
+      addValue(text, { notify: false });
+    },
   };
 }
 
@@ -701,6 +714,11 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
     },
     clear(group: ComboId): void {
       controllers.get(group)?.clearValues();
+    },
+    flushPendingInputs(): void {
+      for (const controller of controllers.values()) {
+        controller.flushPendingInput();
+      }
     },
   };
 }
