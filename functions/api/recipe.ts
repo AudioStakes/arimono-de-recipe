@@ -1,4 +1,5 @@
 import {
+  aiRecipeAssumedPantryIngredients,
   buildCompactRecipeCandidateInput,
   isAiRecipeCandidateRequest,
   parseAiRecipeCandidateRequest,
@@ -83,109 +84,119 @@ const CANDIDATE_SYSTEM_MESSAGE = [
   "Input keys: m materials, rq required materials, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
   "Obey n constraints such as 必須 and 使切.",
   "Every output item must include every rq ingredient in use and ing.",
-  "Output use must be ingredient names copied from m only. Never put tl tools in use.",
+  "Output use must be ingredient names copied from m only. Never put tl tools or seasonings in use.",
   "Output miss must be missing ingredient names only. Never put ng avoid items in miss.",
-  "Output ing must contain only m ingredients, miss ingredients, or basic pantry seasonings.",
+  "Output ing must contain exact names only, no quantities. Use only m ingredients or basic pantry seasonings allowed by schema.",
   "steps must be plain short Japanese strings, not objects.",
   "Use at most 4 badges.",
 ].join("\n");
 
-const CANDIDATE_RESPONSE_FORMAT = {
-  type: "json_schema",
-  json_schema: {
-    type: "object",
-    additionalProperties: false,
-    required: ["items"],
-    properties: {
-      items: {
-        type: "array",
-        minItems: 3,
-        maxItems: 3,
+function uniqueList(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknown {
+  const availableIngredients = uniqueList(request.materials);
+  const recipeIngredients = uniqueList([...availableIngredients, ...aiRecipeAssumedPantryIngredients]);
+  const optionalMissingIngredients = aiRecipeAssumedPantryIngredients;
+
+  return {
+    type: "json_schema",
+    json_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["items"],
+      properties: {
         items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["id", "title", "time", "badges", "use", "miss", "why", "ing", "steps"],
-          properties: {
-            id: {
-              type: "string",
-              enum: ["a", "b", "c"],
-            },
-            title: {
-              type: "string",
-              maxLength: 32,
-            },
-            time: {
-              type: "integer",
-              minimum: 1,
-              maximum: 240,
-            },
-            badges: {
-              type: "array",
-              maxItems: 4,
-              items: {
+          type: "array",
+          minItems: 3,
+          maxItems: 3,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "title", "time", "badges", "use", "miss", "why", "ing", "steps"],
+            properties: {
+              id: {
                 type: "string",
-                enum: [
-                  "no_shop",
-                  "miss_optional",
-                  "quick",
-                  "easy",
-                  "uses_up",
-                  "few_dishes",
-                  "kids",
-                ],
+                enum: ["a", "b", "c"],
               },
-            },
-            use: {
-              type: "array",
-              description:
-                "Available ingredient names used by this recipe. Values must be copied from input m, not tools.",
-              minItems: 1,
-              maxItems: 12,
-              items: {
+              title: {
                 type: "string",
-                maxLength: 48,
+                maxLength: 32,
               },
-            },
-            miss: {
-              type: "array",
-              description:
-                "Missing ingredient names only. Do not include avoid items from ng or cooking tools from tl.",
-              maxItems: 6,
-              items: {
-                type: "string",
-                maxLength: 48,
+              time: {
+                type: "integer",
+                minimum: 1,
+                maximum: 240,
               },
-            },
-            why: {
-              type: "string",
-              maxLength: 80,
-            },
-            ing: {
-              type: "array",
-              description:
-                "Recipe ingredients. Use available m ingredients, miss ingredients, or basic pantry seasonings only.",
-              minItems: 1,
-              maxItems: 6,
-              items: {
-                type: "string",
-                maxLength: 48,
+              badges: {
+                type: "array",
+                maxItems: 4,
+                items: {
+                  type: "string",
+                  enum: [
+                    "no_shop",
+                    "miss_optional",
+                    "quick",
+                    "easy",
+                    "uses_up",
+                    "few_dishes",
+                    "kids",
+                  ],
+                },
               },
-            },
-            steps: {
-              type: "array",
-              minItems: 1,
-              maxItems: 3,
-              items: {
+              use: {
+                type: "array",
+                description:
+                  "Available ingredient names used by this recipe. Values must be copied from input m.",
+                minItems: 1,
+                maxItems: 12,
+                items: {
+                  type: "string",
+                  enum: availableIngredients,
+                },
+              },
+              miss: {
+                type: "array",
+                description:
+                  "Optional missing pantry seasoning names only. Do not include input m, ng, tools, meat, fish, egg, dairy, tofu, vegetables, mushrooms, or seaweed.",
+                maxItems: 3,
+                items: {
+                  type: "string",
+                  enum: optionalMissingIngredients,
+                },
+              },
+              why: {
                 type: "string",
-                maxLength: 60,
+                maxLength: 80,
+              },
+              ing: {
+                type: "array",
+                description:
+                  "Exact ingredient names only, no quantities. Use only input m ingredients or allowed pantry seasonings.",
+                minItems: 1,
+                maxItems: 6,
+                items: {
+                  type: "string",
+                  enum: recipeIngredients,
+                },
+              },
+              steps: {
+                type: "array",
+                minItems: 1,
+                maxItems: 3,
+                items: {
+                  type: "string",
+                  maxLength: 60,
+                },
               },
             },
           },
         },
       },
     },
-  },
-} as const;
+  };
+}
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -396,7 +407,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             ],
             max_tokens: CANDIDATE_MAX_TOKENS,
             temperature: TEMPERATURE,
-            response_format: CANDIDATE_RESPONSE_FORMAT,
+            response_format: buildCandidateResponseFormat(body.request),
           });
 
     if (body.kind === "candidates") {

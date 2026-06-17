@@ -43,6 +43,29 @@ const allowedBadges = [
   "kids",
 ] as const satisfies readonly AiRecipeCandidateBadge[];
 
+export const aiRecipeAssumedPantryIngredients = [
+  "油",
+  "ごま油",
+  "オリーブオイル",
+  "塩",
+  "こしょう",
+  "胡椒",
+  "砂糖",
+  "しょうゆ",
+  "醤油",
+  "みそ",
+  "味噌",
+  "酢",
+  "みりん",
+  "酒",
+  "料理酒",
+  "だし",
+  "だし汁",
+  "水",
+  "片栗粉",
+  "小麦粉",
+] as const;
+
 const requestKeys = new Set([
   "mode",
   "materials",
@@ -410,28 +433,7 @@ function matchesRequestMaterial(value: string, materials: readonly string[]): bo
 }
 
 const assumedPantryIngredients = new Set(
-  [
-    "油",
-    "ごま油",
-    "オリーブオイル",
-    "塩",
-    "こしょう",
-    "胡椒",
-    "砂糖",
-    "しょうゆ",
-    "醤油",
-    "みそ",
-    "味噌",
-    "酢",
-    "みりん",
-    "酒",
-    "料理酒",
-    "だし",
-    "だし汁",
-    "水",
-    "片栗粉",
-    "小麦粉",
-  ].map(normalizeForComparison),
+  aiRecipeAssumedPantryIngredients.map(normalizeForComparison),
 );
 
 function matchesList(value: string, items: readonly string[]): boolean {

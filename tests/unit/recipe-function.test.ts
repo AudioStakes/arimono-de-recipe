@@ -363,6 +363,19 @@ describe("POST /api/recipe", () => {
         type: "json_schema",
       }),
     );
+    const responseFormat = input["response_format"] as Record<string, unknown>;
+    const jsonSchema = responseFormat["json_schema"] as Record<string, unknown>;
+    const properties = jsonSchema["properties"] as Record<string, unknown>;
+    const items = properties["items"] as Record<string, unknown>;
+    const itemSchema = items["items"] as Record<string, unknown>;
+    const itemProperties = itemSchema["properties"] as Record<string, unknown>;
+    const use = itemProperties["use"] as Record<string, unknown>;
+    const useItems = use["items"] as Record<string, unknown>;
+    const ing = itemProperties["ing"] as Record<string, unknown>;
+    const ingItems = ing["items"] as Record<string, unknown>;
+    expect(useItems["enum"]).toEqual(["豆腐", "キャベツ"]);
+    expect(ingItems["enum"]).toEqual(expect.arrayContaining(["豆腐", "キャベツ", "しょうゆ"]));
+    expect(ingItems["enum"]).not.toContain("卵");
     const messages = input["messages"];
     expect(Array.isArray(messages)).toBe(true);
     if (!Array.isArray(messages)) throw new Error("AI messages were not an array.");
