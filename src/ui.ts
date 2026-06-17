@@ -465,30 +465,20 @@ function renderAppShell(): string {
           <span class="brand-title-text">ありもの de レシピ</span>
         </span>
       </h1>
-      <p class="lead" id="appLead">家にある食材から、今日作れそうな料理候補を見つけます。</p>
-      <p class="use-flow" aria-label="使い方">
-        <span class="flow-step">1. 条件を入力</span>
-        <span class="flow-arrow" aria-hidden="true">→</span>
-        <span class="flow-step">2. 料理候補を見る</span>
-        <span class="flow-arrow" aria-hidden="true">→</span>
-        <span class="flow-step">3. 詳細を決める</span>
-      </p>
+      <p class="lead" id="appLead">冷蔵庫にある食材を入れて、今日作る料理候補をすぐ見つけます。</p>
     </header>
     <div class="app-layout">
       <form class="form" id="recipeForm" data-testid="recipe-form" novalidate aria-describedby="appLead">
         <div id="basicFields" data-testid="basic-fields"></div>
-        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
-      </form>
-      <section class="prompt-section" aria-label="レシピ依頼文と実行方法">
+        <section class="prompt-section" aria-label="料理候補と依頼文">
         <div class="prompt-heading">
-          <h2 id="promptHeading">料理候補とAI向け依頼文</h2>
-          <p id="promptDescription">このアプリで短い候補を見たり、AI向けレシピ依頼文を普段使っているAIへ貼り付けたりできます。</p>
+          <h2 id="promptHeading">今日の料理候補</h2>
+          <p id="promptDescription">家にある材料をもとに候補を見ます。依頼文コピーは別のAIで使うための補助です。</p>
         </div>
-        <div id="conditionChips" class="chips" data-testid="condition-chips"></div>
         <div class="prompt-action-grid" aria-label="実行方法">
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
-              <h3>AIで候補を見る</h3>
+              <h3>今日の候補を見る</h3>
               <p>家にある食材をもとに、短い料理候補を3つ表示します。</p>
             </div>
             <button
@@ -498,12 +488,12 @@ function renderAppShell(): string {
               data-testid="generate-recipe"
             >
               <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
-              <span class="action-button-label">AIで候補を見る</span>
+              <span class="action-button-label">今日の候補を見る</span>
             </button>
           </article>
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
-              <h3>AI向けレシピ依頼文をコピー</h3>
+              <h3>依頼文をコピー</h3>
               <p>ChatGPT、Claude、Geminiなど、普段使っているAIに貼り付けて使えます。</p>
             </div>
             <button
@@ -522,16 +512,6 @@ function renderAppShell(): string {
             </button>
           </article>
         </div>
-        <div class="output-shell">
-          <textarea
-            id="output"
-            class="output"
-            data-testid="prompt-output"
-            aria-labelledby="promptHeading"
-            aria-describedby="promptDescription"
-            readonly
-          ></textarea>
-        </div>
         <div
           id="aiRecipePanel"
           class="ai-recipe-panel"
@@ -540,7 +520,23 @@ function renderAppShell(): string {
           hidden
         >
         </div>
+        <details class="prompt-preview-details">
+          <summary>AI向け依頼文を確認する</summary>
+          <div class="output-shell">
+            <textarea
+              id="output"
+              class="output"
+              data-testid="prompt-output"
+              aria-labelledby="promptHeading"
+              aria-describedby="promptDescription"
+              readonly
+            ></textarea>
+          </div>
+        </details>
       </section>
+        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
+        <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
+      </form>
     </div>
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-state="closed">
@@ -564,7 +560,7 @@ function renderAppShell(): string {
             data-testid="generate-recipe-mobile"
           >
             <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
-            <span class="action-button-label">AIで候補を見る</span>
+            <span class="action-button-label">今日の候補を見る</span>
           </button>
           <button
             id="sheetToggle"
@@ -670,15 +666,15 @@ function getAppElements(): AppElements {
 
 function renderFields(): void {
   queryElement("#basicFields").innerHTML = [
-    renderRequestIntentField(),
-    `<div id="targetDishField" hidden>${renderComboField(getCombo("targetDish"), "targetDishHint")}<p id="targetDishHint" class="field-hint">作りたい料理名を自由に入力できます。候補は入力補助です。</p></div>`,
-    `<div id="pairingTargetsField" hidden>${renderComboField(getCombo("pairingTargets"))}</div>`,
     renderComboField(getCombo("materials")),
     renderMaterialUseField(),
     renderServingsField(),
   ].join("");
 
   queryElement("#advancedFields").innerHTML = [
+    renderRequestIntentField(),
+    `<div id="targetDishField" hidden>${renderComboField(getCombo("targetDish"), "targetDishHint")}<p id="targetDishHint" class="field-hint">作りたい料理名を自由に入力できます。候補は入力補助です。</p></div>`,
+    `<div id="pairingTargetsField" hidden>${renderComboField(getCombo("pairingTargets"))}</div>`,
     renderRecipeCountField(),
     renderCollapsibleComboField(getCombo("cookingTools")),
     renderCollapsibleCookTimeField(),

@@ -4,7 +4,7 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   await page.goto("/");
 
   const output = page.getByTestId("prompt-output");
-  await expect(page.locator(".prompt-heading h2")).toHaveText("料理候補とAI向け依頼文");
+  await expect(page.locator(".prompt-heading h2")).toHaveText("今日の料理候補");
   await expect(output).toHaveAttribute("readonly");
   await expect(output).toHaveValue(/## 役割/);
   await expect(output).toHaveValue(/## 出力形式/);

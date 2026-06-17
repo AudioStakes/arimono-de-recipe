@@ -25,7 +25,7 @@ function setGenerateButtonState(elements: AppElements, loading: boolean): void {
     button.setAttribute("aria-busy", String(loading));
     const label = button.querySelector<HTMLElement>(".action-button-label");
     if (label) {
-      label.textContent = loading ? "候補を探しています" : "AIで候補を見る";
+      label.textContent = loading ? "候補を探しています" : "今日の候補を見る";
     }
   }
 }

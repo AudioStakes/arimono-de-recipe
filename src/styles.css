@@ -212,39 +212,6 @@ header {
   line-height: 1.6;
 }
 
-.use-flow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  max-inline-size: 100%;
-  margin: 0;
-  padding-block-end: var(--space-2);
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-
-.flow-step {
-  display: inline-flex;
-  align-items: center;
-  min-block-size: 38px;
-  padding: 7px 16px;
-  color: var(--primary-deep);
-  font-size: 0.9rem;
-  font-weight: 900;
-  white-space: nowrap;
-  background: rgba(255, 249, 242, 0.88);
-  border: 1px solid rgba(204, 120, 92, 0.18);
-  border-radius: var(--radius-pill);
-  box-shadow:
-    var(--inner-highlight),
-    0 10px 24px rgba(86, 56, 28, 0.08);
-}
-
-.flow-arrow {
-  color: var(--primary-active);
-  font-weight: 900;
-}
-
 .app-layout {
   display: grid;
   gap: var(--space-6);
@@ -860,6 +827,23 @@ input[type="range"] {
   min-inline-size: 0;
 }
 
+.prompt-preview-details {
+  min-inline-size: 0;
+}
+
+.prompt-preview-details summary {
+  min-block-size: var(--space-7);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.prompt-preview-details[open] {
+  display: grid;
+  gap: var(--space-3);
+}
+
 .output {
   min-block-size: 320px;
   padding: var(--space-4);
@@ -1394,20 +1378,23 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
     font-size: 4.4rem;
   }
 
-  .app-layout {
+  .form {
     grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.82fr);
     align-items: start;
+    column-gap: var(--space-7);
   }
 
-  .form {
-    padding-inline-end: 72px;
-    border-inline-end: 1px solid var(--line);
+  #basicFields,
+  .advanced-fields,
+  .secondary-condition-chips {
+    grid-column: 1;
   }
 
   .prompt-section {
     position: sticky;
+    grid-column: 2;
+    grid-row: 1 / span 3;
     inset-block-start: var(--space-5);
-    padding-inline-start: 72px;
   }
 
   .bottom-actions,
