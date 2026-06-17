@@ -156,6 +156,7 @@ export type AiRecipeState = {
   request: AiRecipeCandidateRequest | null;
   candidates: AiRecipeCandidatesResponse | null;
   selectedCandidateId: string;
+  cookingCandidateId: string;
   model: string;
   usage: unknown | null;
   errorMessage: string;

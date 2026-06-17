@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   getMissingIngredientLabels,
+  getTasteAdjustmentLabels,
   getUsedMaterialLabels,
   getVisibleCandidateBadgeLabels,
 } from "../../src/recipe-candidate-list";
@@ -49,5 +50,12 @@ describe("recipe candidate list labels", () => {
         { name: "キャベツ", usage: "required" },
       ]),
     ).toEqual(["豆腐（150g・使い切り）", "キャベツ（必ず使う）", "卵"]);
+  });
+
+  test("候補詳細用の味の調整を返す", () => {
+    expect(getTasteAdjustmentLabels()).toEqual([
+      "塩・しょうゆは少量ずつ足す",
+      "濃ければ水かだしでのばす",
+    ]);
   });
 });
