@@ -126,9 +126,33 @@ export function bindAppEvents(
     setMobileSheetState(state, elements, true, opener);
   };
 
+  const removeMaterialFromButton = (button: HTMLButtonElement): void => {
+    const materialName = button.dataset["removeMaterial"];
+    if (materialName) {
+      services.removeComboValue("materials", materialName);
+    }
+  };
+
+  elements.form.addEventListener("pointerdown", (event) => {
+    const target = event.target as Element;
+    const materialRemoveButton = target.closest<HTMLButtonElement>("[data-remove-material]");
+    if (!materialRemoveButton) {
+      return;
+    }
+
+    event.preventDefault();
+    removeMaterialFromButton(materialRemoveButton);
+  });
+
   elements.form.addEventListener("click", (event) => {
     const target = event.target as Element;
     if (target.closest(".pill")) {
+      return;
+    }
+
+    const materialRemoveButton = target.closest<HTMLButtonElement>("[data-remove-material]");
+    if (materialRemoveButton) {
+      removeMaterialFromButton(materialRemoveButton);
       return;
     }
 
@@ -199,6 +223,10 @@ export function bindAppEvents(
     () => void createAiRecipe(state, elements, services, "desktop"),
   );
   $("#generateRecipeMobile").addEventListener("click", () => {
+    services.flushPendingInputs();
+    if (!services.validateBeforeAiRecipe()) {
+      return;
+    }
     setMobileSheetState(state, elements, true, elements.generateRecipeMobile);
     void createAiRecipe(state, elements, services, "mobile");
   });

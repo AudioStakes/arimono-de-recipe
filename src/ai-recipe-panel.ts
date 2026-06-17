@@ -219,6 +219,9 @@ export async function createAiRecipe(
 
   services.flushPendingInputs();
   refreshPromptPanel(state, elements, services);
+  if (!services.validateBeforeAiRecipe()) {
+    return;
+  }
 
   const requestId = state.aiRecipe.requestId + 1;
   const request = buildAiRecipeCandidateRequest(services.readConditions());

@@ -34,9 +34,11 @@ export type PromptPanelServices = {
   flushPendingInputs: () => void;
   setHasUserInput: (value: boolean) => void;
   setNearBottom: (value: boolean) => void;
+  removeComboValue: (group: ComboId, value: string) => void;
   clearCombo: (group: ComboId) => void;
   clearCookTime: () => void;
   clearSupplementalNotes: () => void;
+  validateBeforeAiRecipe: () => boolean;
   openMobilePromptForCopy?: (opener: HTMLElement) => void;
   onChange: () => void;
 };

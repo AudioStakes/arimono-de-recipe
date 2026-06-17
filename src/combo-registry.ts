@@ -241,9 +241,10 @@ function createComboController(
     }
   }
 
-  function removeValue(value: string): void {
-    values = values.filter((item) => item !== value);
-    if (editingValue === value) {
+  function removeStoredValue(value: string): void {
+    const targetValue = value.trim();
+    values = values.filter((item) => item.trim() !== targetValue);
+    if (editingValue?.trim() === targetValue) {
       editingValue = null;
     }
     renderPills();
@@ -373,7 +374,7 @@ function createComboController(
     remove.setAttribute("aria-label", `${value}を削除`);
     remove.addEventListener("click", (event) => {
       event.stopPropagation();
-      removeValue(value);
+      removeStoredValue(value);
     });
 
     pill.addEventListener("keydown", (event) => {
@@ -391,7 +392,7 @@ function createComboController(
       if (dataset.armedDelete === "true") {
         return;
       }
-      removeValue(value);
+      removeStoredValue(value);
     });
 
     pill.appendChild(remove);
@@ -469,6 +470,9 @@ function createComboController(
     },
     getValues(): string[] {
       return [...values];
+    },
+    removeValue(value: string): void {
+      removeStoredValue(value);
     },
     clearValues(): void {
       values = [];
@@ -812,6 +816,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
     },
     getValues(group: ComboId): string[] {
       return controllers.get(group)?.getValues() ?? [];
+    },
+    removeValue(group: ComboId, value: string): void {
+      controllers.get(group)?.removeValue(value);
     },
     clear(group: ComboId): void {
       controllers.get(group)?.clearValues();
