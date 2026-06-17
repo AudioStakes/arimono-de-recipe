@@ -19,6 +19,7 @@ export type RecipeMaterialInput = {
 
 export type RecipeDecisionCandidateRequest = {
   materials: RecipeMaterialInput[];
+  allowShopping?: boolean;
   directions: string[];
   tools: string[];
   avoid: string[];

@@ -27,7 +27,7 @@ const candidateResponse = {
       id: "a",
       title: "豆腐のあんかけ",
       time: 15,
-      badges: ["no_shop", "quick"],
+      badges: ["quick"],
       use: ["豆腐"],
       miss: [],
       why: "豆腐を主役にして短時間で作れます。",
@@ -40,7 +40,7 @@ const candidateResponse = {
       time: 12,
       badges: ["easy"],
       use: ["キャベツ"],
-      miss: ["卵"],
+      miss: [],
       why: "少ない材料で主菜寄りにできます。",
       ing: ["キャベツ", "油", "塩"],
       steps: ["切る", "炒める", "味を調える"],
@@ -49,7 +49,7 @@ const candidateResponse = {
       id: "c",
       title: "豆腐スープ",
       time: 10,
-      badges: ["no_shop", "few_dishes"],
+      badges: ["few_dishes"],
       use: ["豆腐", "キャベツ"],
       miss: [],
       why: "鍋ひとつでありものを使えます。",
@@ -374,9 +374,14 @@ describe("POST /api/recipe", () => {
     const itemProperties = itemSchema["properties"] as Record<string, unknown>;
     const use = itemProperties["use"] as Record<string, unknown>;
     const useItems = use["items"] as Record<string, unknown>;
+    const badges = itemProperties["badges"] as Record<string, unknown>;
+    const badgeItems = badges["items"] as Record<string, unknown>;
+    const miss = itemProperties["miss"] as Record<string, unknown>;
     const ing = itemProperties["ing"] as Record<string, unknown>;
     const ingItems = ing["items"] as Record<string, unknown>;
     expect(useItems["enum"]).toEqual(["豆腐", "キャベツ"]);
+    expect(badgeItems["enum"]).toEqual(["quick", "easy", "uses_up", "few_dishes", "kids"]);
+    expect(miss["maxItems"]).toBe(0);
     expect(ingItems["enum"]).toEqual(expect.arrayContaining(["豆腐", "キャベツ", "しょうゆ"]));
     expect(ingItems["enum"]).not.toContain("卵");
     const messages = input["messages"];
@@ -386,6 +391,7 @@ describe("POST /api/recipe", () => {
     const user = messages[1] as Record<string, unknown> | undefined;
     expect(system).toEqual(expect.objectContaining({ role: "system" }));
     expect(String(system?.["content"])).toContain("response_format schema");
+    expect(String(system?.["content"])).toContain("shop=1");
     expect(user).toEqual(
       expect.objectContaining({
         role: "user",
@@ -408,6 +414,69 @@ describe("POST /api/recipe", () => {
       }),
     );
     expect(String(user?.["content"]).length).toBeLessThan(legacyPrompt.length);
+  });
+
+  test("allowShoppingがtrueならmissing ingredient用のschema付きcompact inputで依頼する", async () => {
+    const run = vi.fn<Env["AI"]["run"]>(async () => ({
+      response: {
+        items: [
+          candidateResponse.items[0],
+          {
+            ...candidateResponse.items[1],
+            badges: ["miss_optional", "easy"],
+            miss: ["卵"],
+            ing: ["キャベツ", "卵", "油", "塩"],
+          },
+          candidateResponse.items[2],
+        ],
+      },
+      usage: { input_tokens: 22, output_tokens: 130 },
+    }));
+
+    const response = await onRequest(
+      createContext(createRequest({ ...candidateRequest, allowShopping: true }), {
+        AI: { run },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await readJson(response);
+    expect(isRecord(payload)).toBe(true);
+    if (!isRecord(payload) || !Array.isArray(payload["items"])) {
+      throw new Error("candidate payload was not returned.");
+    }
+    expect(payload["items"][1]).toEqual(
+      expect.objectContaining({
+        badges: ["miss_optional", "easy"],
+        miss: ["卵"],
+      }),
+    );
+
+    const call = run.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("AI.run was not called.");
+    const [, input] = call;
+    expect(isRecord(input)).toBe(true);
+    if (!isRecord(input)) throw new Error("AI input was not an object.");
+    const responseFormat = input["response_format"] as Record<string, unknown>;
+    const jsonSchema = responseFormat["json_schema"] as Record<string, unknown>;
+    const properties = jsonSchema["properties"] as Record<string, unknown>;
+    const items = properties["items"] as Record<string, unknown>;
+    const itemSchema = items["items"] as Record<string, unknown>;
+    const itemProperties = itemSchema["properties"] as Record<string, unknown>;
+    const badges = itemProperties["badges"] as Record<string, unknown>;
+    const badgeItems = badges["items"] as Record<string, unknown>;
+    const miss = itemProperties["miss"] as Record<string, unknown>;
+    const ing = itemProperties["ing"] as Record<string, unknown>;
+    const ingItems = ing["items"] as Record<string, unknown>;
+    expect(badgeItems["enum"]).toContain("miss_optional");
+    expect(miss["maxItems"]).toBe(3);
+    expect(ingItems["enum"]).toBeUndefined();
+    const messages = input["messages"];
+    expect(Array.isArray(messages)).toBe(true);
+    if (!Array.isArray(messages)) throw new Error("AI messages were not an array.");
+    const user = messages[1] as Record<string, unknown> | undefined;
+    expect(String(user?.["content"])).toContain('"shop":1');
   });
 
   test("candidate requestの未知fieldや上限超過を400で拒否する", async () => {
@@ -533,7 +602,7 @@ describe("POST /api/recipe", () => {
     }));
 
     const response = await onRequest(
-      createContext(createRequest(candidateRequest), {
+      createContext(createRequest({ ...candidateRequest, allowShopping: true }), {
         AI: { run },
       }),
     );

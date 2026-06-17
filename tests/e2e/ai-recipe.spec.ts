@@ -6,7 +6,7 @@ const candidateResponse = {
       id: "a",
       title: "豆腐のあんかけ",
       time: 15,
-      badges: ["no_shop", "quick"],
+      badges: ["quick"],
       use: ["豆腐"],
       miss: [],
       why: "豆腐を主役にして短時間で作れます。",
@@ -19,7 +19,7 @@ const candidateResponse = {
       time: 12,
       badges: ["easy"],
       use: ["キャベツ"],
-      miss: ["卵"],
+      miss: [],
       why: "少ない材料で主菜寄りにできます。",
       ing: ["キャベツ", "油", "塩"],
       steps: ["切る", "炒める", "味を調える"],
@@ -28,7 +28,7 @@ const candidateResponse = {
       id: "c",
       title: "豆腐スープ",
       time: 10,
-      badges: ["no_shop", "few_dishes"],
+      badges: ["few_dishes"],
       use: ["豆腐", "キャベツ"],
       miss: [],
       why: "鍋ひとつでありものを使えます。",
@@ -90,7 +90,8 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await expect(page.getByTestId(/^recipe-candidate-[abc]$/)).toHaveCount(3);
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐のあんかけ");
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("15分");
-  await expect(page.getByTestId("recipe-candidate-a")).toContainText("買い足しなし");
+  await expect(page.getByTestId("recipe-candidate-a")).not.toContainText("買い足しなし");
+  await expect(page.getByTestId("recipe-candidate-a")).not.toContainText("買い足しあり");
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐");
   await expect(page.getByTestId("recipe-candidate-a")).toContainText(
     "豆腐を主役にして短時間で作れます。",
@@ -99,8 +100,8 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
     "「豆腐のあんかけ」の詳細を表示",
   );
   await expect(page.getByTestId("recipe-candidate-select-a")).not.toHaveAttribute("aria-controls");
-  await expect(page.getByTestId("recipe-candidate-b")).toContainText("不足あり");
-  await expect(page.getByTestId("recipe-candidate-b")).toContainText("卵");
+  await expect(page.getByTestId("recipe-candidate-b")).not.toContainText("不足あり");
+  await expect(page.getByTestId("recipe-candidate-b")).not.toContainText("追加:");
 
   await page.getByTestId("recipe-candidate-select-a").click();
   await expect(page.getByTestId("recipe-candidate-select-a")).toHaveAttribute(
@@ -324,7 +325,7 @@ test("モバイルの固定CTAから候補を見て詳細選択しても追加AP
 
   await page.getByTestId("mobile-recipe-candidate-select-b").click();
   await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("キャベツ炒め");
-  await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("卵");
+  await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("キャベツ");
   await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("味を調える");
   expect(callCount).toBe(1);
 

@@ -79,9 +79,10 @@ const CANDIDATE_SYSTEM_MESSAGE = [
   "You generate Japanese home-cooking recipe candidates.",
   "Return only JSON matching the response_format schema.",
   "Input m is compact material tuples: [name, usage, amount?]. usage is auto, required, or use_up. Input rq means required/use_up material names that every candidate must use. Input tl means cooking tools. Input ng means avoid list.",
-  "Main ingredients must come from m.",
+  "Input shop=1 means a small number of missing ingredients may be listed. If shop is omitted, miss must be empty.",
+  "Main ingredients must come from m unless shop=1 and the extra ingredient is listed in miss.",
   "Return exactly 3 items.",
-  "Input keys: m material tuples, rq required/use_up materials, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
+  "Input keys: m material tuples, rq required/use_up materials, shop shopping permission, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
   "For use_up materials, prefer recipes that consume the amount when practical.",
   "Every output item must include every rq ingredient in use and ing.",
   "Output use must be ingredient names copied from m only. Never put tl tools or seasonings in use.",
@@ -96,9 +97,29 @@ function uniqueList(values: readonly string[]): string[] {
 }
 
 function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknown {
+  const allowShopping = request.allowShopping === true;
   const availableIngredients = uniqueList(request.materials.map((material) => material.name));
   const recipeIngredients = uniqueList([...availableIngredients, ...aiRecipeAssumedPantryIngredients]);
-  const optionalMissingIngredients = aiRecipeAssumedPantryIngredients;
+  const badgeValues = allowShopping
+    ? ["miss_optional", "quick", "easy", "uses_up", "few_dishes", "kids"]
+    : ["quick", "easy", "uses_up", "few_dishes", "kids"];
+  const missingItemsSchema = allowShopping
+    ? {
+        type: "string",
+        maxLength: 48,
+      }
+    : {
+        type: "string",
+      };
+  const recipeIngredientItemsSchema = allowShopping
+    ? {
+        type: "string",
+        maxLength: 48,
+      }
+    : {
+        type: "string",
+        enum: recipeIngredients,
+      };
 
   return {
     type: "json_schema",
@@ -134,15 +155,7 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
                 maxItems: 4,
                 items: {
                   type: "string",
-                  enum: [
-                    "no_shop",
-                    "miss_optional",
-                    "quick",
-                    "easy",
-                    "uses_up",
-                    "few_dishes",
-                    "kids",
-                  ],
+                  enum: badgeValues,
                 },
               },
               use: {
@@ -159,12 +172,9 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
               miss: {
                 type: "array",
                 description:
-                  "Optional missing pantry seasoning names only. Do not include input m, ng, tools, meat, fish, egg, dairy, tofu, vegetables, mushrooms, or seaweed.",
-                maxItems: 3,
-                items: {
-                  type: "string",
-                  enum: optionalMissingIngredients,
-                },
+                  "Missing ingredient names only. Keep empty unless input shop=1. Do not include input m, ng, or tools.",
+                maxItems: allowShopping ? 3 : 0,
+                items: missingItemsSchema,
               },
               why: {
                 type: "string",
@@ -173,13 +183,10 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
               ing: {
                 type: "array",
                 description:
-                  "Exact ingredient names only, no quantities. Use only input m ingredients or allowed pantry seasonings.",
+                  "Exact ingredient names only, no quantities. Use input m ingredients, allowed pantry seasonings, or shop=1 missing ingredients.",
                 minItems: 1,
                 maxItems: 6,
-                items: {
-                  type: "string",
-                  enum: recipeIngredients,
-                },
+                items: recipeIngredientItemsSchema,
               },
               steps: {
                 type: "array",

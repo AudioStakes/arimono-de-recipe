@@ -70,6 +70,7 @@ export const aiRecipeAssumedPantryIngredients = [
 const requestKeys = new Set([
   "mode",
   "materials",
+  "allowShopping",
   "servings",
   "time",
   "directions",
@@ -225,6 +226,21 @@ function appendOptionalList(
   return true;
 }
 
+function appendOptionalBoolean(
+  request: AiRecipeCandidateRequest,
+  key: "allowShopping",
+  value: unknown,
+): boolean {
+  if (value === undefined) {
+    return true;
+  }
+  if (typeof value !== "boolean") {
+    return false;
+  }
+  request[key] = value;
+  return true;
+}
+
 export function isAiRecipeCandidateRequest(value: unknown): value is AiRecipeCandidateRequest {
   return isRecord(value) && value["mode"] === "candidates";
 }
@@ -251,6 +267,7 @@ export function parseAiRecipeCandidateRequest(
 
   const request: AiRecipeCandidateRequest = { mode: "candidates", materials };
   if (
+    !appendOptionalBoolean(request, "allowShopping", value["allowShopping"]) ||
     !appendOptionalString(
       request,
       "servings",
@@ -313,6 +330,7 @@ export function buildCompactRecipeCandidateInput(request: AiRecipeCandidateReque
   if (request.tools?.length) compact["tl"] = request.tools;
   if (request.avoid?.length) compact["ng"] = request.avoid;
   if (requiredMaterials.length) compact["rq"] = requiredMaterials;
+  if (request.allowShopping) compact["shop"] = 1;
   if (request.notes) compact["n"] = request.notes;
   return JSON.stringify(compact);
 }
@@ -555,6 +573,10 @@ function getConstrainedMaterialNames(request: AiRecipeCandidateRequest): string[
     .map((material) => material.name);
 }
 
+function isShoppingBadge(badge: AiRecipeCandidateBadge): boolean {
+  return badge === "no_shop" || badge === "miss_optional";
+}
+
 function normalizeCandidateForRequest(
   item: AiRecipeCandidate,
   request: AiRecipeCandidateRequest,
@@ -581,9 +603,7 @@ function normalizeCandidateForRequest(
       !(request.avoid?.some((avoid) => conflictsWithAvoid(missing, [avoid])) ?? false),
   );
   const badges = item.badges.filter(
-    (badge) =>
-      !(badge === "no_shop" && miss.length > 0) &&
-      !(badge === "miss_optional" && miss.length === 0),
+    (badge) => badge !== "no_shop" && !(badge === "miss_optional" && miss.length === 0),
   );
 
   return {
@@ -598,8 +618,20 @@ export function validateAiRecipeCandidatesForRequest(
   response: AiRecipeCandidatesResponse,
   request: AiRecipeCandidateRequest,
 ): ParseResult<AiRecipeCandidatesResponse> {
+  const allowShopping = request.allowShopping === true;
   const requestMaterialNames = getRequestMaterialNames(request);
   const constrainedMaterials = getConstrainedMaterialNames(request);
+
+  for (const item of response.items) {
+    if (!allowShopping && item.miss.length > 0) {
+      return invalid("candidate missing ingredients require shopping permission");
+    }
+
+    if (!allowShopping && item.badges.some((badge) => isShoppingBadge(badge))) {
+      return invalid("candidate shopping badges require shopping permission");
+    }
+  }
+
   const normalizedItems = response.items.map((item) => normalizeCandidateForRequest(item, request));
 
   for (const item of normalizedItems) {

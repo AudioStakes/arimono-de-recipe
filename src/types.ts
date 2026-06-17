@@ -116,6 +116,7 @@ export type AiRecipeMaterialInput = {
 export type AiRecipeCandidateRequest = {
   mode: "candidates";
   materials: AiRecipeMaterialInput[];
+  allowShopping?: boolean;
   servings?: string;
   time?: string;
   directions?: string[];
