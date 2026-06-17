@@ -1,6 +1,9 @@
+import { parseAiRecipeCandidatesResponse } from "./ai-recipe-schema";
+import type { AiRecipeCandidateRequest, AiRecipeCandidatesResponse } from "./types";
+
 export type GenerateRecipeSuccess = {
   ok: true;
-  recipe: string;
+  candidates: AiRecipeCandidatesResponse;
   model: string;
   usage: unknown | null;
 };
@@ -15,7 +18,7 @@ export type GenerateRecipeFailure = {
 
 export type GenerateRecipeResult = GenerateRecipeSuccess | GenerateRecipeFailure;
 
-export const maxRecipePromptLength = 12000;
+const maxAiRecipeRequestBodyLength = 2400;
 
 type ApiErrorResponse = {
   error: {
@@ -25,7 +28,7 @@ type ApiErrorResponse = {
 };
 
 type ApiSuccessResponse = {
-  recipe: string;
+  items: unknown;
   model: string;
   usage: unknown | null;
 };
@@ -41,7 +44,7 @@ const isApiErrorResponse = (value: unknown): value is ApiErrorResponse =>
 
 const isApiSuccessResponse = (value: unknown): value is ApiSuccessResponse =>
   isRecord(value) &&
-  typeof value["recipe"] === "string" &&
+  Array.isArray(value["items"]) &&
   typeof value["model"] === "string" &&
   ("usage" in value ? value["usage"] === null || value["usage"] !== undefined : false);
 
@@ -54,15 +57,16 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 export async function generateRecipe(
-  prompt: string,
+  request: AiRecipeCandidateRequest,
   fetcher: typeof fetch = fetch,
 ): Promise<GenerateRecipeResult> {
-  if (prompt.trim().length > maxRecipePromptLength) {
+  const body = JSON.stringify(request);
+  if (body.length > maxAiRecipeRequestBodyLength) {
     return {
       ok: false,
       error: {
-        code: "prompt_too_long",
-        message: "promptが長すぎます。内容を短くしてください。",
+        code: "request_too_long",
+        message: "AIへの依頼条件が長すぎます。内容を短くしてください。",
       },
     };
   }
@@ -75,7 +79,7 @@ export async function generateRecipe(
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body,
     });
   } catch {
     return {
@@ -116,9 +120,20 @@ export async function generateRecipe(
     };
   }
 
+  const parsedCandidates = parseAiRecipeCandidatesResponse(payload);
+  if (!parsedCandidates.ok) {
+    return {
+      ok: false,
+      error: {
+        code: "invalid_response",
+        message: "AIからの応答形式を確認できませんでした。",
+      },
+    };
+  }
+
   return {
     ok: true,
-    recipe: payload.recipe,
+    candidates: parsedCandidates.value,
     model: payload.model,
     usage: payload.usage,
   };

@@ -1,6 +1,8 @@
 import { generateRecipe } from "./ai-recipe-client";
+import { buildAiRecipeCandidateRequest } from "./ai-recipe-request";
 import type { AppElements } from "./app-elements";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
+import { renderRecipeCandidateList } from "./recipe-candidate-list";
 import type { AiRecipeSurface, AppState } from "./types";
 
 const mobileAiRecipeTestIds = {
@@ -15,6 +17,8 @@ type AiRecipeTestId = keyof typeof mobileAiRecipeTestIds;
 
 const FALLBACK_MESSAGE =
   "AIへの依頼に失敗しました。AI向けレシピ依頼文をコピーして、普段使っているAIに貼り付けてください。";
+const EMPTY_MATERIALS_MESSAGE =
+  "先に「家にある食材・材料」を入力してください。AI向けレシピ依頼文のコピーは使えます。";
 
 function setGenerateButtonState(elements: AppElements, loading: boolean): void {
   for (const button of [elements.generateRecipe, elements.generateRecipeMobile]) {
@@ -22,7 +26,7 @@ function setGenerateButtonState(elements: AppElements, loading: boolean): void {
     button.setAttribute("aria-busy", String(loading));
     const label = button.querySelector<HTMLElement>(".action-button-label");
     if (label) {
-      label.textContent = loading ? "AIに依頼しています" : "AIでレシピを作成";
+      label.textContent = loading ? "候補を探しています" : "AIで候補を見る";
     }
   }
 }
@@ -79,9 +83,9 @@ function renderAiRecipeSurface(
 
   if (aiRecipe.status === "loading") {
     panel.replaceChildren(
-      renderPanelHeading("AIからのレシピ案", surface),
+      renderPanelHeading("AIの料理候補", surface),
       renderPanelParagraph(
-        "AIにレシピ案を依頼しています。",
+        "材料の組み合わせを確認しています。",
         "ai-recipe-status-text",
         getTestId(surface, "ai-recipe-status"),
         live ? "status" : "",
@@ -103,22 +107,33 @@ function renderAiRecipeSurface(
   }
 
   const status = renderPanelParagraph(
-    "AIからのレシピ案を表示しました。",
+    "AIの料理候補を表示しました。",
     "ai-recipe-status-text",
     getTestId(surface, "ai-recipe-status"),
     live ? "status" : "",
   );
-  const recipe = document.createElement("div");
-  recipe.className = "ai-recipe-content";
-  recipe.setAttribute("data-testid", getTestId(surface, "ai-recipe-content"));
-  recipe.textContent = aiRecipe.recipe;
+  const content = document.createElement("div");
+  content.className = "ai-recipe-content";
+  content.setAttribute("data-testid", getTestId(surface, "ai-recipe-content"));
+
+  if (aiRecipe.candidates) {
+    content.appendChild(
+      renderRecipeCandidateList({
+        surface,
+        candidates: aiRecipe.candidates.items,
+        selectedCandidateId: aiRecipe.selectedCandidateId,
+        onSelect: (candidateId) => selectRecipeCandidate(state, elements, candidateId, surface),
+        onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
+      }),
+    );
+  }
 
   const meta = renderPanelParagraph(
     `使用モデル: ${aiRecipe.model}`,
     "ai-recipe-meta",
     getTestId(surface, "ai-recipe-model"),
   );
-  panel.replaceChildren(renderPanelHeading("AIからのレシピ案", surface), status, recipe, meta);
+  panel.replaceChildren(renderPanelHeading("AIの料理候補", surface), status, content, meta);
 }
 
 export function renderAiRecipePanel(state: AppState, elements: AppElements): void {
@@ -132,6 +147,48 @@ function focusAiRecipeStatus(elements: AppElements, surface: AiRecipeSurface): v
   panel.querySelector<HTMLElement>('[role="status"], [role="alert"]')?.focus();
 }
 
+function focusRecipeCandidateDetail(elements: AppElements, surface: AiRecipeSurface): void {
+  const panel = getSurfacePanel(elements, surface);
+  const testId =
+    surface === "mobile" ? "mobile-recipe-candidate-detail" : "recipe-candidate-detail";
+  panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
+}
+
+function focusRecipeCandidateList(elements: AppElements, surface: AiRecipeSurface): void {
+  const panel = getSurfacePanel(elements, surface);
+  const testId = surface === "mobile" ? "mobile-recipe-candidate-list" : "recipe-candidate-list";
+  panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
+}
+
+function selectRecipeCandidate(
+  state: AppState,
+  elements: AppElements,
+  candidateId: string,
+  surface: AiRecipeSurface,
+): void {
+  state.aiRecipe = {
+    ...state.aiRecipe,
+    activeSurface: surface,
+    selectedCandidateId: candidateId,
+  };
+  renderAiRecipePanel(state, elements);
+  focusRecipeCandidateDetail(elements, surface);
+}
+
+function clearSelectedRecipeCandidate(
+  state: AppState,
+  elements: AppElements,
+  surface: AiRecipeSurface,
+): void {
+  state.aiRecipe = {
+    ...state.aiRecipe,
+    activeSurface: surface,
+    selectedCandidateId: "",
+  };
+  renderAiRecipePanel(state, elements);
+  focusRecipeCandidateList(elements, surface);
+}
+
 export function resetAiRecipeForInputChange(state: AppState, elements: AppElements): void {
   if (state.aiRecipe.status === "idle") {
     return;
@@ -140,11 +197,11 @@ export function resetAiRecipeForInputChange(state: AppState, elements: AppElemen
   state.aiRecipe = {
     status: "idle",
     activeSurface: state.aiRecipe.activeSurface,
-    recipe: "",
+    candidates: null,
+    selectedCandidateId: "",
     model: "",
     usage: null,
     errorMessage: "",
-    promptSnapshot: "",
     requestId: state.aiRecipe.requestId + 1,
   };
   renderAiRecipePanel(state, elements);
@@ -164,21 +221,37 @@ export async function createAiRecipe(
   refreshPromptPanel(state, elements, services);
 
   const requestId = state.aiRecipe.requestId + 1;
-  const promptSnapshot = elements.output.value;
+  const request = buildAiRecipeCandidateRequest(services.readConditions());
+  if (request.materials.length === 0) {
+    state.aiRecipe = {
+      status: "error",
+      activeSurface: surface,
+      candidates: null,
+      selectedCandidateId: "",
+      model: "",
+      usage: null,
+      errorMessage: EMPTY_MATERIALS_MESSAGE,
+      requestId,
+    };
+    renderAiRecipePanel(state, elements);
+    focusAiRecipeStatus(elements, surface);
+    return;
+  }
+
   state.aiRecipe = {
     status: "loading",
     activeSurface: surface,
-    recipe: "",
+    candidates: null,
+    selectedCandidateId: "",
     model: "",
     usage: null,
     errorMessage: "",
-    promptSnapshot,
     requestId,
   };
   renderAiRecipePanel(state, elements);
   focusAiRecipeStatus(elements, surface);
 
-  const result = await generateRecipe(promptSnapshot);
+  const result = await generateRecipe(request);
   if (state.aiRecipe.requestId !== requestId) {
     return;
   }
@@ -187,25 +260,26 @@ export async function createAiRecipe(
     state.aiRecipe = {
       status: "success",
       activeSurface: surface,
-      recipe: result.recipe,
+      candidates: result.candidates,
+      selectedCandidateId: "",
       model: result.model,
       usage: result.usage,
       errorMessage: "",
-      promptSnapshot,
       requestId,
     };
   } else {
     state.aiRecipe = {
       status: "error",
       activeSurface: surface,
-      recipe: "",
+      candidates: null,
+      selectedCandidateId: "",
       model: "",
       usage: null,
       errorMessage: FALLBACK_MESSAGE,
-      promptSnapshot,
       requestId,
     };
   }
 
   renderAiRecipePanel(state, elements);
+  focusAiRecipeStatus(elements, surface);
 }

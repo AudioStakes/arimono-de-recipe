@@ -103,14 +103,50 @@ export type ChipItem = {
 export type AiRecipeStatus = "idle" | "loading" | "success" | "error";
 export type AiRecipeSurface = "desktop" | "mobile";
 
+export type AiRecipeCandidateRequest = {
+  mode: "candidates";
+  materials: string[];
+  servings?: string;
+  time?: string;
+  directions?: string[];
+  tools?: string[];
+  avoid?: string[];
+  notes?: string;
+};
+
+export type AiRecipeCandidateBadge =
+  | "no_shop"
+  | "miss_optional"
+  | "quick"
+  | "easy"
+  | "uses_up"
+  | "few_dishes"
+  | "kids";
+
+export type AiRecipeCandidate = {
+  id: string;
+  title: string;
+  time: number;
+  badges: AiRecipeCandidateBadge[];
+  use: string[];
+  miss: string[];
+  why: string;
+  ing: string[];
+  steps: string[];
+};
+
+export type AiRecipeCandidatesResponse = {
+  items: AiRecipeCandidate[];
+};
+
 export type AiRecipeState = {
   status: AiRecipeStatus;
   activeSurface: AiRecipeSurface;
-  recipe: string;
+  candidates: AiRecipeCandidatesResponse | null;
+  selectedCandidateId: string;
   model: string;
   usage: unknown | null;
   errorMessage: string;
-  promptSnapshot: string;
   requestId: number;
 };
 

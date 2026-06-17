@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { generateRecipe, maxRecipePromptLength } from "../../src/ai-recipe-client";
+import { generateRecipe } from "../../src/ai-recipe-client";
+import type { AiRecipeCandidateRequest, AiRecipeCandidatesResponse } from "../../src/types";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -11,24 +12,72 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   });
 }
 
+const request = {
+  mode: "candidates",
+  materials: ["豆腐", "キャベツ"],
+  servings: "2人分",
+  directions: ["あっさり"],
+} satisfies AiRecipeCandidateRequest;
+
+const candidates = {
+  items: [
+    {
+      id: "a",
+      title: "豆腐のあんかけ",
+      time: 15,
+      badges: ["no_shop", "quick"],
+      use: ["豆腐"],
+      miss: [],
+      why: "豆腐を主役にして短時間で作れます。",
+      ing: ["豆腐", "片栗粉", "しょうゆ"],
+      steps: ["豆腐を温める", "あんを作る", "かける"],
+    },
+    {
+      id: "b",
+      title: "キャベツ炒め",
+      time: 12,
+      badges: ["easy"],
+      use: ["キャベツ"],
+      miss: ["卵"],
+      why: "少ない材料で主菜寄りにできます。",
+      ing: ["キャベツ", "油", "塩"],
+      steps: ["切る", "炒める", "味を調える"],
+    },
+    {
+      id: "c",
+      title: "豆腐スープ",
+      time: 10,
+      badges: ["no_shop", "few_dishes"],
+      use: ["豆腐", "キャベツ"],
+      miss: [],
+      why: "鍋ひとつでありものを使えます。",
+      ing: ["豆腐", "キャベツ", "だし"],
+      steps: ["煮る", "味を調える"],
+    },
+  ],
+} satisfies AiRecipeCandidatesResponse;
+
 describe("generateRecipe", () => {
-  test("成功レスポンスを扱える", async () => {
+  test("候補成功レスポンスを扱える", async () => {
     const fetcher: typeof fetch = async (input, init) => {
       expect(input).toBe("/api/recipe");
       expect(init?.method).toBe("POST");
       expect(init?.headers).toEqual({ "content-type": "application/json" });
-      expect(JSON.parse(String(init?.body))).toEqual({ prompt: "豆腐で作る" });
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(body).toEqual(request);
+      expect(body["prompt"]).toBeUndefined();
+      expect(String(init?.body)).not.toContain("## 役割");
 
       return jsonResponse({
-        recipe: "豆腐のあんかけ",
+        ...candidates,
         model: "test-model",
         usage: { output_tokens: 120 },
       });
     };
 
-    await expect(generateRecipe("豆腐で作る", fetcher)).resolves.toEqual({
+    await expect(generateRecipe(request, fetcher)).resolves.toEqual({
       ok: true,
-      recipe: "豆腐のあんかけ",
+      candidates,
       model: "test-model",
       usage: { output_tokens: 120 },
     });
@@ -39,26 +88,26 @@ describe("generateRecipe", () => {
       jsonResponse(
         {
           error: {
-            code: "invalid_prompt",
-            message: "promptを入力してください。",
+            code: "invalid_request",
+            message: "AI候補の依頼条件を確認してください。",
           },
         },
         { status: 400 },
       );
 
-    await expect(generateRecipe("", fetcher)).resolves.toEqual({
+    await expect(generateRecipe(request, fetcher)).resolves.toEqual({
       ok: false,
       error: {
-        code: "invalid_prompt",
-        message: "promptを入力してください。",
+        code: "invalid_request",
+        message: "AI候補の依頼条件を確認してください。",
       },
     });
   });
 
   test("不正レスポンスを扱える", async () => {
-    const fetcher: typeof fetch = async () => jsonResponse({ result: "missing recipe" });
+    const fetcher: typeof fetch = async () => jsonResponse({ result: "missing items" });
 
-    await expect(generateRecipe("豆腐", fetcher)).resolves.toEqual({
+    await expect(generateRecipe(request, fetcher)).resolves.toEqual({
       ok: false,
       error: {
         code: "invalid_response",
@@ -72,7 +121,7 @@ describe("generateRecipe", () => {
       throw new TypeError("network failed");
     };
 
-    await expect(generateRecipe("豆腐", fetcher)).resolves.toEqual({
+    await expect(generateRecipe(request, fetcher)).resolves.toEqual({
       ok: false,
       error: {
         code: "network_error",
@@ -81,16 +130,25 @@ describe("generateRecipe", () => {
     });
   });
 
-  test("長すぎるpromptは送信前に拒否する", async () => {
+  test("長すぎるrequest bodyは送信前に拒否する", async () => {
     const fetcher: typeof fetch = async () => {
       throw new Error("fetch should not be called");
     };
 
-    await expect(generateRecipe("あ".repeat(maxRecipePromptLength + 1), fetcher)).resolves.toEqual({
+    await expect(
+      generateRecipe(
+        {
+          mode: "candidates",
+          materials: ["豆腐"],
+          notes: "あ".repeat(3000),
+        },
+        fetcher,
+      ),
+    ).resolves.toEqual({
       ok: false,
       error: {
-        code: "prompt_too_long",
-        message: "promptが長すぎます。内容を短くしてください。",
+        code: "request_too_long",
+        message: "AIへの依頼条件が長すぎます。内容を短くしてください。",
       },
     });
   });
