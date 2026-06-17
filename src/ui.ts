@@ -51,6 +51,7 @@ const createInitialState = (): AppState => {
     aiRecipe: {
       status: "idle",
       activeSurface: "desktop",
+      request: null,
       candidates: null,
       selectedCandidateId: "",
       model: "",
