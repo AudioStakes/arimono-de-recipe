@@ -10,4 +10,10 @@ export type AppElements = {
   sheetClose: HTMLButtonElement;
   chips: HTMLElement;
   stickyChips: HTMLElement;
+  generateRecipe: HTMLButtonElement;
+  generateRecipeMobile: HTMLButtonElement;
+  copyPromptSticky: HTMLButtonElement;
+  copyPromptMobile: HTMLButtonElement;
+  aiRecipePanel: HTMLElement;
+  aiRecipePanelMobile: HTMLElement;
 };

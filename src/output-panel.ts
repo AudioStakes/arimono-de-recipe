@@ -10,6 +10,8 @@ type PromptPanelElements = {
   bottom: HTMLElement;
   chips: Element;
   stickyChips: Element;
+  copyPromptSticky: HTMLElement;
+  copyPromptMobile: HTMLElement;
 };
 
 type PromptPanelState = {
@@ -35,6 +37,7 @@ export type PromptPanelServices = {
   clearCombo: (group: ComboId) => void;
   clearCookTime: () => void;
   clearSupplementalNotes: () => void;
+  openMobilePromptForCopy?: (opener: HTMLElement) => void;
   onChange: () => void;
 };
 
@@ -239,15 +242,31 @@ export async function copyPrompt(
   event: Event,
 ): Promise<void> {
   const button = event.currentTarget as HTMLElement | null;
+  let feedbackButton = button;
   services.flushPendingInputs();
   refreshPromptPanel(state, elements, services);
+  let copied = false;
   try {
     await copyText(String(elements.output.value || ""));
+    copied = true;
   } catch {
-    elements.output.select();
-    document.execCommand("copy");
+    const useMobileFallback =
+      button === elements.copyPromptMobile || button === elements.copyPromptSticky;
+    if (button === elements.copyPromptSticky) {
+      services.openMobilePromptForCopy?.(elements.copyPromptSticky);
+      feedbackButton = elements.copyPromptMobile;
+    }
+    const fallbackTarget = useMobileFallback ? elements.mobileOutput : elements.output;
+    fallbackTarget.select();
+    copied = document.execCommand("copy");
   }
-  showCopyFeedback(button);
+
+  if (copied) {
+    showCopyFeedback(feedbackButton);
+    return;
+  }
+
+  showCopyError(feedbackButton);
 }
 
 function showCopyFeedback(button: HTMLElement | null): void {
@@ -271,4 +290,26 @@ function showCopyFeedback(button: HTMLElement | null): void {
     if (label) label.textContent = defaultLabel;
     if (status) status.textContent = "";
   }, 1800);
+}
+
+function showCopyError(button: HTMLElement | null): void {
+  if (!button) return;
+
+  const label = button.querySelector<HTMLElement>(".copy-label");
+  const status = button.querySelector<HTMLElement>(".copy-status");
+  const dataset = button.dataset as DOMStringMap & {
+    defaultLabel?: string;
+  };
+  const defaultLabel = dataset.defaultLabel ?? label?.textContent ?? "";
+  const errorLabel = "コピーできませんでした。本文を選択してコピーしてください。";
+
+  button.classList.add("is-copy-error");
+  if (label) label.textContent = errorLabel;
+  if (status) status.textContent = errorLabel;
+
+  window.setTimeout(() => {
+    button.classList.remove("is-copy-error");
+    if (label) label.textContent = defaultLabel;
+    if (status) status.textContent = "";
+  }, 2600);
 }

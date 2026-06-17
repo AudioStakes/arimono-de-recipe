@@ -11,7 +11,7 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
     page.getByText("「ありもので何作ろう？」を、AIへそのまま渡せるレシピ依頼文に。"),
   ).toBeVisible();
   await expect(page.locator(".use-flow")).toContainText("1. 条件を入力");
-  await expect(page.locator(".use-flow")).toContainText("3. コピーしてAIへ渡す");
+  await expect(page.locator(".use-flow")).toContainText("3. AI生成またはコピー");
 
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText([

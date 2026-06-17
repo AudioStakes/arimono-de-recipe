@@ -100,6 +100,20 @@ export type ChipItem = {
   action?: () => void;
 };
 
+export type AiRecipeStatus = "idle" | "loading" | "success" | "error";
+export type AiRecipeSurface = "desktop" | "mobile";
+
+export type AiRecipeState = {
+  status: AiRecipeStatus;
+  activeSurface: AiRecipeSurface;
+  recipe: string;
+  model: string;
+  usage: unknown | null;
+  errorMessage: string;
+  promptSnapshot: string;
+  requestId: number;
+};
+
 export type AppState = {
   hasUserInput: boolean;
   inlineVisible: boolean;
@@ -107,4 +121,5 @@ export type AppState = {
   ticking: boolean;
   mobileSheetOpen: boolean;
   materialRequests: MaterialRequest[];
+  aiRecipe: AiRecipeState;
 };

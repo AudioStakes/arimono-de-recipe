@@ -15,14 +15,16 @@ test("モバイルでは固定ボトムシートが表示され、展開と収�
 
   await expect(page.getByTestId("sticky-condition-chips")).toHaveClass(/show/);
   await expect(page.locator("#sheetToggle")).toContainText("レシピ依頼文を確認する");
-  await expect(page.locator("#sheetExpand")).toHaveText("⌃");
-  await page.locator("#sheetExpand").click();
+  await expect(page.getByRole("button", { name: "レシピ依頼文全文を表示" })).toHaveText("⌃");
+  await page.getByRole("button", { name: "レシピ依頼文全文を表示" }).click();
   await expect(footer).toHaveAttribute("data-state", "open");
   await expect(mobilePromptPanel).toHaveAttribute("data-state", "open");
   await expect(footer).toHaveClass(/is-open/);
   await expect(mobilePromptPanel).toBeVisible();
   await expect(page.locator(".mobile-prompt-head h2")).toHaveText("AIに渡す依頼文");
   await expect(page.getByTestId("copy-prompt-sticky")).toBeHidden();
+  await expect(page.getByTestId("generate-recipe-mobile")).toBeVisible();
+  await expect(page.getByTestId("copy-prompt-mobile-panel")).toBeVisible();
   await page.locator("#sheetClose").click();
   await expect(footer).toHaveAttribute("data-state", "closed");
   await expect(mobilePromptPanel).toHaveAttribute("data-state", "closed");

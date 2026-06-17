@@ -1,3 +1,4 @@
+import { createAiRecipe } from "./ai-recipe-panel";
 import type { AppElements } from "./app-elements";
 import type { PromptPanelServices } from "./output-panel";
 import {
@@ -13,6 +14,8 @@ const $ = <T extends Element>(selector: string, root: ParentNode = document): T 
   if (!element) throw new Error(`Element not found: ${selector}`);
   return element;
 };
+
+let mobileSheetOpener: HTMLElement | null = null;
 
 function syncStickyFooterState(
   state: AppState,
@@ -48,8 +51,17 @@ function setCollapsibleState(button: HTMLButtonElement, expanded: boolean): void
   }
 }
 
-function setMobileSheetState(state: AppState, elements: AppElements, open: boolean): void {
+function setMobileSheetState(
+  state: AppState,
+  elements: AppElements,
+  open: boolean,
+  opener: HTMLElement | null = null,
+): void {
+  const wasOpen = state.mobileSheetOpen;
   state.mobileSheetOpen = open;
+  if (open && opener) {
+    mobileSheetOpener = opener;
+  }
   elements.bottom.classList.toggle("is-open", open);
   elements.bottom.setAttribute("data-state", open ? "open" : "closed");
   elements.bottomBackdrop.hidden = !open;
@@ -63,6 +75,13 @@ function setMobileSheetState(state: AppState, elements: AppElements, open: boole
   const mobilePromptPanel = $("#mobilePromptPanel");
   mobilePromptPanel.setAttribute("aria-hidden", String(!open));
   mobilePromptPanel.setAttribute("data-state", open ? "open" : "closed");
+
+  if (open && !wasOpen) {
+    elements.sheetClose.focus();
+  } else if (!open && wasOpen) {
+    mobileSheetOpener?.focus();
+    mobileSheetOpener = null;
+  }
 }
 
 function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
@@ -103,6 +122,10 @@ export function bindAppEvents(
   elements: AppElements,
   services: PromptPanelServices,
 ): void {
+  services.openMobilePromptForCopy = (opener) => {
+    setMobileSheetState(state, elements, true, opener);
+  };
+
   elements.form.addEventListener("click", (event) => {
     const target = event.target as Element;
     if (target.closest(".pill")) {
@@ -143,20 +166,41 @@ export function bindAppEvents(
     syncStickyFooterState(state, elements, services);
   });
 
-  elements.sheetToggle.addEventListener("click", () => setMobileSheetState(state, elements, true));
-  elements.sheetExpand.addEventListener("click", () => setMobileSheetState(state, elements, true));
+  elements.sheetToggle.addEventListener("click", () =>
+    setMobileSheetState(state, elements, true, elements.sheetToggle),
+  );
+  elements.sheetExpand.addEventListener("click", () =>
+    setMobileSheetState(state, elements, true, elements.sheetExpand),
+  );
   elements.sheetClose.addEventListener("click", () => setMobileSheetState(state, elements, false));
   elements.bottomBackdrop.addEventListener("click", () =>
     setMobileSheetState(state, elements, false),
   );
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.mobileSheetOpen) {
+      setMobileSheetState(state, elements, false);
+    }
+  });
 
   $("#copyPrompt").addEventListener(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),
   );
-  $("#copyPromptSticky").addEventListener(
+  elements.copyPromptSticky.addEventListener(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),
+  );
+  elements.copyPromptMobile.addEventListener(
+    "click",
+    (event) => void copyPromptPanel(state, elements, services, event),
+  );
+  $("#generateRecipe").addEventListener(
+    "click",
+    () => void createAiRecipe(state, elements, services, "desktop"),
+  );
+  $("#generateRecipeMobile").addEventListener(
+    "click",
+    () => void createAiRecipe(state, elements, services, "mobile"),
   );
 
   attachBottomSheetDrag(state, elements);

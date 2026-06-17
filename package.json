@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:pages": "npm run build && wrangler pages dev dist --ai=AI",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "format": "biome check --write --diagnostic-level=error --reporter=github --colors=off .",
@@ -24,11 +25,13 @@
   },
   "devDependencies": {
     "@biomejs/biome": "latest",
+    "@cloudflare/workers-types": "^4.20260617.1",
     "@playwright/test": "latest",
     "@types/node": "^25.9.3",
     "htmlhint": "latest",
     "typescript": "latest",
     "vite": "latest",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.7",
+    "wrangler": "^4.101.0"
   }
 }
