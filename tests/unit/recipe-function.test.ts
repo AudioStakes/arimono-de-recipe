@@ -329,9 +329,9 @@ describe("POST /api/recipe", () => {
     ]);
   });
 
-  test("candidate JSONを受け取り、短いcompact inputでWorkers AIへ依頼する", async () => {
+  test("candidate JSONを受け取り、schema付きcompact inputでWorkers AIへ依頼する", async () => {
     const run = vi.fn<Env["AI"]["run"]>(async () => ({
-      response: JSON.stringify(candidateResponse),
+      response: candidateResponse,
       usage: { input_tokens: 18, output_tokens: 120 },
     }));
 
@@ -344,7 +344,7 @@ describe("POST /api/recipe", () => {
     expect(response.status).toBe(200);
     expect(await readJson(response)).toEqual({
       ...candidateResponse,
-      model: recipeFunctionLimits.model,
+      model: recipeFunctionLimits.candidateModel,
       usage: { input_tokens: 18, output_tokens: 120 },
     });
 
@@ -353,18 +353,23 @@ describe("POST /api/recipe", () => {
     expect(call).toBeDefined();
     if (!call) throw new Error("AI.run was not called.");
     const [model, input] = call;
-    expect(model).toBe(recipeFunctionLimits.model);
+    expect(model).toBe(recipeFunctionLimits.candidateModel);
     expect(isRecord(input)).toBe(true);
     if (!isRecord(input)) throw new Error("AI input was not an object.");
     expect(input["max_tokens"]).toBe(recipeFunctionLimits.candidateMaxTokens);
     expect(input["temperature"]).toBe(recipeFunctionLimits.temperature);
+    expect(input["response_format"]).toEqual(
+      expect.objectContaining({
+        type: "json_schema",
+      }),
+    );
     const messages = input["messages"];
     expect(Array.isArray(messages)).toBe(true);
     if (!Array.isArray(messages)) throw new Error("AI messages were not an array.");
     const system = messages[0] as Record<string, unknown> | undefined;
     const user = messages[1] as Record<string, unknown> | undefined;
     expect(system).toEqual(expect.objectContaining({ role: "system" }));
-    expect(String(system?.["content"])).toContain("Return JSON only");
+    expect(String(system?.["content"])).toContain("response_format schema");
     expect(user).toEqual(
       expect.objectContaining({
         role: "user",

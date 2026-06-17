@@ -2,7 +2,7 @@ import {
   buildCompactRecipeCandidateInput,
   isAiRecipeCandidateRequest,
   parseAiRecipeCandidateRequest,
-  parseAiRecipeCandidatesJson,
+  parseAiRecipeCandidatesModelOutput,
   validateAiRecipeCandidatesForRequest,
 } from "../../src/ai-recipe-schema";
 import type { AiRecipeCandidateRequest } from "../../src/types";
@@ -60,7 +60,8 @@ type WorkersAiTextResult = {
   usage?: unknown;
 };
 
-const MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const LEGACY_MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const CANDIDATE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 const MAX_PROMPT_LENGTH = 12000;
 const MAX_BODY_BYTES = 32000;
 const LEGACY_MAX_TOKENS = 1400;
@@ -75,13 +76,115 @@ const LEGACY_SYSTEM_MESSAGE = [
 
 const CANDIDATE_SYSTEM_MESSAGE = [
   "You generate Japanese home-cooking recipe candidates.",
-  "Return JSON only. No markdown. No prose outside JSON.",
+  "Return only JSON matching the response_format schema.",
+  "Input m means available ingredients. Input tl means cooking tools. Input ng means avoid list.",
   "Main ingredients must come from m.",
   "Return exactly 3 items.",
-  "Input keys: m materials, sv servings, t time, d direction, tl tools, ng avoid, n notes. Obey n constraints such as 必須 and 使切.",
-  'Schema: {"items":[{"id":"a","title":"","time":0,"badges":[],"use":[],"miss":[],"why":"","ing":[],"steps":[]}]}',
-  "Limits: why<=60 Japanese chars, ing<=6, steps<=3, badges from no_shop,miss_optional,quick,easy,uses_up,few_dishes,kids.",
+  "Input keys: m materials, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
+  "Obey n constraints such as 必須 and 使切.",
+  "Output use must be ingredient names copied from m only. Never put tl tools in use.",
+  "Output miss must be missing ingredient names only. Never put ng avoid items in miss.",
+  "Output ing must contain only m ingredients, miss ingredients, or basic pantry seasonings.",
+  "steps must be plain short Japanese strings, not objects.",
+  "Use at most 4 badges.",
 ].join("\n");
+
+const CANDIDATE_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["items"],
+    properties: {
+      items: {
+        type: "array",
+        minItems: 3,
+        maxItems: 3,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["id", "title", "time", "badges", "use", "miss", "why", "ing", "steps"],
+          properties: {
+            id: {
+              type: "string",
+              enum: ["a", "b", "c"],
+            },
+            title: {
+              type: "string",
+              maxLength: 32,
+            },
+            time: {
+              type: "integer",
+              minimum: 1,
+              maximum: 240,
+            },
+            badges: {
+              type: "array",
+              maxItems: 4,
+              items: {
+                type: "string",
+                enum: [
+                  "no_shop",
+                  "miss_optional",
+                  "quick",
+                  "easy",
+                  "uses_up",
+                  "few_dishes",
+                  "kids",
+                ],
+              },
+            },
+            use: {
+              type: "array",
+              description:
+                "Available ingredient names used by this recipe. Values must be copied from input m, not tools.",
+              minItems: 1,
+              maxItems: 12,
+              items: {
+                type: "string",
+                maxLength: 48,
+              },
+            },
+            miss: {
+              type: "array",
+              description:
+                "Missing ingredient names only. Do not include avoid items from ng or cooking tools from tl.",
+              maxItems: 6,
+              items: {
+                type: "string",
+                maxLength: 48,
+              },
+            },
+            why: {
+              type: "string",
+              maxLength: 80,
+            },
+            ing: {
+              type: "array",
+              description:
+                "Recipe ingredients. Use available m ingredients, miss ingredients, or basic pantry seasonings only.",
+              minItems: 1,
+              maxItems: 6,
+              items: {
+                type: "string",
+                maxLength: 48,
+              },
+            },
+            steps: {
+              type: "array",
+              minItems: 1,
+              maxItems: 3,
+              items: {
+                type: "string",
+                maxLength: 60,
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const;
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -238,6 +341,15 @@ function extractUsage(result: unknown): unknown | null {
   return result["usage"] ?? null;
 }
 
+function extractCandidateOutput(result: unknown): unknown {
+  if (!isRecord(result)) {
+    return result;
+  }
+
+  const output = result as WorkersAiTextResult;
+  return output.response ?? output.text ?? output.result ?? result;
+}
+
 export const onRequest: PagesFunction<Env> = async (context) => {
   if (context.request.method !== "POST") {
     return errorResponse(405, "method_not_allowed", "POSTでリクエストしてください。", {
@@ -265,7 +377,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   try {
     const result =
       body.kind === "legacy"
-        ? await context.env.AI.run(MODEL, {
+        ? await context.env.AI.run(LEGACY_MODEL, {
             messages: [
               { role: "system", content: LEGACY_SYSTEM_MESSAGE },
               { role: "user", content: body.prompt },
@@ -273,7 +385,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             max_tokens: LEGACY_MAX_TOKENS,
             temperature: TEMPERATURE,
           })
-        : await context.env.AI.run(MODEL, {
+        : await context.env.AI.run(CANDIDATE_MODEL, {
             messages: [
               { role: "system", content: CANDIDATE_SYSTEM_MESSAGE },
               {
@@ -283,15 +395,11 @@ export const onRequest: PagesFunction<Env> = async (context) => {
             ],
             max_tokens: CANDIDATE_MAX_TOKENS,
             temperature: TEMPERATURE,
+            response_format: CANDIDATE_RESPONSE_FORMAT,
           });
-    const recipe = extractRecipeText(result).trim();
-
-    if (!recipe) {
-      return errorResponse(500, "ai_generation_failed", "AIからレシピ案を取得できませんでした。");
-    }
 
     if (body.kind === "candidates") {
-      const candidates = parseAiRecipeCandidatesJson(recipe);
+      const candidates = parseAiRecipeCandidatesModelOutput(extractCandidateOutput(result));
       if (!candidates.ok) {
         return errorResponse(500, "ai_generation_failed", "AIからレシピ案を取得できませんでした。");
       }
@@ -305,14 +413,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
       return jsonResponse({
         ...validatedCandidates.value,
-        model: MODEL,
+        model: CANDIDATE_MODEL,
         usage: extractUsage(result),
       });
     }
 
+    const recipe = extractRecipeText(result).trim();
+
+    if (!recipe) {
+      return errorResponse(500, "ai_generation_failed", "AIからレシピ案を取得できませんでした。");
+    }
+
     return jsonResponse({
       recipe,
-      model: MODEL,
+      model: LEGACY_MODEL,
       usage: extractUsage(result),
     });
   } catch {
@@ -327,5 +441,7 @@ export const recipeFunctionLimits = {
   legacyMaxTokens: LEGACY_MAX_TOKENS,
   candidateMaxTokens: CANDIDATE_MAX_TOKENS,
   temperature: TEMPERATURE,
-  model: MODEL,
+  model: LEGACY_MODEL,
+  legacyModel: LEGACY_MODEL,
+  candidateModel: CANDIDATE_MODEL,
 } as const;

@@ -360,14 +360,47 @@ export function parseAiRecipeCandidatesResponse(
 }
 
 export function parseAiRecipeCandidatesJson(text: string): ParseResult<AiRecipeCandidatesResponse> {
+  const jsonText = extractJsonObjectText(text);
+  if (!jsonText) {
+    return invalid("invalid JSON");
+  }
+
   let payload: unknown;
   try {
-    payload = JSON.parse(text);
+    payload = JSON.parse(jsonText);
   } catch {
     return invalid("invalid JSON");
   }
 
   return parseAiRecipeCandidatesResponse(payload);
+}
+
+export function parseAiRecipeCandidatesModelOutput(
+  value: unknown,
+): ParseResult<AiRecipeCandidatesResponse> {
+  if (typeof value === "string") {
+    return parseAiRecipeCandidatesJson(value);
+  }
+
+  return parseAiRecipeCandidatesResponse(value);
+}
+
+function extractJsonObjectText(text: string): string | null {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fenced?.[1]?.trim() ?? trimmed;
+
+  if (candidate.startsWith("{") && candidate.endsWith("}")) {
+    return candidate;
+  }
+
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  return candidate.slice(start, end + 1);
 }
 
 function normalizeForComparison(value: string): string {
@@ -404,13 +437,24 @@ const assumedPantryIngredients = new Set(
   ].map(normalizeForComparison),
 );
 
-function isAssumedPantryIngredient(value: string): boolean {
-  return assumedPantryIngredients.has(normalizeForComparison(value));
-}
-
 function matchesList(value: string, items: readonly string[]): boolean {
   const normalizedValue = normalizeForComparison(value);
   return items.some((item) => normalizedValue === normalizeForComparison(item));
+}
+
+function mentionsListItem(value: string, items: readonly string[]): boolean {
+  const normalizedValue = normalizeForComparison(value);
+  return items.some((item) => {
+    const normalizedItem = normalizeForComparison(item);
+    return normalizedValue === normalizedItem || normalizedValue.includes(normalizedItem);
+  });
+}
+
+function mentionsAssumedPantryIngredient(value: string): boolean {
+  const normalizedValue = normalizeForComparison(value);
+  return [...assumedPantryIngredients].some(
+    (ingredient) => normalizedValue === ingredient || normalizedValue.includes(ingredient),
+  );
 }
 
 function extractConstrainedMaterials(notes: string | undefined): string[] {
@@ -461,9 +505,9 @@ export function validateAiRecipeCandidatesForRequest(
 
     const unaccountedIngredients = item.ing.filter(
       (ingredient) =>
-        !matchesRequestMaterial(ingredient, request.materials) &&
-        !matchesList(ingredient, item.miss) &&
-        !isAssumedPantryIngredient(ingredient),
+        !mentionsListItem(ingredient, request.materials) &&
+        !mentionsListItem(ingredient, item.miss) &&
+        !mentionsAssumedPantryIngredient(ingredient),
     );
     if (unaccountedIngredients.length > 0) {
       return invalid(

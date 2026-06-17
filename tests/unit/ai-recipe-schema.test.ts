@@ -3,6 +3,7 @@ import {
   buildCompactRecipeCandidateInput,
   parseAiRecipeCandidateRequest,
   parseAiRecipeCandidatesJson,
+  parseAiRecipeCandidatesModelOutput,
   parseAiRecipeCandidatesResponse,
   validateAiRecipeCandidatesForRequest,
 } from "../../src/ai-recipe-schema";
@@ -84,6 +85,23 @@ describe("ai recipe schema", () => {
     if (!parsed.ok) throw new Error(parsed.reason);
     expect(parsed.value.items).toHaveLength(3);
     expect(parsed.value.items[0]?.title).toBe("豆腐のあんかけ");
+  });
+
+  test("JSON Modeのobject応答を3件に正規化する", () => {
+    const parsed = parseAiRecipeCandidatesModelOutput(validCandidates);
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.items.map((item) => item.id)).toEqual(["a", "b", "c"]);
+  });
+
+  test("AI応答のコードフェンスや前置き付きJSONを受け入れる", () => {
+    expect(
+      parseAiRecipeCandidatesJson(`\`\`\`json\n${JSON.stringify(validCandidates)}\n\`\`\``).ok,
+    ).toBe(true);
+    expect(parseAiRecipeCandidatesJson(`候補です。\n${JSON.stringify(validCandidates)}`).ok).toBe(
+      true,
+    );
   });
 
   test("4件以上は全件検証後に3件へ切る", () => {
@@ -218,5 +236,53 @@ describe("ai recipe schema", () => {
         avoid: ["卵"],
       }).ok,
     ).toBe(false);
+  });
+
+  test("ingの分量付き材料と常備調味料をrequest材料として扱う", () => {
+    const realisticCandidates = {
+      items: [
+        {
+          id: "a",
+          title: "鶏もも親子煮",
+          time: 18,
+          badges: ["no_shop", "quick"],
+          use: ["鶏もも肉", "玉ねぎ", "卵"],
+          miss: [],
+          why: "家の材料だけで主菜になります。",
+          ing: ["鶏もも肉 200g", "玉ねぎ 1/2個", "卵 2個", "しょうゆ 大さじ1"],
+          steps: ["鶏肉と玉ねぎを煮る", "卵を回し入れる", "火を止める"],
+        },
+        {
+          id: "b",
+          title: "鶏玉炒め",
+          time: 15,
+          badges: ["no_shop", "easy"],
+          use: ["鶏もも肉", "玉ねぎ", "卵"],
+          miss: [],
+          why: "フライパンだけで短時間にできます。",
+          ing: ["鶏もも肉 180g", "玉ねぎ 1/2個", "卵 2個", "油 小さじ1"],
+          steps: ["材料を切る", "炒める", "卵を絡める"],
+        },
+        {
+          id: "c",
+          title: "鶏肉の卵とじ",
+          time: 20,
+          badges: ["no_shop", "few_dishes"],
+          use: ["鶏もも肉", "玉ねぎ", "卵"],
+          miss: [],
+          why: "汁気があり食べやすいです。",
+          ing: ["鶏もも肉 200g", "玉ねぎ 1個", "卵 2個", "みりん 大さじ1"],
+          steps: ["具材を煮る", "味を調える", "卵でとじる"],
+        },
+      ],
+    } satisfies AiRecipeCandidatesResponse;
+
+    expect(
+      validateAiRecipeCandidatesForRequest(realisticCandidates, {
+        mode: "candidates",
+        materials: ["鶏もも肉", "玉ねぎ", "卵"],
+        notes: "必須:鶏もも肉",
+      }).ok,
+    ).toBe(true);
   });
 });
