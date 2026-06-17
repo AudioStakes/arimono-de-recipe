@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { combos } from "../../src/data";
 
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const exactText = (value: string): RegExp => new RegExp(`^${escapeRegExp(value)}$`);
+
 test("候補入力UIは独自候補リストで、候補選択とフィルタが動く", async ({ page }) => {
   await page.goto("/");
 
@@ -15,17 +18,19 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
 
   await input.click();
   await expect(materialField.locator(".suggestions")).toBeVisible();
-  await expect(input).toHaveAttribute("aria-expanded", "true");
+  await expect(input).not.toHaveAttribute("aria-expanded", /.+/);
 
   await input.press("Escape");
   await expect(materialField.locator(".suggestions")).not.toBeVisible();
-  await expect(input).toHaveAttribute("aria-expanded", "false");
+  await expect(input).not.toHaveAttribute("aria-controls", /.+/);
 
   await input.press("ArrowDown");
   await expect(materialField.locator(".suggestions")).toBeVisible();
 
   await input.fill("豆腐");
-  await expect(materialField.getByRole("option", { name: "豆腐", exact: true })).toBeVisible();
+  await expect(
+    materialField.locator(".suggestion-option", { hasText: exactText("豆腐") }),
+  ).toBeVisible();
   await input.fill("存在しない材料");
   await expect(materialField.getByText("候補がありません")).toBeVisible();
 
@@ -34,12 +39,14 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await expect(materialField.locator(".suggestion-option")).toHaveCount(40);
 
   await input.fill("卵");
-  await materialField.getByRole("option", { name: "卵", exact: true }).click();
+  await materialField.locator(".suggestion-option", { hasText: exactText("卵") }).click();
   await expect(materialField.locator(".pill")).toContainText("卵");
 
   await input.fill("");
   await input.press("ArrowDown");
-  await expect(materialField.getByRole("option", { name: "卵", exact: true })).toHaveCount(0);
+  await expect(
+    materialField.locator(".suggestion-option", { hasText: exactText("卵") }),
+  ).toHaveCount(0);
 });
 
 test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く", async ({ page }) => {
@@ -97,14 +104,20 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   const toolsInput = toolsField.locator(".combo-input");
 
   await materialInput.fill("たまご");
-  await expect(materialField.getByRole("option", { name: "卵", exact: true })).toBeVisible();
+  await expect(
+    materialField.locator(".suggestion-option", { hasText: exactText("卵") }),
+  ).toBeVisible();
 
-  await page.locator('[data-collapsible="pairingTargets"] .field-toggle').click();
+  await page.getByLabel("一緒に出す料理に合わせたい").check();
   await pairingInput.fill("ぎょうざ");
-  await expect(pairingField.getByRole("option", { name: "餃子" })).toBeVisible();
+  await expect(
+    pairingField.locator(".suggestion-option", { hasText: exactText("餃子") }),
+  ).toBeVisible();
 
   await pairingInput.fill("はんばーぐ");
-  await expect(pairingField.getByRole("option", { name: "ハンバーグ", exact: true })).toBeVisible();
+  await expect(
+    pairingField.locator(".suggestion-option", { hasText: exactText("ハンバーグ") }),
+  ).toBeVisible();
 
   await page.locator('[data-collapsible="cookingTools"] .field-toggle').click();
   await toolsInput.fill("でんしれんじ");
@@ -124,7 +137,9 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
     );
   });
 
-  await expect(toolsField.getByRole("option", { name: "電子レンジ", exact: true })).toBeVisible();
+  await expect(
+    toolsField.locator(".suggestion-option", { hasText: exactText("電子レンジ") }),
+  ).toBeVisible();
 });
 
 test("候補クリック、自由入力Enter、blur でピル化し、重複追加しない", async ({ page }) => {
@@ -135,7 +150,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
 
   await input.click();
   await input.fill("豆腐");
-  await materialField.getByRole("option", { name: "豆腐", exact: true }).click();
+  await materialField.locator(".suggestion-option", { hasText: exactText("豆腐") }).click();
   await expect(materialField.locator(".pill")).toContainText("豆腐");
   await expect(input).toHaveValue("");
 
@@ -257,8 +272,10 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await editInput.fill("デミグラスハンバーグ");
   await editInput.press("Enter");
   await expect(materialField.locator(".pill-label")).toHaveText("デミグラスハンバーグ");
-  await expect(output).toHaveValue(/### 家にある食材\n\n- デミグラスハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("家にある食材: デミグラスハンバーグ");
+  await expect(output).toHaveValue(/### 家にある食材・材料\n\n- デミグラスハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText(
+    "家にある食材・材料: デミグラスハンバーグ",
+  );
 
   await materialField.locator(".pill-label").click();
   const secondEditInput = materialField.locator(".pill-edit-input");
@@ -266,8 +283,8 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await secondEditInput.fill("和風ハンバーグ");
   await page.locator("header").click();
   await expect(materialField.locator(".pill-label")).toHaveText("和風ハンバーグ");
-  await expect(output).toHaveValue(/### 家にある食材\n\n- 和風ハンバーグ/);
-  await expect(page.locator("#conditionChips")).toContainText("家にある食材: 和風ハンバーグ");
+  await expect(output).toHaveValue(/### 家にある食材・材料\n\n- 和風ハンバーグ/);
+  await expect(page.locator("#conditionChips")).toContainText("家にある食材・材料: 和風ハンバーグ");
 });
 
 test("編集中の空欄Enterとblurはキャンセルになる", async ({ page }) => {
@@ -317,7 +334,7 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   await input.fill("ハンバーグ");
   await input.press("Enter");
   await input.fill("卵");
-  await materialField.getByRole("option", { name: "卵", exact: true }).click();
+  await materialField.locator(".suggestion-option", { hasText: exactText("卵") }).click();
 
   await materialField.locator(".pill-label").nth(1).click();
   const editInput = materialField.locator(".pill-edit-input");
@@ -378,50 +395,65 @@ test("自由入力した値の追加と削除が全項目で依頼文へ反映�
     {
       comboId: "materials",
       toggle: null,
+      setup: null,
       value: "自由入力の食材",
-      heading: "家にある食材",
+      heading: "家にある食材・材料",
     },
     {
-      comboId: "dishTypes",
-      toggle: '[data-collapsible="dishTypes"] .field-toggle',
-      value: "自由入力の料理区分",
-      heading: "料理区分・作りたいもの",
+      comboId: "targetDish",
+      toggle: null,
+      setup: async () => {
+        await page.getByLabel("作りたい料理がある").check();
+      },
+      value: "自由入力の作りたい料理",
+      heading: "作りたい料理",
+    },
+    {
+      comboId: "recipeRoles",
+      toggle: null,
+      setup: async () => {
+        await page.getByLabel("一緒に出す料理に合わせたい").check();
+        await page.getByLabel("複数品を指定").check();
+      },
+      value: "自由入力の役割",
+      heading: "料理の役割・量感",
     },
     {
       comboId: "cookingTools",
       toggle: '[data-collapsible="cookingTools"] .field-toggle',
+      setup: null,
       value: "自由入力の調理方法",
-      heading: "使いたい調理器具・調理方法",
+      heading: "調理方法・調理器具",
     },
     {
       comboId: "pairingTargets",
-      toggle: '[data-collapsible="pairingTargets"] .field-toggle',
+      toggle: null,
+      setup: async () => {
+        await page.getByLabel("一緒に出す料理に合わせたい").check();
+      },
       value: "自由入力の合わせ料理",
-      heading: "合わせたい料理・一緒に出す料理",
-    },
-    {
-      comboId: "difficulty",
-      toggle: '[data-collapsible="difficulty"] .field-toggle',
-      value: "自由入力の手軽さ",
-      heading: "作りやすさ・手軽さ",
+      heading: "一緒に出す料理",
     },
     {
       comboId: "recipeDirections",
       toggle: '[data-collapsible="recipeDirections"] .field-toggle',
-      value: "自由入力の味や雰囲気",
-      heading: "味や雰囲気",
+      setup: null,
+      value: "自由入力の方向性",
+      heading: "レシピの方向性",
     },
     {
       comboId: "ngFoodsAndSeasonings",
       toggle: '[data-collapsible="ngFoodsAndSeasonings"] .field-toggle',
+      setup: null,
       value: "自由入力のNG条件",
-      heading: "NG食材・調味料",
+      heading: "使えない・持っていない食材・調味料",
     },
   ] as const;
 
   const output = page.locator("#output");
 
-  for (const { comboId, toggle, value, heading } of cases) {
+  for (const { comboId, toggle, setup, value, heading } of cases) {
+    await setup?.();
     if (toggle) {
       const toggleButton = page.locator(toggle);
       if ((await toggleButton.getAttribute("aria-expanded")) !== "true") {
@@ -435,10 +467,14 @@ test("自由入力した値の追加と削除が全項目で依頼文へ反映�
     await input.press("Enter");
 
     await expect(field.locator(".pill-label")).toContainText(value);
-    await expect(output).toHaveValue(new RegExp(`### ${heading}[\\s\\S]*- ${value}`));
+    const sectionValuePattern = new RegExp(
+      `### ${escapeRegExp(heading)}\\n\\n(?:(?!\\n### ).)*- ${escapeRegExp(value)}`,
+      "s",
+    );
+    await expect(output).toHaveValue(sectionValuePattern);
 
     await field.locator(".pill-remove").click();
     await expect(field.locator(".pill")).toHaveCount(0);
-    await expect(output).not.toHaveValue(new RegExp(`### ${heading}[\\s\\S]*- ${value}`));
+    await expect(output).not.toHaveValue(sectionValuePattern);
   }
 });

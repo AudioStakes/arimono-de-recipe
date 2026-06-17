@@ -1,20 +1,46 @@
 export type ComboId =
   | "materials"
-  | "dishTypes"
+  | "targetDish"
+  | "recipeRoles"
   | "cookingTools"
   | "pairingTargets"
-  | "difficulty"
   | "recipeDirections"
   | "ngFoodsAndSeasonings";
 
 export type OptionSetKey =
   | "materials"
-  | "dishTypes"
+  | "targetDishes"
+  | "recipeRoles"
   | "cookingTools"
   | "pairingTargets"
-  | "difficulty"
   | "recipeDirections"
   | "ngFoodsAndSeasonings";
+
+export type RequestIntent = "auto" | "target-dish" | "pairing";
+
+export type MaterialUseMode = "auto" | "specified";
+
+export type MaterialUsage = "auto" | "required" | "use-up";
+
+export type UseUpAmountMode = "as-written" | "custom";
+
+export type RecipeCount = "auto" | "one" | "multiple";
+
+export type ServingsMode =
+  | "unspecified"
+  | "one"
+  | "two"
+  | "three-to-four"
+  | "make-ahead"
+  | "custom";
+
+export type MaterialRequest = {
+  id: string;
+  name: string;
+  usage: MaterialUsage;
+  useUpAmountMode: UseUpAmountMode;
+  useUpAmount: string;
+};
 
 export type IconName =
   | "leaf"
@@ -47,6 +73,7 @@ export type ComboConfig = {
   bullets?: boolean;
   basic?: boolean;
   chip?: string;
+  single?: boolean;
 };
 
 export type ServingGroup = {
@@ -56,7 +83,12 @@ export type ServingGroup = {
 };
 
 export type PromptData = Record<ComboId, string[]> & {
+  requestIntent: RequestIntent;
+  materialUseMode: MaterialUseMode;
+  materialRequests: MaterialRequest[];
   servings: string;
+  servingsMode: ServingsMode;
+  recipeCount: RecipeCount;
   cookTime: string;
   supplementalNotes: string;
 };
@@ -73,4 +105,5 @@ export type AppState = {
   nearBottom: boolean;
   ticking: boolean;
   mobileSheetOpen: boolean;
+  materialRequests: MaterialRequest[];
 };

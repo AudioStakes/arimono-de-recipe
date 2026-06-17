@@ -19,6 +19,7 @@ const requiredStableHooks = [
   "recipe-form",
   "basic-fields",
   "advanced-fields",
+  "material-use-panel",
   "cook-time-range",
   "supplemental-notes",
   "condition-chips",
@@ -126,7 +127,7 @@ function assertPromptRulesStayOutOfUi(files: readonly TextFile[]): void {
   const allowedFiles = new Set(["src/prompt.ts", "src/data.ts"]);
   const promptRulePatterns = [
     /##\s+役割/,
-    /###\s+(?:家にある食材|使う材料|主材料の追加制限|NG食材・調味料|調理時間|食べる人数)/,
+    /###\s+(?:家にある食材・材料|食材・材料|使う材料|使い切りたい食材・材料|使えない・持っていない食材・調味料|調理時間|人数・分量)/,
     /買い足し前提/,
   ] as const;
 
@@ -253,7 +254,7 @@ describe("guardrail violation samples", () => {
   it("rejects prompt rules in UI rendering", () => {
     expect(() =>
       assertPromptRulesStayOutOfUi([
-        { path: "src/ui.ts", text: 'const heading = "### 家にある食材";' },
+        { path: "src/ui.ts", text: 'const heading = "### 家にある食材・材料";' },
       ]),
     ).toThrow(/Prompt source-of-truth guard failed/);
   });

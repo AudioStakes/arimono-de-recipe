@@ -1,5 +1,6 @@
-import { servingGroups } from "./data";
+import { servingGroups, servingsModeOptions } from "./data";
 import { clampServingCount, formatServingsText, type ServingGroupId } from "./servings";
+import type { ServingsMode } from "./types";
 
 const safe$ = <T extends Element>(selector: string, root: ParentNode = document): T | null =>
   root.querySelector<T>(selector);
@@ -35,8 +36,23 @@ export function getServingCounts(): Partial<Record<ServingGroupId, number>> {
   return counts;
 }
 
+export function getServingsMode(): ServingsMode {
+  const checked = safe$<HTMLInputElement>('input[name="servingsMode"]:checked');
+  const value = checked?.value;
+  return servingsModeOptions.some((option) => option.value === value)
+    ? (value as ServingsMode)
+    : "unspecified";
+}
+
 export function getServingsValue(): string {
-  return formatServingsText(getServingCounts());
+  const mode = getServingsMode();
+  if (mode === "unspecified") {
+    return "";
+  }
+  if (mode === "custom") {
+    return formatServingsText(getServingCounts());
+  }
+  return servingsModeOptions.find((option) => option.value === mode)?.label ?? "";
 }
 
 export function updateServingSteppers(): void {

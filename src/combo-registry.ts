@@ -1,5 +1,5 @@
 import { updateComboValues } from "./combo-values";
-import { comboOptionSets, combos } from "./data";
+import { comboOptionSets, combos, featuredComboOptions, pairingRecipeRoleOptions } from "./data";
 import { filterAvailableComboOptions } from "./suggestions";
 import type { ComboId } from "./types";
 
@@ -79,6 +79,14 @@ export function getComboOptionValues(group: ComboId): string[] {
     : values;
 }
 
+function getInitialComboOptionValues(group: ComboId): string[] {
+  const combo = combos.find((item) => item.id === group);
+  if (!combo) {
+    throw new Error(`Combo not found: ${group}`);
+  }
+  return [...(featuredComboOptions[combo.optionSet] ?? getComboOptionValues(group))];
+}
+
 function createComboController(
   root: HTMLElement,
   group: ComboId,
@@ -87,16 +95,23 @@ function createComboController(
 ) {
   let values: string[] = [];
   let editingValue: string | null = null;
+  const combo = combos.find((item) => item.id === group);
+  if (!combo) {
+    throw new Error(`Combo not found: ${group}`);
+  }
+  let singleMode = combo.single === true;
 
   const input = safe$<HTMLInputElement>(".combo-input", root);
   const panel = safe$<HTMLElement>(".suggestions", root);
   const chipRow = safe$<HTMLElement>(".floating-chip-row", root);
+  const picker = safe$<HTMLButtonElement>(".combo-picker", root);
   if (!input || !panel || !chipRow) {
     throw new Error(`Combo UI is incomplete: ${group}`);
   }
   const comboInput = input;
   const suggestionPanel = panel;
   const floatingChipRow = chipRow;
+  const comboPicker = picker;
 
   function isEditing(value: string): boolean {
     return editingValue === value;
@@ -112,6 +127,17 @@ function createComboController(
     }
 
     root.classList.toggle("has-values", values.length > 0);
+    const singleFilled = singleMode && values.length > 0;
+    root.classList.toggle("single-filled", singleFilled);
+    comboInput.disabled = singleFilled;
+    comboInput.hidden = singleFilled;
+    if (comboPicker) {
+      comboPicker.disabled = singleFilled;
+      comboPicker.hidden = singleFilled;
+    }
+    if (singleFilled) {
+      closeSuggestions();
+    }
   }
 
   function focusComboValue(value: string): void {
@@ -126,25 +152,30 @@ function createComboController(
 
   function closeSuggestions(): void {
     suggestionPanel.classList.remove("show");
-    comboInput.setAttribute("aria-expanded", "false");
   }
 
   function renderSuggestions(): HTMLButtonElement[] {
     const query = comboInput.value.trim();
-    const options = filterAvailableComboOptions(getComboOptionValues(group), query, values);
+    const roleOrder = (root.dataset as DOMStringMap & { roleOrder?: string }).roleOrder;
+    const sourceOptions =
+      group === "recipeRoles" && !query && roleOrder === "pairing"
+        ? [...pairingRecipeRoleOptions]
+        : query
+          ? getComboOptionValues(group)
+          : getInitialComboOptionValues(group);
+    const options = filterAvailableComboOptions(sourceOptions, query, values);
 
     suggestionPanel.innerHTML = options.length
       ? options
           .map(
             (value) =>
-              `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" role="option" aria-label="${getSuggestionAriaLabel(value)}">${value}</button>`,
+              `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" aria-label="${getSuggestionAriaLabel(value)}">${value}</button>`,
           )
           .join("")
       : '<div class="suggestion-empty">候補がありません</div>';
 
     closeOthers(suggestionPanel);
     suggestionPanel.classList.add("show");
-    comboInput.setAttribute("aria-expanded", "true");
     return $$<HTMLButtonElement>(".suggestion-option", suggestionPanel);
   }
 
@@ -156,13 +187,15 @@ function createComboController(
     if (!text) {
       return;
     }
-    if (!values.includes(text)) {
+    if (singleMode) {
+      values = values[0] === text ? values : [text];
+    } else if (!values.includes(text)) {
       values = [...values, text];
     }
     comboInput.value = "";
     renderPills();
     closeOthers(null);
-    if (options.refocusInput) {
+    if (options.refocusInput && !(singleMode && values.length > 0)) {
       focusInputAtEnd(comboInput);
     }
     if (options.notify !== false) {
@@ -380,9 +413,6 @@ function createComboController(
 
   function commitInput(): void {
     addValue(comboInput.value);
-    requestAnimationFrame(() => {
-      comboInput.value = "";
-    });
   }
 
   return {
@@ -412,6 +442,19 @@ function createComboController(
     },
     render(): void {
       renderPills();
+    },
+    setSingleMode(single: boolean): void {
+      const changed = singleMode !== single;
+      singleMode = single;
+      if (singleMode && values.length > 1) {
+        values = values.slice(0, 1);
+        renderPills();
+        notifyChange();
+        return;
+      }
+      if (changed) {
+        renderPills();
+      }
     },
     closeSuggestions,
     openSuggestions(): HTMLButtonElement[] {
@@ -570,6 +613,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
     const target = event.target as Element | null;
+    if (target?.closest(".pill-edit-input")) {
+      return false;
+    }
     const option = target?.closest<HTMLButtonElement>(".suggestion-option");
     const controller = controllerFromTarget(event.target);
     if (option && controller) {
@@ -618,6 +664,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   };
 
   const handleCompositionStart = (target: EventTarget | null): boolean => {
+    if ((target as Element | null)?.closest(".pill-edit-input")) {
+      return false;
+    }
     const controller = controllerFromTarget(target);
     if (!controller) {
       return false;
@@ -627,6 +676,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   };
 
   const handleCompositionEnd = (target: EventTarget | null): boolean => {
+    if ((target as Element | null)?.closest(".pill-edit-input")) {
+      return false;
+    }
     const controller = controllerFromTarget(target);
     if (!controller) {
       return false;
@@ -636,6 +688,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   };
 
   const handleCompositionUpdate = (target: EventTarget | null): boolean => {
+    if ((target as Element | null)?.closest(".pill-edit-input")) {
+      return false;
+    }
     const controller = controllerFromTarget(target);
     if (!controller) {
       return false;
@@ -654,6 +709,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   };
 
   const handleInput = (target: EventTarget | null): boolean => {
+    if ((target as Element | null)?.closest(".pill-edit-input")) {
+      return false;
+    }
     const controller = controllerFromTarget(target);
     if (!controller) {
       return false;
@@ -714,6 +772,9 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
     },
     clear(group: ComboId): void {
       controllers.get(group)?.clearValues();
+    },
+    setSingleMode(group: ComboId, single: boolean): void {
+      controllers.get(group)?.setSingleMode(single);
     },
     flushPendingInputs(): void {
       for (const controller of controllers.values()) {

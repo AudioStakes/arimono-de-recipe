@@ -2,7 +2,6 @@ import type { AppElements } from "./app-elements";
 import type { PromptPanelServices } from "./output-panel";
 import {
   copyPrompt as copyPromptPanel,
-  markUserHasInput,
   syncStickyFooter as syncStickyFooterPanel,
 } from "./output-panel";
 import { adjustServingValue } from "./serving-controls";
@@ -27,14 +26,6 @@ function syncStickyFooterState(
     innerWidth: window.innerWidth,
   });
   void services;
-}
-
-function markUserInput(
-  state: AppState,
-  elements: AppElements,
-  services: PromptPanelServices,
-): void {
-  markUserHasInput(state, elements, services);
 }
 
 function setCollapsibleState(button: HTMLButtonElement, expanded: boolean): void {
@@ -125,7 +116,7 @@ export function bindAppEvents(
       const delta = servingButton.classList.contains("serving-plus") ? 1 : -1;
       if (id) {
         adjustServingValue(id, delta);
-        markUserInput(state, elements, services);
+        services.onChange();
       }
       return;
     }
@@ -138,11 +129,11 @@ export function bindAppEvents(
   });
 
   elements.form.addEventListener("change", () => {
-    markUserInput(state, elements, services);
+    services.onChange();
   });
 
   elements.form.addEventListener("input", () => {
-    markUserInput(state, elements, services);
+    services.onChange();
   });
 
   window.addEventListener("resize", () => {

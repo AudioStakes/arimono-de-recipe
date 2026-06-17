@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("食べる人数は4区分のステッパーUIで増減できる", async ({ page }) => {
   await page.goto("/");
+  await page.getByLabel("詳しく指定").check();
 
   const groups = [
     {
@@ -43,7 +44,7 @@ test("食べる人数は4区分のステッパーUIで増減できる", async ({
   await expect(page.locator('[data-serving-id="childCount"] .serving-count')).toHaveText("1人");
   await expect(page.locator('[data-serving-id="toddlerCount"] .serving-count')).toHaveText("1人");
   await expect(page.locator("#output")).toHaveValue(
-    /### 食べる人数[\s\S]*大人2人、子供1人、幼児1人/,
+    /### 人数・分量[\s\S]*大人2人、子供1人、幼児1人/,
   );
   await expect(page.locator(".chips")).toContainText("大人2人、子供1人、幼児1人");
   await expect(page.locator("select")).toHaveCount(0);
@@ -55,6 +56,20 @@ test("食べる人数は4区分のステッパーUIで増減できる", async ({
   await expect(page.locator('[data-serving-id="adultCount"] .serving-count')).toHaveText("10人");
   await expect(page.locator('[data-serving-id="adultCount"] .serving-plus')).toBeDisabled();
   await expect(page.locator("#output")).toHaveValue(
-    /### 食べる人数[\s\S]*大人10人、子供1人、幼児1人/,
+    /### 人数・分量[\s\S]*大人10人、子供1人、幼児1人/,
   );
+});
+
+test("人数・分量プリセットはステッパーなしで依頼文へ反映される", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("2人分").check();
+  await expect(page.locator("#customServingsPanel")).toBeHidden();
+  await expect(page.locator("#output")).toHaveValue(/### 人数・分量\n\n2人分/);
+
+  await page.getByLabel("作り置き多め").check();
+  await expect(page.locator("#output")).toHaveValue(/### 人数・分量\n\n作り置き多め/);
+
+  await page.getByLabel("指定なし").check();
+  await expect(page.locator("#output")).not.toHaveValue(/### 人数・分量/);
 });

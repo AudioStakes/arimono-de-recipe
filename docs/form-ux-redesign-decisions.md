@@ -47,14 +47,14 @@ Do not include `できるだけ使い切りたい` or `持っていない材料�
 
 ## Material input and material use
 
-`食材・材料` remains one primary list. The user may type amounts directly into material names, such as `卵2個`, `豆腐150g`, or `キャベツ1/8玉`.
+`家にある食材・材料` remains one primary list. The user may type amounts directly into material names, such as `卵2個`, `豆腐150g`, or `キャベツ1/8玉`.
 
 `材料の使い方` is two choices:
 
 - `おまかせ`
 - `必ず使う・使い切りたい食材・材料がある`
 
-When the second option is selected, show a material-use panel under the existing material input. The panel is based on the same `食材・材料` list; do not ask users to re-enter materials.
+When the second option is selected, show a material-use panel under the existing material input. The panel is based on the same `家にある食材・材料` list; do not ask users to re-enter materials.
 
 Each material row has an exclusive three-choice use:
 
@@ -70,18 +70,18 @@ Material row behavior:
 - Editing a material chip keeps that material's use setting.
 - Re-adding a removed material starts from `おまかせ`.
 
-When `使い切る` is selected, show use-up amount controls:
+When `必ず使う` or `使い切る` is selected, show amount controls:
 
-- Default: `食材・材料に書いた量を使う`
+- Default: `家にある食材・材料に書いた量を使う`
 - Optional: `量を別で指定する`
 
-Only `量を別で指定する` shows a `使い切りたい量` input. Do not parse amounts automatically from material names. If the user chooses `食材・材料に書いた量を使う`, pass that wording through to the prompt rather than extracting a number.
+Only `量を別で指定する` shows a custom amount input. Do not parse amounts automatically from material names. If the user chooses `家にある食材・材料に書いた量を使う`, pass that wording through to the prompt rather than extracting a number.
 
 If `必ず使う・使い切りたい食材・材料がある` is selected but no material-specific choices are set, copy is still allowed and prompt sections for required/use-up materials are omitted. The UI should show a light prompt to choose at least one material. If there are no materials yet, show an empty state explaining that materials must be added first.
 
 ## Material data model
 
-Only `食材・材料` needs to become structured. Other combo values can remain `string[]`.
+Only `家にある食材・材料` needs to become structured. Other combo values can remain `string[]`.
 
 Suggested shape:
 
@@ -176,7 +176,7 @@ Initial `作りたい料理` candidates:
 - `親子丼`
 - `味噌汁`
 
-`合わせたい料理・一緒に出す料理`:
+`一緒に出す料理`:
 
 - Used especially when `今回やりたいこと` is `一緒に出す料理に合わせたい`.
 - Multiple values are allowed.
@@ -196,7 +196,7 @@ When `一緒に出す料理に合わせたい` is selected but no pairing dish i
 - `調理条件`.
 - `使えない・持っていない食材・調味料`.
 - `その他の要望`.
-- For `ありものでおまかせ`, optional `作りたい品数・料理の役割`.
+- For `ありものでおまかせ`, optional `作りたい品数` with `料理の役割・量感` as a dependent sub-input.
 
 Keep the domain term `レシピの方向性`; use `味付け・方向性` as a user-facing label.
 
@@ -265,7 +265,7 @@ Material-specific prompt sections should be separate:
 
 For use-up materials, distinguish:
 
-- Amount is the amount written in `食材・材料`.
+- Amount is the amount written in `家にある食材・材料`.
 - Amount is separately specified in `使い切りたい量`.
 
 For multiple-role requests, ask for one dish per selected role.
@@ -293,7 +293,7 @@ E2E tests:
 - Removing a material removes its material-use row.
 - Editing a material preserves its material-use setting.
 - `作りたい料理` accepts only one value.
-- `合わせたい料理・一緒に出す料理` accepts multiple values.
+- `一緒に出す料理` accepts multiple values.
 - Mobile sticky summary reflects the new high-signal fields without becoming noisy.
 - Copy remains possible when prompted-but-optional fields are empty.
 

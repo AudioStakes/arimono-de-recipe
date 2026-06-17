@@ -6,13 +6,15 @@ describe("buildConditionChipSpecs", () => {
   test("入力済み条件が表示順にチップ化される", () => {
     const chips = buildConditionChipSpecs(
       makeEmptyPromptData({
+        requestIntent: "pairing",
         materials: ["豆腐", "しめじ"],
         servings: "大人2人、子供1人、幼児1人",
-        dishTypes: ["副菜", "汁物"],
+        targetDish: ["カレー"],
+        recipeCount: "multiple",
+        recipeRoles: ["副菜・一品", "汁物"],
         cookingTools: ["電子レンジ"],
         pairingTargets: ["餃子", "カレー"],
         cookTime: "20分以内",
-        difficulty: ["時短"],
         recipeDirections: ["あっさり", "和風", "平日夕食"],
         ngFoodsAndSeasonings: ["にんじん", "にんにく"],
         supplementalNotes: "子ども用に辛くしない。",
@@ -20,23 +22,25 @@ describe("buildConditionChipSpecs", () => {
     );
 
     expect(chips.map((chip) => chip.label)).toEqual([
-      "家にある食材: 豆腐、しめじ",
+      "一緒に出す料理に合わせたい",
+      "家にある食材・材料: 豆腐、しめじ",
+      "一緒に出す料理: 餃子、カレー",
       "大人2人、子供1人、幼児1人",
-      "料理区分・作りたいもの: 副菜、汁物",
-      "使いたい調理器具・調理方法: 電子レンジ",
-      "一緒に出す: 餃子、カレー",
+      "作りたい品数: 複数品",
+      "料理の役割・量感: 副菜・一品、汁物",
+      "調理方法・調理器具: 電子レンジ",
       "調理時間: 20分以内",
-      "作りやすさ・手軽さ: 時短",
-      "味や雰囲気: あっさり、和風、平日夕食",
-      "NG食材・調味料: にんじん、にんにく",
+      "レシピの方向性: あっさり、和風、平日夕食",
+      "使えない・持っていない: にんじん、にんにく",
       "その他の要望あり",
     ]);
 
     expect(chips.map((chip) => chip.removable)).toEqual([
-      true,
       false,
       true,
       true,
+      false,
+      false,
       true,
       true,
       true,
@@ -46,9 +50,9 @@ describe("buildConditionChipSpecs", () => {
     ]);
   });
 
-  test("未指定の条件はチップ化されない", () => {
+  test("未指定の任意条件はチップ化されない", () => {
     const chips = buildConditionChipSpecs(makeEmptyPromptData());
 
-    expect(chips).toEqual([]);
+    expect(chips.map((chip) => chip.label)).toEqual(["ありものでおまかせ"]);
   });
 });
