@@ -1,3 +1,4 @@
+import { renderAiRecipePanel, resetAiRecipeForInputChange } from "./ai-recipe-panel";
 import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
 import { getCookTimeValue, updateCookTimeDisplay } from "./combo-field";
@@ -44,6 +45,16 @@ const createInitialState = (): AppState => {
     ticking: false,
     mobileSheetOpen: false,
     materialRequests: [],
+    aiRecipe: {
+      status: "idle",
+      activeSurface: "desktop",
+      recipe: "",
+      model: "",
+      usage: null,
+      errorMessage: "",
+      promptSnapshot: "",
+      requestId: 0,
+    },
   };
 };
 
@@ -373,6 +384,7 @@ export function initializeApp(root: HTMLElement): void {
   updateCookTimeDisplay();
   updateServingSteppers();
   refreshPromptPanelPanel(state, elements, outputPanel);
+  renderAiRecipePanel(state, elements);
 }
 
 function renderAppShell(): string {
@@ -395,7 +407,7 @@ function renderAppShell(): string {
         <span class="flow-arrow" aria-hidden="true">→</span>
         <span class="flow-step">2. 依頼文ができる</span>
         <span class="flow-arrow" aria-hidden="true">→</span>
-        <span class="flow-step">3. コピーしてAIへ渡す</span>
+        <span class="flow-step">3. AI生成またはコピー</span>
       </p>
     </header>
     <div class="app-layout">
@@ -403,28 +415,66 @@ function renderAppShell(): string {
         <div id="basicFields" data-testid="basic-fields"></div>
         <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
       </form>
-      <section class="prompt-section" aria-label="AIへ渡すレシピ依頼文">
+      <section class="prompt-section" aria-label="レシピ依頼文と実行方法">
         <div class="prompt-heading">
-          <h2>AIへ渡すレシピ依頼文</h2>
-          <p>この文章をコピーして、ChatGPTなどのAIへ渡してください。</p>
+          <h2 id="promptHeading">AIへ渡すレシピ依頼文</h2>
+          <p id="promptDescription">依頼文を確認してから、このアプリでAIに依頼するか、普段使っているAIへ貼り付けられます。</p>
         </div>
-        <div id="conditionChips" class="chips" data-testid="condition-chips" aria-live="polite"></div>
-        <button
-          id="copyPrompt"
-          class="copy-icon-button copy-button"
-          type="button"
-          aria-label="依頼文をコピー"
-          title="依頼文をコピー"
-          data-testid="copy-prompt"
-          data-default-label="依頼文をコピー"
-          data-success-label="コピーしました。AIへ渡してください"
-        >
-          <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
-          <span class="copy-label">依頼文をコピー</span>
-          <span class="copy-status" aria-live="polite"></span>
-        </button>
+        <div id="conditionChips" class="chips" data-testid="condition-chips"></div>
+        <div class="prompt-action-grid" aria-label="実行方法">
+          <article class="prompt-action-card">
+            <div class="prompt-action-copy">
+              <h3>AIでレシピを作成</h3>
+              <p>このアプリ内でAIに依頼して、レシピ案を表示します。</p>
+            </div>
+            <button
+              id="generateRecipe"
+              class="action-button button-primary"
+              type="button"
+              data-testid="generate-recipe"
+            >
+              <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
+              <span class="action-button-label">AIでレシピを作成</span>
+            </button>
+          </article>
+          <article class="prompt-action-card">
+            <div class="prompt-action-copy">
+              <h3>AI向けレシピ依頼文をコピー</h3>
+              <p>ChatGPT、Claude、Geminiなど、普段使っているAIに貼り付けて使えます。</p>
+            </div>
+            <button
+              id="copyPrompt"
+              class="copy-icon-button copy-button action-button"
+              type="button"
+              aria-label="AI向けレシピ依頼文をコピー"
+              title="AI向けレシピ依頼文をコピー"
+              data-testid="copy-prompt"
+              data-default-label="AI向けレシピ依頼文をコピー"
+              data-success-label="コピーしました。普段使っているAIに貼り付けてください。"
+            >
+              <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
+              <span class="copy-label">AI向けレシピ依頼文をコピー</span>
+              <span class="copy-status" aria-live="polite"></span>
+            </button>
+          </article>
+        </div>
         <div class="output-shell">
-          <textarea id="output" class="output" data-testid="prompt-output" readonly></textarea>
+          <textarea
+            id="output"
+            class="output"
+            data-testid="prompt-output"
+            aria-labelledby="promptHeading"
+            aria-describedby="promptDescription"
+            readonly
+          ></textarea>
+        </div>
+        <div
+          id="aiRecipePanel"
+          class="ai-recipe-panel"
+          data-testid="ai-recipe-panel"
+          data-state="idle"
+          hidden
+        >
         </div>
       </section>
     </div>
@@ -441,7 +491,7 @@ function renderAppShell(): string {
         >
           ⌃
         </button>
-        <div id="stickyChips" class="sticky-chips" data-testid="sticky-condition-chips" aria-live="polite"></div>
+        <div id="stickyChips" class="sticky-chips" data-testid="sticky-condition-chips"></div>
         <div class="sheet-actions">
           <button
             id="sheetToggle"
@@ -456,14 +506,14 @@ function renderAppShell(): string {
             id="copyPromptSticky"
             class="copy-icon-button copy-request-button"
             type="button"
-            aria-label="AIへ渡す依頼文をコピーする"
-            title="AIへ渡す依頼文をコピーする"
+            aria-label="AI向けレシピ依頼文をコピー"
+            title="AI向けレシピ依頼文をコピー"
             data-testid="copy-prompt-sticky"
-            data-default-label="AIへ渡す依頼文をコピーする"
-            data-success-label="コピーしました。AIへ渡してください"
+            data-default-label="AI向けレシピ依頼文をコピー"
+            data-success-label="コピーしました。普段使っているAIに貼り付けてください。"
           >
             <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
-            <span class="copy-label">AIへ渡す依頼文をコピーする</span>
+            <span class="copy-label">AI向けレシピ依頼文をコピー</span>
             <span class="copy-status" aria-live="polite"></span>
           </button>
         </div>
@@ -472,14 +522,62 @@ function renderAppShell(): string {
           class="mobile-prompt-panel"
           data-testid="mobile-prompt-panel"
           data-state="closed"
+          role="region"
+          aria-labelledby="mobilePromptHeading"
           aria-hidden="true"
+          tabindex="-1"
         >
           <div class="mobile-prompt-head">
-            <h2>AIに渡す依頼文</h2>
+            <h2 id="mobilePromptHeading">AIに渡す依頼文</h2>
             <button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button>
           </div>
+          <div class="mobile-sheet-action-grid" aria-label="実行方法">
+            <article class="mobile-action-card">
+              <p>アプリ内でAIに依頼</p>
+              <button
+                id="generateRecipeMobile"
+                class="action-button button-primary"
+                type="button"
+                data-testid="generate-recipe-mobile"
+              >
+                <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
+                <span class="action-button-label">AIでレシピを作成</span>
+              </button>
+            </article>
+            <article class="mobile-action-card">
+              <p>普段使っているAIへ貼り付け</p>
+              <button
+                id="copyPromptMobile"
+                class="copy-icon-button copy-button action-button"
+                type="button"
+                aria-label="AI向けレシピ依頼文をコピー"
+                title="AI向けレシピ依頼文をコピー"
+                data-testid="copy-prompt-mobile-panel"
+                data-default-label="AI向けレシピ依頼文をコピー"
+                data-success-label="コピーしました。普段使っているAIに貼り付けてください。"
+              >
+                <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
+                <span class="copy-label">AI向けレシピ依頼文をコピー</span>
+                <span class="copy-status" aria-live="polite"></span>
+              </button>
+            </article>
+          </div>
+          <div
+            id="aiRecipePanelMobile"
+            class="ai-recipe-panel mobile-ai-recipe-panel"
+            data-testid="mobile-ai-recipe-panel"
+            data-state="idle"
+            hidden
+          >
+          </div>
           <div class="output-shell mobile-output-shell">
-            <textarea id="mobileOutput" class="output mobile-output" data-testid="mobile-prompt-output" readonly></textarea>
+            <textarea
+              id="mobileOutput"
+              class="output mobile-output"
+              data-testid="mobile-prompt-output"
+              aria-labelledby="mobilePromptHeading"
+              readonly
+            ></textarea>
           </div>
         </div>
       </div>
@@ -500,6 +598,12 @@ function getAppElements(): AppElements {
     sheetClose: queryElement("#sheetClose") as HTMLButtonElement,
     chips: queryElement("#conditionChips") as HTMLElement,
     stickyChips: queryElement("#stickyChips") as HTMLElement,
+    generateRecipe: queryElement("#generateRecipe") as HTMLButtonElement,
+    generateRecipeMobile: queryElement("#generateRecipeMobile") as HTMLButtonElement,
+    copyPromptSticky: queryElement("#copyPromptSticky") as HTMLButtonElement,
+    copyPromptMobile: queryElement("#copyPromptMobile") as HTMLButtonElement,
+    aiRecipePanel: queryElement("#aiRecipePanel") as HTMLElement,
+    aiRecipePanelMobile: queryElement("#aiRecipePanelMobile") as HTMLElement,
   };
 }
 
@@ -723,6 +827,7 @@ function createOutputPanelServices(
   const notifyOutputChange = (): void => {
     if (!outputPanelServices) return;
     syncDynamicFormState();
+    resetAiRecipeForInputChange(state, elements);
     markUserHasInputPanel(state, elements, outputPanelServices);
   };
 

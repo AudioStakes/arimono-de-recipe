@@ -15,7 +15,7 @@ Every meaningful change should report commands run, exit codes, relevant output,
 ## Local Priority
 
 1. Preserve prompt output behavior.
-2. Preserve static-only privacy model.
+2. Preserve the approved privacy boundary: copy stays local; only `AIでレシピを作成` sends the request text to `/api/recipe`.
 3. Preserve Vite static build.
 4. Prefer data/config-centered recipe item changes.
 5. Prefer stable hooks over CSS class selectors in E2E.

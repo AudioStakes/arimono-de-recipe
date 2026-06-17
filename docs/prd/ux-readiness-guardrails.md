@@ -20,7 +20,7 @@ Prepare the repo so future UX changes are reviewable, testable, scoped, and reve
 
 - No UX redesign.
 - No runtime feature expansion.
-- No backend, API, auth, storage, telemetry, or external transmission.
+- No backend, API, auth, storage, telemetry, or external transmission for this guardrail PRD.
 - No design-system completeness.
 - No monorepo conversion.
 - No prompt output behavior change.
@@ -33,3 +33,7 @@ Prepare the repo so future UX changes are reviewable, testable, scoped, and reve
 - Package/public-entry boundary policy for this single Vite app.
 - Codex subagent policy.
 - PR and review evidence expectations.
+
+## Superseded Scope
+
+ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Function + Workers AI path. The guardrail intent still applies, but the old static-only non-goal is superseded for that approved route only.

@@ -28,6 +28,19 @@ const requiredStableHooks = [
   "mobile-prompt-output",
   "copy-prompt",
   "copy-prompt-sticky",
+  "copy-prompt-mobile-panel",
+  "generate-recipe",
+  "generate-recipe-mobile",
+  "ai-recipe-panel",
+  "ai-recipe-status",
+  "ai-recipe-content",
+  "ai-recipe-error",
+  "ai-recipe-model",
+  "mobile-ai-recipe-panel",
+  "mobile-ai-recipe-status",
+  "mobile-ai-recipe-content",
+  "mobile-ai-recipe-error",
+  "mobile-ai-recipe-model",
   "mobile-prompt-panel",
   "recipe-item-${",
   "recipe-item-toggle-${",
@@ -96,7 +109,7 @@ async function collectEntry(
   return [{ path: projectPath, text: await readFile(absolutePath, "utf8") }];
 }
 
-function assertNoStaticOnlyViolations(files: readonly TextFile[]): void {
+function assertClientNetworkBoundary(files: readonly TextFile[]): void {
   const forbiddenPatterns = [
     { label: "server framework import", pattern: /\bfrom\s+["'](?:express|fastify|hono|next)["']/ },
     {
@@ -105,16 +118,88 @@ function assertNoStaticOnlyViolations(files: readonly TextFile[]): void {
     },
     { label: "Hono import", pattern: /["']@hono\// },
     { label: "Node HTTP server import", pattern: /["']node:(?:http|https|http2|net)["']/ },
-    { label: "fetch call", pattern: /\bfetch\s*\(/ },
     { label: "XMLHttpRequest", pattern: /\bXMLHttpRequest\b/ },
     { label: "WebSocket", pattern: /\bWebSocket\b/ },
     { label: "sendBeacon", pattern: /\bnavigator\.sendBeacon\b/ },
-    { label: "LLM provider name", pattern: /\b(?:OpenAI|Anthropic|Gemini|GoogleGenerativeAI)\b/i },
+    { label: "Cloudflare REST API", pattern: /api\.cloudflare\.com/i },
+    { label: "authorization header", pattern: /\b(?:Authorization|Bearer)\b/ },
     {
       label: "API key",
-      pattern: /\b(?:API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)\b/,
+      pattern:
+        /\b(?:API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|CLOUDFLARE_API_TOKEN)\b/,
     },
     { label: "runtime env access", pattern: /\b(?:import\.meta|process)\.env\b/ },
+  ] as const;
+
+  const fetchFiles = files
+    .filter((file) => /\bfetch\s*\(/.test(file.text))
+    .map((file) => file.path);
+  const disallowedFetchFiles = fetchFiles.filter((file) => file !== "src/ai-recipe-client.ts");
+  const aiClient = files.find((file) => file.path === "src/ai-recipe-client.ts");
+  const aiClientEndpoints = aiClient
+    ? [...aiClient.text.matchAll(/\b(?:fetcher|fetch)\(\s*["']([^"']+)["']/g)].flatMap((match) =>
+        match[1] ? [match[1]] : [],
+      )
+    : [];
+  const aiClientDirectFetchEndpoints = aiClient
+    ? [...aiClient.text.matchAll(/\bfetch\(\s*["']([^"']+)["']/g)].flatMap((match) =>
+        match[1] ? [match[1]] : [],
+      )
+    : [];
+  const disallowedAiClientEndpoints = aiClientEndpoints.filter(
+    (endpoint) => endpoint !== "/api/recipe",
+  );
+
+  const violations = files.flatMap((file) =>
+    forbiddenPatterns
+      .filter(({ pattern }) => pattern.test(file.text))
+      .map(({ label }) => `${file.path}: ${label}`),
+  );
+
+  if (disallowedFetchFiles.length > 0) {
+    violations.push(
+      ...disallowedFetchFiles.map((file) => `${file}: fetch call outside approved API client`),
+    );
+  }
+
+  if (!aiClient?.text.includes('fetcher("/api/recipe"')) {
+    violations.push("src/ai-recipe-client.ts: approved API client must call /api/recipe only");
+  }
+
+  if (disallowedAiClientEndpoints.length > 0) {
+    violations.push(
+      ...disallowedAiClientEndpoints.map(
+        (endpoint) => `src/ai-recipe-client.ts: unapproved API endpoint ${endpoint}`,
+      ),
+    );
+  }
+
+  if (aiClientDirectFetchEndpoints.length > 0) {
+    violations.push("src/ai-recipe-client.ts: direct fetch call is not allowed");
+  }
+
+  if (violations.length > 0) {
+    throw new Error(`Client network boundary guard failed:\n${violations.join("\n")}`);
+  }
+}
+
+function assertApprovedFunctionBoundary(files: readonly TextFile[]): void {
+  const approvedFunctionFiles = new Set(["functions/api/recipe.ts"]);
+  const unexpectedFunctionFiles = files
+    .map((file) => file.path)
+    .filter((file) => !approvedFunctionFiles.has(file));
+  const forbiddenPatterns = [
+    { label: "Cloudflare REST API", pattern: /api\.cloudflare\.com/i },
+    { label: "authorization header", pattern: /\b(?:Authorization|Bearer)\b/ },
+    { label: "Cloudflare token", pattern: /\b(?:CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)\b/ },
+    {
+      label: "provider SDK import",
+      pattern: /["'](?:openai|@anthropic-ai\/sdk|@google\/generative-ai)["']/i,
+    },
+    { label: "server fetch call", pattern: /\bfetch\s*\(/ },
+    { label: "console logging", pattern: /\bconsole\./ },
+    { label: "persistent storage", pattern: /\b(?:localStorage|sessionStorage|indexedDB)\b/ },
+    { label: "telemetry beacon", pattern: /\bsendBeacon\b/ },
   ] as const;
 
   const violations = files.flatMap((file) =>
@@ -123,8 +208,25 @@ function assertNoStaticOnlyViolations(files: readonly TextFile[]): void {
       .map(({ label }) => `${file.path}: ${label}`),
   );
 
+  if (unexpectedFunctionFiles.length > 0) {
+    violations.push(
+      ...unexpectedFunctionFiles.map(
+        (file) => `${file}: function file outside approved API surface`,
+      ),
+    );
+  }
+
+  if (!files.some((file) => file.path === "functions/api/recipe.ts")) {
+    violations.push("functions/api/recipe.ts: approved recipe API function is missing");
+  }
+
+  const recipeFunction = files.find((file) => file.path === "functions/api/recipe.ts");
+  if (!recipeFunction?.text.includes("context.env.AI.run(")) {
+    violations.push("functions/api/recipe.ts: must use context.env.AI.run");
+  }
+
   if (violations.length > 0) {
-    throw new Error(`Static-only guard failed:\n${violations.join("\n")}`);
+    throw new Error(`Function boundary guard failed:\n${violations.join("\n")}`);
   }
 }
 
@@ -174,8 +276,17 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
     ".serving-adjust",
     ".custom-servings-panel",
     ".chips",
+    ".ai-recipe-panel",
+    ".mobile-ai-recipe-panel",
+    ".ai-recipe-content",
+    ".ai-recipe-error-message",
+    ".action-button",
     "[data-serving-id=",
     "#customServingsPanel",
+    "#generateRecipe",
+    "#generateRecipeMobile",
+    "#aiRecipePanel",
+    "#aiRecipePanelMobile",
   ] as const;
 
   if (missingHooks.length > 0) {
@@ -233,14 +344,26 @@ function extractAdrLinks(text: string): string[] {
 }
 
 describe("current repository guardrails", () => {
-  it("keeps runtime source static-only", async () => {
+  it("keeps client network use limited to the approved recipe API", async () => {
     const sourceFiles = await collectFiles("src", (projectPath) => projectPath.endsWith(".ts"));
-    assertNoStaticOnlyViolations(sourceFiles);
+    assertClientNetworkBoundary(sourceFiles);
+  });
+
+  it("keeps Pages Functions limited to the approved Workers AI boundary", async () => {
+    const hasFunctionsDirectory = await pathExists("functions");
+    const functionFiles = hasFunctionsDirectory
+      ? await collectFiles("functions", (projectPath) => projectPath.endsWith(".ts"))
+      : [];
+    assertApprovedFunctionBoundary(functionFiles);
   });
 
   it("keeps prompt output rules out of generic UI rendering modules", async () => {
     const sourceFiles = await collectFiles("src", (projectPath) => projectPath.endsWith(".ts"));
-    assertPromptRulesStayOutOfUi(sourceFiles);
+    const hasFunctionsDirectory = await pathExists("functions");
+    const functionFiles = hasFunctionsDirectory
+      ? await collectFiles("functions", (projectPath) => projectPath.endsWith(".ts"))
+      : [];
+    assertPromptRulesStayOutOfUi([...sourceFiles, ...functionFiles]);
   });
 
   it("keeps stable hooks documented and used by E2E", async () => {
@@ -284,12 +407,58 @@ describe("current repository guardrails", () => {
 });
 
 describe("guardrail violation samples", () => {
-  it("rejects runtime API/server additions", () => {
+  it("rejects unapproved client network/server additions", () => {
     expect(() =>
-      assertNoStaticOnlyViolations([
+      assertClientNetworkBoundary([
         { path: "src/main.ts", text: 'import express from "express";\nfetch("/api/recipe");' },
       ]),
-    ).toThrow(/Static-only guard failed/);
+    ).toThrow(/Client network boundary guard failed/);
+  });
+
+  it("rejects unapproved function files", () => {
+    expect(() =>
+      assertApprovedFunctionBoundary([
+        { path: "functions/api/other.ts", text: "export const onRequest = () => new Response();" },
+      ]),
+    ).toThrow(/Function boundary guard failed/);
+  });
+
+  it("rejects unapproved API endpoints in the client", () => {
+    expect(() =>
+      assertClientNetworkBoundary([
+        { path: "src/ai-recipe-client.ts", text: 'fetcher("/api/recipe"); fetcher("/api/other");' },
+      ]),
+    ).toThrow(/unapproved API endpoint/);
+  });
+
+  it("rejects direct fetch to unapproved API endpoints in the approved client", () => {
+    expect(() =>
+      assertClientNetworkBoundary([
+        { path: "src/ai-recipe-client.ts", text: 'fetcher("/api/recipe"); fetch("/api/other");' },
+      ]),
+    ).toThrow(/unapproved API endpoint/);
+  });
+
+  it("rejects direct fetch to the approved API endpoint in the approved client", () => {
+    expect(() =>
+      assertClientNetworkBoundary([
+        {
+          path: "src/ai-recipe-client.ts",
+          text: 'fetcher("/api/recipe"); fetch("/api/recipe");',
+        },
+      ]),
+    ).toThrow(/direct fetch call/);
+  });
+
+  it("rejects server-side fetch in the approved function", () => {
+    expect(() =>
+      assertApprovedFunctionBoundary([
+        {
+          path: "functions/api/recipe.ts",
+          text: 'export const onRequest = () => fetch("https://example.test");',
+        },
+      ]),
+    ).toThrow(/server fetch call/);
   });
 
   it("rejects prompt rules in UI rendering", () => {

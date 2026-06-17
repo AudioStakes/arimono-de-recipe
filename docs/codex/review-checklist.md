@@ -9,8 +9,9 @@
 
 ## Product Guardrails
 
-- The app remains a static client-only prompt maker.
-- No API, server, auth, storage, telemetry, analytics, or external transmission was added.
+- The copyable `レシピ依頼文` remains a first-class artifact.
+- API/server/external transmission is limited to the approved `/api/recipe` Pages Function and Workers AI binding.
+- No auth, storage, telemetry, analytics, provider SDK, or external LLM auto-posting was added.
 - Prompt output still omits unspecified items and their rules.
 - Prompt output source-of-truth remains in prompt/domain-oriented modules.
 

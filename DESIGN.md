@@ -128,6 +128,7 @@ description: Claude の暖かい AI プロダクト感、Starbucks の食・日�
   /* Layout */
   --page-gutter: clamp(16px, 3vw, 32px);
   --sticky-footer-space: 136px;
+  --viewport-block: 100dvh;
 }
 ```
 

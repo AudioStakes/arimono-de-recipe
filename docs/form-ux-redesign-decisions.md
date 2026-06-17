@@ -4,7 +4,7 @@ This document records the design decisions from the form UX grilling session bef
 
 ## Current implementation understanding
 
-- The app is a static Vite/TypeScript frontend that builds a recipe request text for users to paste into an AI chat. It must not generate recipes in-app, call APIs, require login, or send inputs externally.
+- At the time of this UX decision, the app was a static Vite/TypeScript frontend that built a recipe request text for users to paste into an AI chat. ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Function + Workers AI path; the copyable recipe request text remains the core artifact.
 - Current form configuration is centered on `src/data.ts` `combos`, while `src/ui.ts` renders the actual fields.
 - `src/prompt.ts` owns prompt generation and already omits unspecified input sections.
 - `src/conditions.ts` aggregates the current UI state into `PromptData`.
@@ -15,7 +15,7 @@ This document records the design decisions from the form UX grilling session bef
 
 ## Existing assets to preserve
 
-- Static frontend architecture and Cloudflare Pages-compatible `dist/` build.
+- Vite frontend architecture and Cloudflare Pages-compatible `dist/` build, with the ADR 0011 Pages Function exception.
 - Existing combo input pattern: prepared candidates plus free input.
 - Chip display, chip editing, IME-safe entry, duplicate handling, and removal.
 - Real-time prompt generation and copy buttons.

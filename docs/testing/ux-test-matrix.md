@@ -10,7 +10,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
 | モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
 | UI selector stability | no | yes | required |
-| Static-only/no external transmission | optional | optional | required |
+| Approved `/api/recipe` transmission boundary | required | required with mock | required |
 
 ## Stable Hook Convention
 
@@ -33,6 +33,19 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 - `data-testid="mobile-prompt-output"`
 - `data-testid="copy-prompt"`
 - `data-testid="copy-prompt-sticky"`
+- `data-testid="copy-prompt-mobile-panel"`
+- `data-testid="generate-recipe"`
+- `data-testid="generate-recipe-mobile"`
+- `data-testid="ai-recipe-panel"`
+- `data-testid="ai-recipe-status"`
+- `data-testid="ai-recipe-content"`
+- `data-testid="ai-recipe-error"`
+- `data-testid="ai-recipe-model"`
+- `data-testid="mobile-ai-recipe-panel"`
+- `data-testid="mobile-ai-recipe-status"`
+- `data-testid="mobile-ai-recipe-content"`
+- `data-testid="mobile-ai-recipe-error"`
+- `data-testid="mobile-ai-recipe-model"`
 - `data-testid="mobile-prompt-panel"`
 - `data-state="open|closed"` for collapsible panels and the mobile prompt panel.
 

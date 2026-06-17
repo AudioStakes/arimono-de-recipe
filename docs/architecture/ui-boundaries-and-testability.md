@@ -27,6 +27,9 @@ This repo is currently a private single Vite app. It uses source-module boundari
 - `src/prompt.ts` owns prompt output rules.
 - `src/ui.ts` owns rendering structure and stable hooks.
 - `src/app-events.ts` owns interaction state changes.
+- `src/ai-recipe-client.ts` owns the browser call to the same-origin `/api/recipe` endpoint.
+- `src/ai-recipe-panel.ts` owns in-app AI generation UI state and keeps generated recipe text separate from prompt text.
+- `functions/api/recipe.ts` owns the approved Cloudflare Pages Function boundary for Workers AI.
 
 Do not add fake root `exports` just to make this app look like a package. If future `packages/*` are introduced, each package must declare explicit `exports` and avoid exposing broad internals.
 
