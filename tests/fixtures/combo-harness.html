@@ -12,20 +12,32 @@
         <div class="underlined-field">
           <input
             class="combo-input"
+            data-testid="combo-input-materials"
             type="text"
             placeholder="食材・材料を入力"
             aria-label="食材・材料"
             autocomplete="off"
             role="combobox"
+            aria-autocomplete="list"
+            aria-controls="materialsSuggestions"
             aria-expanded="false"
           />
           <button
             class="combo-picker"
+            data-testid="combo-picker-materials"
             type="button"
             aria-label="食材・材料の候補を表示"
+            aria-controls="materialsSuggestions"
             hidden
           ></button>
-          <div class="suggestions" role="listbox" aria-label="食材・材料の候補"></div>
+          <div
+            id="materialsSuggestions"
+            class="suggestions"
+            data-testid="combo-suggestions-materials"
+            role="listbox"
+            aria-label="食材・材料の候補"
+            aria-hidden="true"
+          ></div>
         </div>
       </div>
       <button id="outside" type="button">outside</button>

@@ -113,6 +113,11 @@ function createComboController(
   const floatingChipRow = chipRow;
   const comboPicker = picker;
 
+  function updateSuggestionSuppression(): void {
+    const hasOpenSuggestions = document.querySelector(".suggestions.show:not(.is-empty)") !== null;
+    document.body.classList.toggle("has-open-suggestions", hasOpenSuggestions);
+  }
+
   function isEditing(value: string): boolean {
     return editingValue === value;
   }
@@ -152,6 +157,30 @@ function createComboController(
 
   function closeSuggestions(): void {
     suggestionPanel.classList.remove("show");
+    suggestionPanel.setAttribute("aria-hidden", "true");
+    comboInput.setAttribute("aria-expanded", "false");
+    clearSelectedSuggestions();
+    updateSuggestionSuppression();
+  }
+
+  function setSelectedSuggestion(option: HTMLElement | null): void {
+    for (const item of $$<HTMLElement>("[role='option']", suggestionPanel)) {
+      item.setAttribute("aria-selected", item === option ? "true" : "false");
+    }
+  }
+
+  function clearSelectedSuggestions(): void {
+    comboInput.removeAttribute("aria-activedescendant");
+    setSelectedSuggestion(null);
+  }
+
+  function focusSuggestion(option: HTMLButtonElement): void {
+    const id = option.id;
+    setSelectedSuggestion(option);
+    if (id) {
+      comboInput.setAttribute("aria-activedescendant", id);
+    }
+    option.focus({ preventScroll: true });
   }
 
   function renderSuggestions(): HTMLButtonElement[] {
@@ -168,20 +197,25 @@ function createComboController(
     suggestionPanel.innerHTML = options.length
       ? options
           .map(
-            (value) =>
-              `<button type="button" class="suggestion-option" tabindex="-1" data-value="${value}" aria-label="${getSuggestionAriaLabel(value)}">${value}</button>`,
+            (value, index) =>
+              `<button id="${group}Option${index}" type="button" class="suggestion-option" data-testid="combo-option-${group}" role="option" tabindex="-1" data-value="${value}" aria-label="${getSuggestionAriaLabel(value)}" aria-selected="false">${value}</button>`,
           )
           .join("")
-      : '<div class="suggestion-empty">候補がありません</div>';
+      : `<div class="suggestion-empty" data-testid="combo-empty-${group}" role="option" aria-disabled="true" aria-selected="false">候補がありません</div>`;
+    suggestionPanel.classList.toggle("is-empty", options.length === 0);
 
     closeOthers(suggestionPanel);
     suggestionPanel.classList.add("show");
+    suggestionPanel.setAttribute("aria-hidden", "false");
+    comboInput.setAttribute("aria-expanded", "true");
+    clearSelectedSuggestions();
+    updateSuggestionSuppression();
     return $$<HTMLButtonElement>(".suggestion-option", suggestionPanel);
   }
 
   function addValue(
     value: string,
-    options: { refocusInput?: boolean; notify?: boolean } = {},
+    options: { closeOtherSuggestions?: boolean; notify?: boolean; refocusInput?: boolean } = {},
   ): void {
     const text = value.trim();
     if (!text) {
@@ -194,7 +228,11 @@ function createComboController(
     }
     comboInput.value = "";
     renderPills();
-    closeOthers(null);
+    if (options.closeOtherSuggestions === false) {
+      closeSuggestions();
+    } else {
+      closeOthers(null);
+    }
     if (options.refocusInput && !(singleMode && values.length > 0)) {
       focusInputAtEnd(comboInput);
     }
@@ -260,6 +298,7 @@ function createComboController(
     pill.className = "pill";
     pill.tabIndex = -1;
     (pill.dataset as DOMStringMap & { value?: string }).value = value;
+    pill.setAttribute("data-testid", `combo-pill-${group}`);
 
     if (isEditing(value)) {
       pill.classList.add("editing");
@@ -267,6 +306,7 @@ function createComboController(
       editInput.className = "pill-edit-input";
       editInput.type = "text";
       editInput.value = value;
+      editInput.setAttribute("data-testid", `combo-pill-edit-${group}`);
       editInput.setAttribute("aria-label", `${value}を編集`);
       editInput.setAttribute("autocomplete", "off");
       const dataset = editInput.dataset as ImeDataset & { suppressBlurCommit?: string };
@@ -316,6 +356,7 @@ function createComboController(
       label.type = "button";
       label.className = "pill-label";
       label.textContent = value;
+      label.setAttribute("data-testid", `combo-pill-label-${group}`);
       label.setAttribute("aria-label", `${value}を編集`);
       label.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -328,6 +369,7 @@ function createComboController(
     remove.type = "button";
     remove.className = "pill-remove";
     remove.textContent = "×";
+    remove.setAttribute("data-testid", `combo-pill-remove-${group}`);
     remove.setAttribute("aria-label", `${value}を削除`);
     remove.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -363,6 +405,7 @@ function createComboController(
       return false;
     }
     if (delta < 0 && index === 0) {
+      clearSelectedSuggestions();
       focusInputAtEnd(comboInput);
       return true;
     }
@@ -380,7 +423,7 @@ function createComboController(
     }
     const dataset = comboInput.dataset as ImeDataset;
     dataset.skipBlurCommit = "true";
-    next.focus({ preventScroll: true });
+    focusSuggestion(next);
     window.requestAnimationFrame(() => {
       dataset.skipBlurCommit = "false";
     });
@@ -411,8 +454,8 @@ function createComboController(
     return true;
   }
 
-  function commitInput(): void {
-    addValue(comboInput.value);
+  function commitInput(options: { closeOtherSuggestions?: boolean } = {}): void {
+    addValue(comboInput.value, options);
   }
 
   return {
@@ -502,7 +545,7 @@ function createComboController(
         event.preventDefault();
         const options = renderSuggestions();
         if (options[0]) {
-          options[0].focus({ preventScroll: true });
+          focusSuggestion(options[0]);
         }
         return true;
       }
@@ -558,7 +601,7 @@ function createComboController(
           return;
         }
         if (!root.contains(document.activeElement)) {
-          commitInput();
+          commitInput({ closeOtherSuggestions: false });
           closeSuggestions();
         }
       }, 120);

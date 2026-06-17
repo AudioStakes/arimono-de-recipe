@@ -591,10 +591,14 @@ function renderComboFieldControl(combo: ComboConfig, describedBy = ""): string {
           spellcheck="false"
           enterkeyhint="done"
           aria-label="${combo.label}"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="${suggestionsId}"
+          aria-expanded="false"
           ${describedByAttribute}
         />
-        <button class="combo-picker" type="button" aria-label="${combo.label}の候補を表示"></button>
-        <div id="${suggestionsId}" class="suggestions" data-testid="combo-suggestions-${combo.id}" aria-label="${combo.label}の候補"></div>
+        <button class="combo-picker" data-testid="combo-picker-${combo.id}" type="button" aria-label="${combo.label}の候補を表示" aria-controls="${suggestionsId}"></button>
+        <div id="${suggestionsId}" class="suggestions" data-testid="combo-suggestions-${combo.id}" role="listbox" aria-label="${combo.label}の候補" aria-hidden="true"></div>
       </div>
     </div>
   `;
@@ -665,11 +669,11 @@ function renderServingsField(): string {
     .map(
       ({ id, label, icon: iconName }) => `
         <div class="serving-card">
-          <div class="serving-label" id="${id}Label"><span aria-hidden="true">${icon(iconName)}</span>${label}</div>
+          <div class="serving-label" id="${id}Label" data-testid="serving-label-${id}"><span aria-hidden="true">${icon(iconName)}</span>${label}</div>
           <div class="serving-stepper" data-serving-id="${id}" data-testid="serving-stepper-${id}" data-count="0" aria-labelledby="${id}Label">
-            <button class="serving-adjust serving-minus" type="button" aria-label="${label}を1人減らす">−</button>
-            <span class="serving-count" aria-live="polite">0人</span>
-            <button class="serving-adjust serving-plus" type="button" aria-label="${label}を1人増やす">+</button>
+            <button class="serving-adjust serving-minus" data-testid="serving-minus-${id}" type="button" aria-label="${label}を1人減らす">−</button>
+            <span class="serving-count" data-testid="serving-count-${id}" aria-live="polite">0人</span>
+            <button class="serving-adjust serving-plus" data-testid="serving-plus-${id}" type="button" aria-label="${label}を1人増やす">+</button>
           </div>
         </div>
       `,
@@ -680,7 +684,7 @@ function renderServingsField(): string {
     <fieldset class="field fieldset">
       <legend class="field-title">${fieldLabelHtml("人数・分量", "users")}</legend>
       ${renderRadioOptions("servingsMode", servingsModeOptions, "unspecified")}
-      <div id="customServingsPanel" class="custom-servings-panel" hidden>
+      <div id="customServingsPanel" class="custom-servings-panel" data-testid="custom-servings-panel" hidden>
         <div class="serving-grid" aria-label="詳しい人数">${controls}</div>
       </div>
     </fieldset>

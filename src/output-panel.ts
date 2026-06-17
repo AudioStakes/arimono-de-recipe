@@ -25,6 +25,8 @@ type ViewportMetrics = {
   innerWidth: number;
 };
 
+type ChipTone = NonNullable<ChipItem["tone"]>;
+
 export type PromptPanelServices = {
   readConditions: () => PromptData;
   flushPendingInputs: () => void;
@@ -43,12 +45,14 @@ const renderChips = (container: Element, items: ChipItem[], readOnly = false): v
   for (const item of items) {
     const chip = document.createElement("span");
     chip.className = "chip";
+    chip.setAttribute("data-kind", item.tone ?? "condition");
     chip.appendChild(document.createTextNode(item.label));
     if (item.removable && !readOnly && item.action) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "chip-remove";
       remove.textContent = "×";
+      remove.setAttribute("aria-label", `${item.label}を削除`);
       remove.addEventListener("click", item.action);
       chip.appendChild(remove);
     }
@@ -68,9 +72,7 @@ async function copyText(text: string): Promise<void> {
   const fallback = document.createElement("textarea");
   fallback.value = text;
   fallback.setAttribute("readonly", "");
-  fallback.style.position = "fixed";
-  fallback.style.inset = "0";
-  fallback.style.opacity = "0";
+  fallback.className = "clipboard-fallback";
   document.body.appendChild(fallback);
   fallback.focus();
   fallback.select();
@@ -86,9 +88,11 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
   const specs = buildConditionChipSpecs(data);
 
   return specs.map((spec) => {
+    const tone = getChipTone(spec);
     if (spec.kind === "combo") {
       return {
         label: spec.label,
+        tone,
         removable: spec.removable,
         action: () => {
           services.clearCombo(spec.id);
@@ -100,6 +104,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
     if (spec.kind === "cookTime") {
       return {
         label: spec.label,
+        tone,
         removable: spec.removable,
         action: () => {
           services.clearCookTime();
@@ -111,6 +116,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
     if (spec.kind === "supplementalNotes") {
       return {
         label: spec.label,
+        tone,
         removable: spec.removable,
         action: () => {
           services.clearSupplementalNotes();
@@ -121,9 +127,23 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
 
     return {
       label: spec.label,
+      tone,
       removable: spec.removable,
     };
   });
+}
+
+function getChipTone(spec: ReturnType<typeof buildConditionChipSpecs>[number]): ChipTone {
+  if (spec.kind === "combo") {
+    if (spec.id === "materials" || spec.id === "ngFoodsAndSeasonings") {
+      return "ingredient";
+    }
+    if (spec.id === "recipeDirections") {
+      return "workspace";
+    }
+  }
+
+  return "condition";
 }
 
 function buildMobileSummaryChips(data: PromptData): ChipItem[] {
