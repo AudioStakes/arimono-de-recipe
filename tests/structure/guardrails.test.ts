@@ -41,6 +41,12 @@ const requiredStableHooks = [
   "mobile-ai-recipe-content",
   "mobile-ai-recipe-error",
   "mobile-ai-recipe-model",
+  "recipe-candidate-list",
+  "recipe-candidate-${",
+  "recipe-candidate-select-${",
+  "recipe-candidate-detail",
+  "recipe-candidate-back",
+  'data-state", selected ? "selected" : "idle"',
   "mobile-prompt-panel",
   "recipe-item-${",
   "recipe-item-toggle-${",
@@ -291,6 +297,20 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
 
   if (missingHooks.length > 0) {
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
+  }
+
+  if (!sourceText.includes("`mobile-${testId}`")) {
+    throw new Error("Missing stable mobile recipe-candidate hook prefix generation.");
+  }
+
+  for (const hook of [
+    "mobile-recipe-candidate-list",
+    "mobile-recipe-candidate-select-b",
+    "mobile-recipe-candidate-detail",
+  ]) {
+    if (!e2eText.includes(hook)) {
+      throw new Error(`Missing mobile recipe-candidate E2E hook usage: ${hook}`);
+    }
   }
 
   if (!e2eText.includes("getByTestId(") && !e2eText.includes("data-testid")) {

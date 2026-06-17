@@ -48,11 +48,11 @@ const createInitialState = (): AppState => {
     aiRecipe: {
       status: "idle",
       activeSurface: "desktop",
-      recipe: "",
+      candidates: null,
+      selectedCandidateId: "",
       model: "",
       usage: null,
       errorMessage: "",
-      promptSnapshot: "",
       requestId: 0,
     },
   };
@@ -401,13 +401,13 @@ function renderAppShell(): string {
           <span class="brand-title-text">ありもの de レシピ</span>
         </span>
       </h1>
-      <p class="lead" id="appLead">「ありもので何作ろう？」を、AIへそのまま渡せるレシピ依頼文に。</p>
+      <p class="lead" id="appLead">家にある食材から、今日作れそうな料理候補を見つけます。</p>
       <p class="use-flow" aria-label="使い方">
         <span class="flow-step">1. 条件を入力</span>
         <span class="flow-arrow" aria-hidden="true">→</span>
-        <span class="flow-step">2. 依頼文ができる</span>
+        <span class="flow-step">2. 料理候補を見る</span>
         <span class="flow-arrow" aria-hidden="true">→</span>
-        <span class="flow-step">3. AI生成またはコピー</span>
+        <span class="flow-step">3. 詳細を決める</span>
       </p>
     </header>
     <div class="app-layout">
@@ -417,15 +417,15 @@ function renderAppShell(): string {
       </form>
       <section class="prompt-section" aria-label="レシピ依頼文と実行方法">
         <div class="prompt-heading">
-          <h2 id="promptHeading">AIへ渡すレシピ依頼文</h2>
-          <p id="promptDescription">依頼文を確認してから、このアプリでAIに依頼するか、普段使っているAIへ貼り付けられます。</p>
+          <h2 id="promptHeading">料理候補とAI向け依頼文</h2>
+          <p id="promptDescription">このアプリで短い候補を見たり、AI向けレシピ依頼文を普段使っているAIへ貼り付けたりできます。</p>
         </div>
         <div id="conditionChips" class="chips" data-testid="condition-chips"></div>
         <div class="prompt-action-grid" aria-label="実行方法">
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
-              <h3>AIでレシピを作成</h3>
-              <p>このアプリ内でAIに依頼して、レシピ案を表示します。</p>
+              <h3>AIで候補を見る</h3>
+              <p>家にある食材をもとに、短い料理候補を3つ表示します。</p>
             </div>
             <button
               id="generateRecipe"
@@ -434,7 +434,7 @@ function renderAppShell(): string {
               data-testid="generate-recipe"
             >
               <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
-              <span class="action-button-label">AIでレシピを作成</span>
+              <span class="action-button-label">AIで候補を見る</span>
             </button>
           </article>
           <article class="prompt-action-card">
@@ -494,6 +494,15 @@ function renderAppShell(): string {
         <div id="stickyChips" class="sticky-chips" data-testid="sticky-condition-chips"></div>
         <div class="sheet-actions">
           <button
+            id="generateRecipeMobile"
+            class="action-button button-primary"
+            type="button"
+            data-testid="generate-recipe-mobile"
+          >
+            <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
+            <span class="action-button-label">AIで候補を見る</span>
+          </button>
+          <button
             id="sheetToggle"
             class="sheet-toggle-button"
             type="button"
@@ -532,18 +541,6 @@ function renderAppShell(): string {
             <button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button>
           </div>
           <div class="mobile-sheet-action-grid" aria-label="実行方法">
-            <article class="mobile-action-card">
-              <p>アプリ内でAIに依頼</p>
-              <button
-                id="generateRecipeMobile"
-                class="action-button button-primary"
-                type="button"
-                data-testid="generate-recipe-mobile"
-              >
-                <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
-                <span class="action-button-label">AIでレシピを作成</span>
-              </button>
-            </article>
             <article class="mobile-action-card">
               <p>普段使っているAIへ貼り付け</p>
               <button

@@ -8,10 +8,10 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.locator(".brand-fridge")).toBeVisible();
   await expect(page.locator(".brand-title-text")).toHaveText("ありもの de レシピ");
   await expect(
-    page.getByText("「ありもので何作ろう？」を、AIへそのまま渡せるレシピ依頼文に。"),
+    page.getByText("家にある食材から、今日作れそうな料理候補を見つけます。"),
   ).toBeVisible();
   await expect(page.locator(".use-flow")).toContainText("1. 条件を入力");
-  await expect(page.locator(".use-flow")).toContainText("3. AI生成またはコピー");
+  await expect(page.locator(".use-flow")).toContainText("3. 詳細を決める");
 
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText([

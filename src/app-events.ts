@@ -198,10 +198,10 @@ export function bindAppEvents(
     "click",
     () => void createAiRecipe(state, elements, services, "desktop"),
   );
-  $("#generateRecipeMobile").addEventListener(
-    "click",
-    () => void createAiRecipe(state, elements, services, "mobile"),
-  );
+  $("#generateRecipeMobile").addEventListener("click", () => {
+    setMobileSheetState(state, elements, true, elements.generateRecipeMobile);
+    void createAiRecipe(state, elements, services, "mobile");
+  });
 
   attachBottomSheetDrag(state, elements);
   syncStickyFooterState(state, elements, services);

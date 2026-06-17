@@ -136,6 +136,11 @@ textarea {
   outline-offset: 3px;
 }
 
+:where(.recipe-candidate-list, .recipe-candidate-detail):focus {
+  outline: 3px solid rgba(204, 120, 92, 0.28);
+  outline-offset: 3px;
+}
+
 #app {
   display: grid;
   gap: var(--space-6);
@@ -838,21 +843,16 @@ input[type="range"] {
 }
 
 .ai-recipe-content {
-  max-block-size: calc((var(--space-8) * 6) + var(--space-5));
-  padding: var(--space-4);
-  overflow: auto;
+  container-type: inline-size;
   color: var(--ink);
   font-size: 0.95rem;
   font-weight: 500;
   line-height: 1.7;
-  white-space: pre-wrap;
-  background: rgba(255, 255, 255, 0.64);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
 }
 
 .mobile-ai-recipe-panel .ai-recipe-content {
-  max-block-size: calc((var(--space-8) * 2) + var(--space-4));
+  max-block-size: none;
 }
 
 .ai-recipe-meta {
@@ -862,6 +862,163 @@ input[type="range"] {
 
 .ai-recipe-error-message {
   color: var(--error);
+}
+
+.recipe-candidate-section {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+.recipe-candidate-list-heading,
+.recipe-candidate-detail-title {
+  margin: 0;
+  color: var(--primary-deep);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.recipe-candidate-list {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.recipe-candidate-item {
+  min-inline-size: 0;
+}
+
+.recipe-candidate-card,
+.recipe-candidate-detail {
+  display: grid;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+}
+
+.recipe-candidate-item[data-state="selected"] .recipe-candidate-card {
+  border-color: rgba(0, 117, 74, 0.28);
+  box-shadow: var(--inner-highlight);
+}
+
+.recipe-candidate-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.recipe-candidate-meta,
+.recipe-candidate-why {
+  margin: 0;
+}
+
+.recipe-candidate-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.recipe-candidate-badges,
+.recipe-candidate-use,
+.recipe-candidate-miss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.recipe-candidate-badges li,
+.recipe-candidate-use li,
+.recipe-candidate-miss li {
+  min-inline-size: 0;
+  padding: 4px 8px;
+  color: var(--primary-deep);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  background: rgba(255, 246, 236, 0.92);
+  border: 1px solid rgba(204, 120, 92, 0.14);
+  border-radius: var(--radius-pill);
+}
+
+.recipe-candidate-use li {
+  color: var(--ingredient);
+  background: rgba(231, 246, 238, 0.9);
+  border-color: rgba(0, 117, 74, 0.12);
+}
+
+.recipe-candidate-miss li {
+  color: var(--error);
+  background: var(--error-soft);
+  border-color: rgba(198, 69, 69, 0.16);
+}
+
+.recipe-candidate-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  padding: 10px 16px;
+  color: var(--primary-deep);
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.1;
+  background: rgba(255, 249, 242, 0.92);
+  border: 1px solid rgba(204, 120, 92, 0.18);
+  border-radius: var(--radius-pill);
+}
+
+.recipe-candidate-select[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--ingredient);
+  border-color: var(--ingredient);
+}
+
+.recipe-candidate-detail {
+  background: rgba(255, 253, 248, 0.92);
+}
+
+.recipe-candidate-subheading {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.recipe-candidate-detail-list {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-5);
+  margin: 0;
+}
+
+.recipe-candidate-detail-list li {
+  overflow-wrap: anywhere;
+}
+
+.recipe-candidate-back {
+  min-block-size: 44px;
+  padding: 10px 16px;
+  font-weight: 900;
+}
+
+@container (min-width: 560px) {
+  .recipe-candidate-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .copy-icon-button,
@@ -1090,7 +1247,7 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
 
 .mobile-sheet-action-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 
