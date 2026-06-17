@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   getMissingIngredientLabels,
+  getSeasoningLabels,
   getTasteAdjustmentLabels,
   getUsedMaterialLabels,
   getVisibleCandidateBadgeLabels,
@@ -57,5 +58,16 @@ describe("recipe candidate list labels", () => {
       "塩・しょうゆは少量ずつ足す",
       "濃ければ水かだしでのばす",
     ]);
+  });
+
+  test("調理ビューの材料tab用に調味料・その他を分ける", () => {
+    expect(
+      getSeasoningLabels(
+        candidate({
+          use: ["豆腐"],
+          ing: ["豆腐 150g", "片栗粉", "しょうゆ"],
+        }),
+      ),
+    ).toEqual(["片栗粉", "しょうゆ"]);
   });
 });

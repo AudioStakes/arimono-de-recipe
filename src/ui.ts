@@ -55,6 +55,7 @@ const createInitialState = (): AppState => {
       candidates: null,
       selectedCandidateId: "",
       cookingCandidateId: "",
+      cookingTab: "materials",
       model: "",
       usage: null,
       errorMessage: "",

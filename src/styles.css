@@ -1023,6 +1023,33 @@ input[type="range"] {
   border-color: rgba(198, 69, 69, 0.16);
 }
 
+.recipe-cooking-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.recipe-cooking-tab {
+  min-block-size: var(--space-7);
+  padding: 8px 12px;
+  color: var(--muted);
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-pill);
+}
+
+.recipe-cooking-tab[aria-selected="true"] {
+  color: var(--primary-deep);
+  background: rgba(231, 246, 238, 0.94);
+  border-color: rgba(0, 117, 74, 0.22);
+}
+
+.recipe-cooking-panel {
+  display: grid;
+  gap: var(--space-2);
+}
+
 .recipe-candidate-select {
   display: inline-flex;
   align-items: center;

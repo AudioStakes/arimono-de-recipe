@@ -127,7 +127,35 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await page.getByTestId("recipe-candidate-cook").click();
   await expect(page.getByTestId("recipe-cooking-view")).toBeFocused();
   await expect(page.getByTestId("recipe-cooking-view")).toContainText("豆腐のあんかけ");
+  await expect(page.getByRole("tablist", { name: "調理内容" })).toBeVisible();
+  await expect(page.getByTestId("recipe-cooking-tab-materials")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("使う材料");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("豆腐");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("調味料・その他");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("片栗粉");
+  await expect(page.getByTestId("recipe-cooking-view")).not.toContainText("次へ");
+  await page.getByTestId("recipe-cooking-tab-instructions").click();
+  await expect(page.getByTestId("recipe-cooking-tab-instructions")).toBeFocused();
+  await expect(page.getByTestId("recipe-cooking-tab-instructions")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("豆腐を温める");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("あんを作る");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("かける");
+  await page.getByTestId("recipe-cooking-tab-taste").click();
+  await expect(page.getByTestId("recipe-cooking-tab-taste")).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("味の調整");
+  await expect(page.getByTestId("recipe-cooking-panel")).toContainText("濃ければ水かだしでのばす");
   await page.getByTestId("recipe-cooking-back").click();
+  await expect(page.getByTestId("recipe-candidate-detail")).toBeFocused();
+  await page.getByTestId("recipe-candidate-back").click();
   await expect(page.getByTestId("recipe-candidate-list")).toBeFocused();
   expect(callCount).toBe(1);
   await expect(page.getByTestId("prompt-output")).toHaveValue(/未確定の豆腐/);
@@ -343,6 +371,13 @@ test("モバイルの固定CTAから候補を見て詳細選択しても追加AP
   await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("キャベツ炒め");
   await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("キャベツ");
   await expect(page.getByTestId("mobile-recipe-candidate-detail")).toContainText("味を調える");
+  await page.getByTestId("mobile-recipe-candidate-cook").click();
+  await expect(page.getByTestId("mobile-recipe-cooking-view")).toBeFocused();
+  await expect(page.getByTestId("mobile-recipe-cooking-tab-materials")).toBeVisible();
+  await page.getByTestId("mobile-recipe-cooking-tab-instructions").click();
+  await expect(page.getByTestId("mobile-recipe-cooking-panel")).toContainText("切る");
+  await expect(page.getByTestId("mobile-recipe-cooking-panel")).toContainText("炒める");
+  await expect(page.getByTestId("mobile-recipe-cooking-panel")).toContainText("味を調える");
   expect(callCount).toBe(1);
 
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
