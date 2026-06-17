@@ -1,20 +1,18 @@
 import {
   buildCandidateSearchSynonyms,
   cookingMethodAndToolCandidates,
-  dishTypeCandidates,
-  easeCandidates,
   foodMaterialCandidates,
   ngFoodAndSeasoningCandidates,
   pairingTargetCandidates,
   recipeDirectionCandidates,
+  targetDishCandidates,
 } from "./candidate-values";
 
 export const searchSynonyms: Record<string, string> = {
   ...buildCandidateSearchSynonyms(foodMaterialCandidates),
-  ...buildCandidateSearchSynonyms(dishTypeCandidates),
+  ...buildCandidateSearchSynonyms(targetDishCandidates),
   ...buildCandidateSearchSynonyms(cookingMethodAndToolCandidates),
   ...buildCandidateSearchSynonyms(pairingTargetCandidates),
-  ...buildCandidateSearchSynonyms(easeCandidates),
   ...buildCandidateSearchSynonyms(recipeDirectionCandidates),
   ...buildCandidateSearchSynonyms(ngFoodAndSeasoningCandidates),
 };

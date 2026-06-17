@@ -8,12 +8,14 @@ export { getComboOptionValues, isImeComposing };
 
 export function getCookTimeValue(): string {
   const range = safe$<HTMLInputElement>("#cookTimeRange");
-  return range ? (cookTimeOptions[Number(range.value)] ?? "") : "";
+  const value = range ? (cookTimeOptions[Number(range.value)] ?? "") : "";
+  return value === "指定なし" ? "" : value;
 }
 
 export function updateCookTimeDisplay(): void {
   const label = safe$<HTMLElement>("#cookTimeLabel");
   if (label) {
-    label.textContent = getCookTimeValue() || "指定なし";
+    const range = safe$<HTMLInputElement>("#cookTimeRange");
+    label.textContent = range ? (cookTimeOptions[Number(range.value)] ?? "指定なし") : "指定なし";
   }
 }

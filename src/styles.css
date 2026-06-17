@@ -260,6 +260,132 @@ legend.field-title {
   padding: 0;
 }
 
+.field-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.choice-grid,
+.segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compact-choice-grid {
+  gap: 6px;
+}
+
+.choice-option {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--accent-deep);
+  font-size: 0.9rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  cursor: pointer;
+  background: rgba(255, 249, 242, 0.92);
+  border: 1px solid rgba(225, 104, 51, 0.2);
+  border-radius: 12px;
+}
+
+.choice-option input {
+  width: auto;
+  min-height: 0;
+  margin: 0 8px 0 0;
+  accent-color: var(--accent);
+}
+
+.choice-option:has(input:checked) {
+  color: #fff;
+  background: linear-gradient(180deg, #ea763b 0%, var(--accent) 100%);
+  border-color: transparent;
+  box-shadow: 0 10px 20px rgba(225, 104, 51, 0.2);
+}
+
+.choice-option:has(input:focus-visible) {
+  outline: 3px solid rgba(225, 104, 51, 0.38);
+  outline-offset: 3px;
+}
+
+.panel-fieldset {
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.material-use-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.material-request-list {
+  display: grid;
+  gap: 12px;
+}
+
+.material-request-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(127, 67, 31, 0.14);
+}
+
+.material-request-row legend {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.material-amount-controls {
+  display: grid;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 3px solid rgba(225, 104, 51, 0.22);
+}
+
+.material-amount-controls[hidden] {
+  display: none;
+}
+
+.recipe-role-subfield {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 14px 0 0 10px;
+  border-left: 3px solid rgba(225, 104, 51, 0.22);
+}
+
+.recipe-role-subfield[hidden] {
+  display: none;
+}
+
+.subfield-label {
+  margin: 0;
+  color: var(--accent-deep);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.text-input-label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  color: var(--accent-deep);
+  font-size: 0.88rem;
+}
+
+.text-input-label[hidden] {
+  display: none;
+}
+
 .icon {
   display: block;
   flex: 0 0 auto;
@@ -369,6 +495,16 @@ textarea:focus {
 }
 
 .combo-picker {
+  display: none;
+}
+
+.combo.single-filled .underlined-field {
+  min-height: 0;
+  border-bottom: 0;
+}
+
+.combo.single-filled .combo-input,
+.combo.single-filled .combo-picker {
   display: none;
 }
 

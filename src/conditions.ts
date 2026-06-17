@@ -1,9 +1,22 @@
 import type { ComboRegistry } from "./combo-registry";
-import type { ComboId, PromptData } from "./types";
+import type {
+  ComboId,
+  MaterialRequest,
+  MaterialUseMode,
+  PromptData,
+  RecipeCount,
+  RequestIntent,
+  ServingsMode,
+} from "./types";
 
 type PromptDataReadServices = {
   getComboValues: (group: ComboId) => string[];
+  getRequestIntent?: () => RequestIntent;
+  getMaterialUseMode?: () => MaterialUseMode;
+  getMaterialRequests?: () => MaterialRequest[];
   getServingsText: () => string;
+  getServingsMode?: () => ServingsMode;
+  getRecipeCount?: () => RecipeCount;
   getCookTimeText: () => string;
   getSupplementalNotes: () => string;
 };
@@ -14,27 +27,71 @@ export type PromptDataReader = {
 
 export type PromptDataInputs = {
   comboRegistry: Pick<ComboRegistry, "getValues">;
+  getRequestIntent?: () => RequestIntent;
+  getMaterialUseMode?: () => MaterialUseMode;
+  getMaterialRequests?: () => MaterialRequest[];
   getServingsText: () => string;
+  getServingsMode?: () => ServingsMode;
+  getRecipeCount?: () => RecipeCount;
   getCookTimeText: () => string;
   getSupplementalNotes: () => string;
 };
 
-const advancedConditionIds: ComboId[] = ["difficulty", "recipeDirections", "ngFoodsAndSeasonings"];
+const advancedConditionIds: ComboId[] = [
+  "cookingTools",
+  "recipeDirections",
+  "ngFoodsAndSeasonings",
+];
+const promptComboIds = [
+  "materials",
+  "targetDish",
+  "recipeRoles",
+  "cookingTools",
+  "pairingTargets",
+  "recipeDirections",
+  "ngFoodsAndSeasonings",
+] as const satisfies readonly ComboId[];
+
+function readComboValues(services: PromptDataReadServices): Record<ComboId, string[]> {
+  const values = {} as Record<ComboId, string[]>;
+  for (const id of promptComboIds) {
+    values[id] = services.getComboValues(id);
+  }
+  return values;
+}
 
 export function createPromptDataReader(services: PromptDataReadServices): PromptDataReader {
   return {
-    read: () => ({
-      materials: services.getComboValues("materials"),
-      dishTypes: services.getComboValues("dishTypes"),
-      cookingTools: services.getComboValues("cookingTools"),
-      pairingTargets: services.getComboValues("pairingTargets"),
-      difficulty: services.getComboValues("difficulty"),
-      recipeDirections: services.getComboValues("recipeDirections"),
-      ngFoodsAndSeasonings: services.getComboValues("ngFoodsAndSeasonings"),
-      servings: services.getServingsText(),
-      cookTime: services.getCookTimeText(),
-      supplementalNotes: services.getSupplementalNotes(),
-    }),
+    read: () => {
+      const comboValues = readComboValues(services);
+      const requestIntent = services.getRequestIntent?.() ?? "auto";
+      const materialUseMode = services.getMaterialUseMode?.() ?? "auto";
+      const defaultRecipeCount = requestIntent === "pairing" ? "one" : "auto";
+      const requestedRecipeCount =
+        requestIntent === "target-dish"
+          ? "auto"
+          : (services.getRecipeCount?.() ?? defaultRecipeCount);
+      const recipeCount =
+        requestIntent === "pairing" && requestedRecipeCount === "auto"
+          ? "one"
+          : requestedRecipeCount;
+
+      return {
+        ...comboValues,
+        targetDish: requestIntent === "target-dish" ? comboValues.targetDish : [],
+        pairingTargets: requestIntent === "pairing" ? comboValues.pairingTargets : [],
+        recipeRoles: recipeCount === "auto" ? [] : comboValues.recipeRoles,
+        requestIntent,
+        materialUseMode,
+        materialRequests:
+          materialUseMode === "specified" ? (services.getMaterialRequests?.() ?? []) : [],
+        servings: services.getServingsText(),
+        servingsMode: services.getServingsMode?.() ?? "unspecified",
+        recipeCount,
+        cookTime: services.getCookTimeText(),
+        supplementalNotes: services.getSupplementalNotes(),
+      };
+    },
   };
 }
 
@@ -44,6 +101,11 @@ export function createPromptDataReaderFromInputs(inputs: PromptDataInputs): Prom
     getServingsText: inputs.getServingsText,
     getCookTimeText: inputs.getCookTimeText,
     getSupplementalNotes: inputs.getSupplementalNotes,
+    ...(inputs.getRequestIntent ? { getRequestIntent: inputs.getRequestIntent } : {}),
+    ...(inputs.getMaterialUseMode ? { getMaterialUseMode: inputs.getMaterialUseMode } : {}),
+    ...(inputs.getMaterialRequests ? { getMaterialRequests: inputs.getMaterialRequests } : {}),
+    ...(inputs.getServingsMode ? { getServingsMode: inputs.getServingsMode } : {}),
+    ...(inputs.getRecipeCount ? { getRecipeCount: inputs.getRecipeCount } : {}),
   });
 }
 

@@ -8,4 +8,5 @@ export * from "./other-request-examples";
 export * from "./pairing-targets";
 export * from "./recipe-directions";
 export * from "./seasonings";
+export * from "./target-dishes";
 export * from "./types";

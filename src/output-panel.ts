@@ -1,4 +1,5 @@
 import { buildConditionChipSpecs } from "./chips";
+import { requestIntentOptions } from "./data";
 import { buildPrompt } from "./prompt";
 import { getStickyFooterView } from "./sticky-footer";
 import type { ChipItem, ComboId, PromptData } from "./types";
@@ -126,16 +127,21 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
 }
 
 function buildMobileSummaryChips(data: PromptData): ChipItem[] {
+  const intentLabel = requestIntentOptions.find(
+    (option) => option.value === data.requestIntent,
+  )?.label;
   const summaries = [
+    intentLabel ?? "",
     data.materials.length ? data.materials.slice(0, 3).join("・") : "",
     data.servings,
-    data.dishTypes[0] ?? "",
+    data.targetDish[0] ?? "",
+    data.recipeCount === "multiple" ? "複数品" : "",
+    data.recipeRoles[0] ?? "",
     data.cookingTools[0] ?? "",
     data.pairingTargets[0] ?? "",
     data.cookTime || "",
-    data.difficulty[0] ?? "",
     data.recipeDirections[0] ?? "",
-    data.ngFoodsAndSeasonings[0] ? `NG: ${data.ngFoodsAndSeasonings[0]}` : "",
+    data.ngFoodsAndSeasonings[0] ? `使えない: ${data.ngFoodsAndSeasonings[0]}` : "",
     data.supplementalNotes ? "その他の要望あり" : "",
   ].filter(Boolean);
 
