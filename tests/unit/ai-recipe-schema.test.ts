@@ -67,6 +67,20 @@ describe("ai recipe schema", () => {
     );
   });
 
+  test("compact model inputに必須・使い切り材料をrqとして含める", () => {
+    const parsed = parseAiRecipeCandidateRequest({
+      mode: "candidates",
+      materials: ["豆腐", "キャベツ"],
+      notes: "必須:豆腐 / 使切:キャベツ(1/4玉)。薄味",
+    });
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(buildCompactRecipeCandidateInput(parsed.value)).toBe(
+      '{"m":["豆腐","キャベツ"],"rq":["豆腐","キャベツ"],"n":"必須:豆腐 / 使切:キャベツ(1/4玉)。薄味"}',
+    );
+  });
+
   test("unknown fieldsや空材料を拒否する", () => {
     expect(
       parseAiRecipeCandidateRequest({
@@ -121,6 +135,16 @@ describe("ai recipe schema", () => {
     expect(parsed.value.items.map((item) => item.id)).toEqual(["a", "b", "c"]);
   });
 
+  test("AI応答の重複idを表示用idへ正規化する", () => {
+    const parsed = parseAiRecipeCandidatesResponse({
+      items: validCandidates.items.map((item) => ({ ...item, id: "c" })),
+    });
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.items.map((item) => item.id)).toEqual(["a", "b", "c"]);
+  });
+
   test("missing fields, invalid badges, fewer than 3 candidatesを拒否する", () => {
     expect(parseAiRecipeCandidatesResponse({ items: [validCandidates.items[0]] }).ok).toBe(false);
     expect(
@@ -141,18 +165,9 @@ describe("ai recipe schema", () => {
         ],
       }).ok,
     ).toBe(false);
-    expect(
-      parseAiRecipeCandidatesResponse({
-        items: [
-          validCandidates.items[0],
-          { ...validCandidates.items[1], badges: ["no_shop"], miss: ["卵"] },
-          validCandidates.items[2],
-        ],
-      }).ok,
-    ).toBe(false);
   });
 
-  test("request材料にないuseやavoidとの衝突を拒否する", () => {
+  test("request材料にないingやavoidとの衝突を拒否する", () => {
     const [first, second, third] = validCandidates.items;
     if (!first || !second || !third) {
       throw new Error("candidate fixture must include three items.");
@@ -165,17 +180,20 @@ describe("ai recipe schema", () => {
       }).ok,
     ).toBe(true);
 
-    expect(
-      validateAiRecipeCandidatesForRequest(
-        {
-          items: [{ ...first, use: ["豚肉"] }, second, third],
-        },
-        {
-          mode: "candidates",
-          materials: ["豆腐", "キャベツ"],
-        },
-      ).ok,
-    ).toBe(false);
+    const normalizedUse = validateAiRecipeCandidatesForRequest(
+      {
+        items: [{ ...first, use: ["豚肉"] }, second, third],
+      },
+      {
+        mode: "candidates",
+        materials: ["豆腐", "キャベツ"],
+      },
+    );
+    expect(normalizedUse.ok).toBe(true);
+    if (!normalizedUse.ok) {
+      throw new Error(normalizedUse.reason);
+    }
+    expect(normalizedUse.value.items[0]?.use).toEqual(["豆腐"]);
 
     expect(
       validateAiRecipeCandidatesForRequest(
@@ -189,17 +207,20 @@ describe("ai recipe schema", () => {
       ).ok,
     ).toBe(false);
 
-    expect(
-      validateAiRecipeCandidatesForRequest(
-        {
-          items: [{ ...first, miss: ["豆腐"] }, second, third],
-        },
-        {
-          mode: "candidates",
-          materials: ["豆腐", "キャベツ"],
-        },
-      ).ok,
-    ).toBe(false);
+    const normalizedMissingRequestMaterial = validateAiRecipeCandidatesForRequest(
+      {
+        items: [{ ...first, miss: ["豆腐"] }, second, third],
+      },
+      {
+        mode: "candidates",
+        materials: ["豆腐", "キャベツ"],
+      },
+    );
+    expect(normalizedMissingRequestMaterial.ok).toBe(true);
+    if (!normalizedMissingRequestMaterial.ok) {
+      throw new Error(normalizedMissingRequestMaterial.reason);
+    }
+    expect(normalizedMissingRequestMaterial.value.items[0]?.miss).toEqual([]);
 
     expect(
       validateAiRecipeCandidatesForRequest(
@@ -233,9 +254,88 @@ describe("ai recipe schema", () => {
       validateAiRecipeCandidatesForRequest(validCandidates, {
         mode: "candidates",
         materials: ["豆腐", "キャベツ"],
-        avoid: ["卵"],
+        avoid: ["キャベツ"],
       }).ok,
     ).toBe(false);
+  });
+
+  test("request材料がmissに混ざったAI応答を正規化する", () => {
+    const [first, second, third] = validCandidates.items;
+    if (!first || !second || !third) {
+      throw new Error("candidate fixture must include three items.");
+    }
+
+    const parsed = validateAiRecipeCandidatesForRequest(
+      {
+        items: [
+          { ...first, badges: ["quick", "miss_optional"], use: ["豆腐"], miss: ["キャベツ"] },
+          second,
+          third,
+        ],
+      },
+      {
+        mode: "candidates",
+        materials: ["豆腐", "キャベツ"],
+      },
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.items[0]?.miss).toEqual([]);
+    expect(parsed.value.items[0]?.badges).toEqual(["quick"]);
+  });
+
+  test("avoid条件がmissに混ざったAI応答を正規化する", () => {
+    const [first, second, third] = validCandidates.items;
+    if (!first || !second || !third) {
+      throw new Error("candidate fixture must include three items.");
+    }
+
+    const parsed = validateAiRecipeCandidatesForRequest(
+      {
+        items: [{ ...first, badges: ["miss_optional"], miss: ["辛い味"] }, second, third],
+      },
+      {
+        mode: "candidates",
+        materials: ["豆腐", "キャベツ"],
+        avoid: ["辛い味"],
+      },
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.items[0]?.miss).toEqual([]);
+    expect(parsed.value.items[0]?.badges).toEqual([]);
+  });
+
+  test("useに混ざった入力外材料を落とし、ingのrequest材料をuseへ補完する", () => {
+    const [first, second, third] = validCandidates.items;
+    if (!first || !second || !third) {
+      throw new Error("candidate fixture must include three items.");
+    }
+
+    const parsed = validateAiRecipeCandidatesForRequest(
+      {
+        items: [
+          {
+            ...first,
+            use: ["豆腐", "みりん"],
+            ing: ["豆腐 150g", "キャベツ 1枚", "みりん 大さじ1"],
+          },
+          second,
+          third,
+        ],
+      },
+      {
+        mode: "candidates",
+        materials: ["豆腐", "キャベツ"],
+        notes: "必須:キャベツ",
+      },
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.items[0]?.use).toEqual(["豆腐", "キャベツ"]);
   });
 
   test("ingの分量付き材料と常備調味料をrequest材料として扱う", () => {

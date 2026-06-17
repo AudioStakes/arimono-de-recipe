@@ -219,11 +219,13 @@ export function buildCompactRecipeCandidateInput(request: AiRecipeCandidateReque
   const compact: Record<string, string | string[]> = {
     m: request.materials,
   };
+  const requiredMaterials = extractConstrainedMaterials(request.notes);
   if (request.servings) compact["sv"] = request.servings;
   if (request.time) compact["t"] = request.time;
   if (request.directions?.length) compact["d"] = request.directions;
   if (request.tools?.length) compact["tl"] = request.tools;
   if (request.avoid?.length) compact["ng"] = request.avoid;
+  if (requiredMaterials.length) compact["rq"] = requiredMaterials;
   if (request.notes) compact["n"] = request.notes;
   return JSON.stringify(compact);
 }
@@ -312,10 +314,6 @@ function parseCandidate(value: unknown): AiRecipeCandidate | null {
     return null;
   }
 
-  if (miss.length > 0 && badges.includes("no_shop")) {
-    return null;
-  }
-
   return {
     id,
     title,
@@ -341,14 +339,13 @@ export function parseAiRecipeCandidatesResponse(
   }
 
   const items: AiRecipeCandidate[] = [];
-  const ids = new Set<string>();
   for (const rawItem of value["items"]) {
     const item = parseCandidate(rawItem);
-    if (!item || ids.has(item.id)) {
+    if (!item) {
       return invalid("invalid candidate");
     }
-    ids.add(item.id);
-    items.push(item);
+    const id = ["a", "b", "c", "d", "e"][items.length] ?? item.id;
+    items.push({ ...item, id });
   }
 
   return {
@@ -457,13 +454,27 @@ function mentionsAssumedPantryIngredient(value: string): boolean {
   );
 }
 
+function findMentionedRequestMaterial(
+  value: string,
+  materials: readonly string[],
+): string | undefined {
+  return materials.find((material) => mentionsListItem(value, [material]));
+}
+
+function appendUniqueMaterial(materials: string[], material: string): void {
+  if (!matchesList(material, materials)) {
+    materials.push(material);
+  }
+}
+
 function extractConstrainedMaterials(notes: string | undefined): string[] {
   if (!notes) {
     return [];
   }
 
-  return [...notes.matchAll(/(?:必須|使切):([^/。]+)/g)].flatMap((match) => {
-    const material = match[1]?.replace(/\([^)]*\)$/, "").trim();
+  return notes.split(/\s+\/\s+|。/).flatMap((segment) => {
+    const match = segment.match(/^(?:必須|使切):(.+)$/);
+    const material = match?.[1]?.replace(/[（(][^）)]*[）)]$/, "").trim();
     return material ? [material] : [];
   });
 }
@@ -480,23 +491,58 @@ function conflictsWithAvoid(value: string, avoid: readonly string[]): boolean {
   });
 }
 
+function normalizeCandidateForRequest(
+  item: AiRecipeCandidate,
+  request: AiRecipeCandidateRequest,
+): AiRecipeCandidate {
+  const use: string[] = [];
+  for (const used of item.use) {
+    const material = findMentionedRequestMaterial(used, request.materials);
+    if (material) {
+      appendUniqueMaterial(use, material);
+    }
+  }
+
+  for (const ingredient of item.ing) {
+    const material = findMentionedRequestMaterial(ingredient, request.materials);
+    if (material) {
+      appendUniqueMaterial(use, material);
+    }
+  }
+
+  const miss = item.miss.filter(
+    (missing) =>
+      !matchesRequestMaterial(missing, request.materials) &&
+      !(request.avoid?.some((avoid) => conflictsWithAvoid(missing, [avoid])) ?? false),
+  );
+  const badges = item.badges.filter(
+    (badge) =>
+      !(badge === "no_shop" && miss.length > 0) &&
+      !(badge === "miss_optional" && miss.length === 0),
+  );
+
+  return {
+    ...item,
+    badges,
+    miss,
+    use,
+  };
+}
+
 export function validateAiRecipeCandidatesForRequest(
   response: AiRecipeCandidatesResponse,
   request: AiRecipeCandidateRequest,
 ): ParseResult<AiRecipeCandidatesResponse> {
   const constrainedMaterials = extractConstrainedMaterials(request.notes);
+  const normalizedItems = response.items.map((item) => normalizeCandidateForRequest(item, request));
 
-  for (const item of response.items) {
+  for (const item of normalizedItems) {
     if (item.use.length === 0) {
       return invalid("candidate use is required");
     }
 
     if (item.use.some((used) => !matchesRequestMaterial(used, request.materials))) {
       return invalid("candidate use must come from request materials");
-    }
-
-    if (item.miss.some((missing) => matchesRequestMaterial(missing, request.materials))) {
-      return invalid("candidate miss must not include request materials");
     }
 
     if (constrainedMaterials.some((material) => !matchesList(material, item.use))) {
@@ -523,5 +569,5 @@ export function validateAiRecipeCandidatesForRequest(
     }
   }
 
-  return { ok: true, value: response };
+  return { ok: true, value: { items: normalizedItems } };
 }

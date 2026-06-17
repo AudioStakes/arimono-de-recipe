@@ -457,7 +457,7 @@ describe("POST /api/recipe", () => {
     const run = vi.fn<Env["AI"]["run"]>(async () => ({
       response: JSON.stringify({
         items: [
-          { ...candidateResponse.items[0], use: ["豚肉"] },
+          { ...candidateResponse.items[0], ing: ["豆腐", "豚肉"] },
           candidateResponse.items[1],
           candidateResponse.items[2],
         ],
@@ -494,6 +494,43 @@ describe("POST /api/recipe", () => {
       }),
     );
     expect(avoidResponse.status).toBe(500);
+  });
+
+  test("candidate modeはrequest材料がmissに混ざったAI応答を正規化して返す", async () => {
+    const run = vi.fn<Env["AI"]["run"]>(async () => ({
+      response: {
+        items: [
+          {
+            ...candidateResponse.items[0],
+            badges: ["quick", "miss_optional"],
+            use: ["豆腐"],
+            miss: ["キャベツ"],
+            ing: ["豆腐", "しょうゆ"],
+          },
+          candidateResponse.items[1],
+          candidateResponse.items[2],
+        ],
+      },
+    }));
+
+    const response = await onRequest(
+      createContext(createRequest(candidateRequest), {
+        AI: { run },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payload = await readJson(response);
+    expect(isRecord(payload)).toBe(true);
+    if (!isRecord(payload) || !Array.isArray(payload["items"])) {
+      throw new Error("candidate payload was not returned.");
+    }
+    expect(payload["items"][0]).toEqual(
+      expect.objectContaining({
+        miss: [],
+        badges: ["quick"],
+      }),
+    );
   });
 
   test("candidate modeは4件以上の妥当な候補を3件に切る", async () => {
