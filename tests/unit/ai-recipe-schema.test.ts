@@ -110,6 +110,25 @@ describe("ai recipe schema", () => {
     ]);
   });
 
+  test("使い切り材料は空でないamountだけを受け入れる", () => {
+    const parsed = parseAiRecipeCandidateRequest({
+      mode: "candidates",
+      materials: [{ name: "キャベツ", usage: "use_up", amount: " 1/4玉 " }],
+    });
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.materials).toEqual([
+      { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
+    ]);
+    expect(
+      parseAiRecipeCandidateRequest({
+        mode: "candidates",
+        materials: [{ name: "キャベツ", usage: "use_up", amount: " " }],
+      }).ok,
+    ).toBe(false);
+  });
+
   test("unknown fieldsや不正な材料指定を拒否する", () => {
     expect(
       parseAiRecipeCandidateRequest({

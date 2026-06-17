@@ -1,4 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+
+function materialCard(page: Page, name: string): Locator {
+  return page.getByTestId(/^material-card-/).filter({ hasText: name });
+}
+
+function materialUsageOption(card: Locator, usage: "auto" | "required" | "use-up"): Locator {
+  return card.getByTestId(new RegExp(`^material-usage-option-.+-${usage}$`));
+}
+
+function materialAmountInput(card: Locator): Locator {
+  return card.getByTestId(/^material-amount-/);
+}
+
+function materialUseUpError(card: Locator): Locator {
+  return card.getByTestId(/^material-use-up-error-/);
+}
 
 test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", async ({ page }) => {
   await page.goto("/");
@@ -154,11 +170,11 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
   await expect(page.getByTestId("material-use-panel")).toBeVisible();
   await expect(page.getByTestId("material-use-panel")).toContainText("豆腐");
 
-  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
-  await expect(tofuRow.getByLabel("量（任意）")).toBeVisible();
-  await expect(tofuRow.locator('input[value="auto"]')).toBeChecked();
-  await tofuRow.locator('input[value="required"]').check();
-  await expect(tofuRow.getByLabel("量（任意）")).toBeVisible();
+  const tofuRow = materialCard(page, "豆腐");
+  await expect(materialAmountInput(tofuRow)).toBeVisible();
+  await expect(materialUsageOption(tofuRow, "auto")).toBeChecked();
+  await materialUsageOption(tofuRow, "required").check();
+  await expect(materialAmountInput(tofuRow)).toBeVisible();
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 必ず使う食材・材料\n\n- 豆腐（家にある食材・材料に書いた量を使う）/,
   );
@@ -172,10 +188,10 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
     /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
   );
 
-  await tofuRow.locator('input[value="use-up"]').check();
-  await expect(tofuRow.getByLabel("量（必須）")).toBeVisible();
-  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeVisible();
-  await tofuRow.getByLabel("量（必須）").fill("120g");
+  await materialUsageOption(tofuRow, "use-up").check();
+  await expect(materialAmountInput(tofuRow)).toBeVisible();
+  await expect(materialUseUpError(tofuRow)).toBeVisible();
+  await materialAmountInput(tofuRow).fill("120g");
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 使い切りたい食材・材料\n\n- 豆腐150g（使い切りたい量: 120g）/,
   );
@@ -196,11 +212,11 @@ test("複数材料の使い方は編集後も別材料へ移らない", async ({
   await materialInput.fill("キャベツ");
   await materialInput.press("Enter");
 
-  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
-  const cabbageRow = page.locator("[data-material-request-id]").filter({ hasText: "キャベツ" });
-  await tofuRow.locator('input[value="required"]').check();
-  await cabbageRow.locator('input[value="use-up"]').check();
-  await cabbageRow.getByLabel("量（必須）").fill("1/4玉");
+  const tofuRow = materialCard(page, "豆腐");
+  const cabbageRow = materialCard(page, "キャベツ");
+  await materialUsageOption(tofuRow, "required").check();
+  await materialUsageOption(cabbageRow, "use-up").check();
+  await materialAmountInput(cabbageRow).fill("1/4玉");
 
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 必ず使う食材・材料\n\n- 豆腐（家にある食材・材料に書いた量を使う）/,
@@ -227,8 +243,8 @@ test("複数材料の使い方は編集後も別材料へ移らない", async ({
     /### 家にある食材・材料\n\n- 豆腐150g\n- もやし/,
   );
 
-  const editedTofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐150g" });
-  await editedTofuRow.locator('input[value="auto"]').check();
+  const editedTofuRow = materialCard(page, "豆腐150g");
+  await materialUsageOption(editedTofuRow, "auto").check();
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 必ず使う食材・材料/);
 });
 

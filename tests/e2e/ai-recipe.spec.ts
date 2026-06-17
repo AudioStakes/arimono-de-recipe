@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 
 const candidateResponse = {
   items: [
@@ -46,6 +46,22 @@ function apiSuccessBody() {
   });
 }
 
+function materialCard(page: Page, name: string): Locator {
+  return page.getByTestId(/^material-card-/).filter({ hasText: name });
+}
+
+function materialUsageOption(card: Locator, usage: "auto" | "required" | "use-up"): Locator {
+  return card.getByTestId(new RegExp(`^material-usage-option-.+-${usage}$`));
+}
+
+function materialAmountInput(card: Locator): Locator {
+  return card.getByTestId(/^material-amount-/);
+}
+
+function materialUseUpError(card: Locator): Locator {
+  return card.getByTestId(/^material-use-up-error-/);
+}
+
 test("AI生成は短い候補requestを送り、3候補から詳細をローカル表示する", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let callCount = 0;
@@ -58,7 +74,8 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
     const body = route.request().postDataJSON() as Record<string, unknown>;
     expect(body["mode"]).toBe("candidates");
     expect(body["prompt"]).toBeUndefined();
-    expect(body["materials"]).toEqual([{ name: "未確定の豆腐", usage: "auto" }]);
+    expect(body["allowShopping"]).toBeUndefined();
+    expect(body["materials"]).toEqual([{ name: "豆腐", usage: "use_up", amount: "150g" }]);
     expect(JSON.stringify(body)).not.toContain("## 役割");
     await apiResponseReady;
     await route.fulfill({
@@ -72,7 +89,12 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await expect(page.getByTestId("generate-recipe")).toContainText("今日の候補を見る");
   await expect(page.getByTestId("copy-prompt")).toContainText("AI向けレシピ依頼文をコピー");
 
-  await page.getByTestId("combo-input-materials").fill("未確定の豆腐");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+  const tofuCard = materialCard(page, "豆腐");
+  await expect(tofuCard).toBeVisible();
+  await materialUsageOption(tofuCard, "use-up").check();
+  await materialAmountInput(tofuCard).fill("150g");
   const requestSeen = page.waitForRequest("**/api/recipe");
   await page.getByTestId("generate-recipe").click();
   await requestSeen;
@@ -95,7 +117,7 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("15分");
   await expect(page.getByTestId("recipe-candidate-a")).not.toContainText("買い足しなし");
   await expect(page.getByTestId("recipe-candidate-a")).not.toContainText("買い足しあり");
-  await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐");
+  await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐（150g・使い切り）");
   await expect(page.getByTestId("recipe-candidate-a")).toContainText(
     "豆腐を主役にして短時間で作れます。",
   );
@@ -159,7 +181,7 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await page.getByTestId("recipe-candidate-back").click();
   await expect(page.getByTestId("recipe-candidate-list")).toBeFocused();
   expect(callCount).toBe(1);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/未確定の豆腐/);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐/);
 });
 
 test("loading表示は使い切る・必ず使う材料制約を伝える", async ({ page }) => {
@@ -188,11 +210,12 @@ test("loading表示は使い切る・必ず使う材料制約を伝える", asyn
   await page.getByTestId("combo-input-materials").fill("キャベツ");
   await page.getByTestId("combo-input-materials").press("Enter");
 
-  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
-  const cabbageRow = page.locator("[data-material-request-id]").filter({ hasText: "キャベツ" });
-  await tofuRow.locator('input[value="required"]').check();
-  await cabbageRow.locator('input[value="use-up"]').check();
-  await cabbageRow.getByLabel("量（必須）").fill("1/4玉");
+  const tofuRow = materialCard(page, "豆腐");
+  const cabbageRow = materialCard(page, "キャベツ");
+  await expect(tofuRow.getByTestId(/^material-usage-control-/)).toBeVisible();
+  await materialUsageOption(tofuRow, "required").check();
+  await materialUsageOption(cabbageRow, "use-up").check();
+  await materialAmountInput(cabbageRow).fill("1/4玉");
 
   const requestSeen = page.waitForRequest("**/api/recipe");
   await page.getByTestId("generate-recipe").click();
@@ -257,21 +280,20 @@ test("使い切る量が未入力ならAI候補APIを呼ばず、量入力後に
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
 
-  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
-  await tofuRow.locator('input[value="use-up"]').check();
-  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeVisible();
+  const tofuRow = materialCard(page, "豆腐");
+  await materialUsageOption(tofuRow, "use-up").check();
+  await expect(materialUseUpError(tofuRow)).toBeVisible();
 
   await page.getByTestId("generate-recipe").click();
-  await expect(tofuRow.getByLabel("量（必須）")).toBeFocused();
-  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toHaveAttribute(
-    "role",
-    "alert",
-  );
+  await expect(materialAmountInput(tofuRow)).toBeFocused();
+  await expect(materialUseUpError(tofuRow)).toHaveAttribute("role", "alert");
+  await expect(materialUseUpError(tofuRow)).toHaveText("使い切る場合は量を入力してください。");
+  await expect(materialAmountInput(tofuRow)).toHaveAttribute("aria-invalid", "true");
   expect(callCount).toBe(0);
 
   const requestSeen = page.waitForRequest("**/api/recipe");
-  await tofuRow.getByLabel("量（必須）").fill("150g");
-  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeHidden();
+  await materialAmountInput(tofuRow).fill("150g");
+  await expect(materialUseUpError(tofuRow)).toBeHidden();
   await page.getByTestId("generate-recipe").click();
   await requestSeen;
   await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
@@ -295,12 +317,12 @@ test("モバイルでも使い切る量が未入力ならAI候補APIを呼ばな
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
 
-  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
-  await tofuRow.locator('input[value="use-up"]').check();
+  const tofuRow = materialCard(page, "豆腐");
+  await materialUsageOption(tofuRow, "use-up").check();
   await page.getByTestId("generate-recipe-mobile").click();
 
-  await expect(tofuRow.getByLabel("量（必須）")).toBeFocused();
-  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeVisible();
+  await expect(materialAmountInput(tofuRow)).toBeFocused();
+  await expect(materialUseUpError(tofuRow)).toBeVisible();
   await expect(page.getByTestId("mobile-prompt-panel")).toHaveAttribute("data-state", "closed");
   expect(callCount).toBe(0);
 });

@@ -109,18 +109,24 @@ function renderRadioOptions<T extends string>(
   options: readonly { value: T; label: string }[],
   defaultValue: T,
   className = "choice-grid",
+  testIdBase = "",
+  optionTestIdBase = testIdBase ? `${testIdBase}-option` : "",
 ): string {
+  const testId = testIdBase ? ` data-testid="${testIdBase}"` : "";
   return `
-    <div class="${className}">
+    <div class="${className}"${testId}>
       ${options
-        .map(
-          ({ value, label }) => `
+        .map(({ value, label }) => {
+          const optionTestId = optionTestIdBase
+            ? ` data-testid="${optionTestIdBase}-${value}"`
+            : "";
+          return `
             <label class="choice-option">
-              <input type="radio" name="${name}" value="${value}"${value === defaultValue ? " checked" : ""} />
+              <input type="radio" name="${name}" value="${value}"${value === defaultValue ? " checked" : ""}${optionTestId} />
               <span>${label}</span>
             </label>
-          `,
-        )
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -319,6 +325,8 @@ function renderMaterialUsePanel(state: AppState): void {
                 materialUsageOptions,
                 request.usage,
                 "segmented-control",
+                `material-usage-control-${request.id}`,
+                `material-usage-option-${request.id}`,
               )}
                 <label class="text-input-label material-amount-field underlined-field" for="${amountId}">
                   <span>${amountLabel}</span>
