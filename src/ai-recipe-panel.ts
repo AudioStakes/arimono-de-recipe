@@ -3,13 +3,21 @@ import { buildAiRecipeCandidateRequest } from "./ai-recipe-request";
 import type { AppElements } from "./app-elements";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
 import { renderRecipeCandidateList, renderRecipeCookingView } from "./recipe-candidate-list";
-import type { AiRecipeCookingTab, AiRecipeSurface, AppState } from "./types";
+import type {
+  AiRecipeCandidateRequest,
+  AiRecipeCookingTab,
+  AiRecipeMaterialInput,
+  AiRecipeSurface,
+  AppState,
+} from "./types";
 
 const mobileAiRecipeTestIds = {
   "ai-recipe-heading": "mobile-ai-recipe-heading",
   "ai-recipe-status": "mobile-ai-recipe-status",
   "ai-recipe-content": "mobile-ai-recipe-content",
   "ai-recipe-error": "mobile-ai-recipe-error",
+  "ai-recipe-retry": "mobile-ai-recipe-retry",
+  "ai-recipe-adjust-input": "mobile-ai-recipe-adjust-input",
 } as const;
 
 type AiRecipeTestId = keyof typeof mobileAiRecipeTestIds;
@@ -17,7 +25,7 @@ type AiRecipeTestId = keyof typeof mobileAiRecipeTestIds;
 const FALLBACK_MESSAGE =
   "AIへの依頼に失敗しました。AI向けレシピ依頼文をコピーして、普段使っているAIに貼り付けてください。";
 const EMPTY_MATERIALS_MESSAGE =
-  "先に「家にある食材・材料」を入力してください。AI向けレシピ依頼文のコピーは使えます。";
+  "まずは家にある食材を入れてください。AI向けレシピ依頼文のコピーは使えます。";
 
 function setGenerateButtonState(elements: AppElements, loading: boolean): void {
   for (const button of [elements.generateRecipe, elements.generateRecipeMobile]) {
@@ -62,10 +70,100 @@ function renderPanelParagraph(
   return paragraph;
 }
 
+function formatMaterialConstraint(material: AiRecipeMaterialInput): string {
+  return material.amount ? `${material.name}（${material.amount}）` : material.name;
+}
+
+function getLoadingStatusText(request: AiRecipeCandidateRequest | null): string {
+  const useUpMaterials =
+    request?.materials
+      .filter((material) => material.usage === "use_up")
+      .map((material) => formatMaterialConstraint(material)) ?? [];
+  const requiredMaterials =
+    request?.materials
+      .filter((material) => material.usage === "required")
+      .map((material) => formatMaterialConstraint(material)) ?? [];
+  const constraints = [
+    useUpMaterials.length ? `使い切る材料: ${useUpMaterials.join("、")}` : "",
+    requiredMaterials.length ? `必ず使う材料: ${requiredMaterials.join("、")}` : "",
+  ].filter(Boolean);
+
+  if (constraints.length === 0) {
+    return "今日の候補を探しています。";
+  }
+
+  return `今日の候補を探しています。${constraints.join(" / ")}を反映します。`;
+}
+
+function focusMaterialInput(elements: AppElements, surface: AiRecipeSurface): void {
+  const input = document.querySelector<HTMLElement>('[data-testid="combo-input-materials"]');
+  if (!input) {
+    return;
+  }
+
+  if (surface === "mobile" && !elements.bottomBackdrop.hidden) {
+    elements.sheetClose.click();
+  }
+
+  window.requestAnimationFrame(() => {
+    input.scrollIntoView({ block: "center" });
+    input.focus();
+  });
+}
+
+function renderRecoveryButton(
+  label: string,
+  testId: string,
+  className: string,
+  onClick: () => void,
+): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.setAttribute("data-testid", testId);
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function renderErrorActions(
+  state: AppState,
+  elements: AppElements,
+  services: PromptPanelServices | undefined,
+  surface: AiRecipeSurface,
+): HTMLDivElement {
+  const actions = document.createElement("div");
+  actions.className = "ai-recipe-error-actions";
+  const hasMaterialRequest = (state.aiRecipe.request?.materials.length ?? 0) > 0;
+
+  if (hasMaterialRequest && services) {
+    actions.appendChild(
+      renderRecoveryButton(
+        "もう一度候補を見る",
+        getTestId(surface, "ai-recipe-retry"),
+        "button-primary ai-recipe-retry-button",
+        () => void createAiRecipe(state, elements, services, surface),
+      ),
+    );
+  }
+
+  actions.appendChild(
+    renderRecoveryButton(
+      "入力を見直す",
+      getTestId(surface, "ai-recipe-adjust-input"),
+      "button-secondary ai-recipe-adjust-button",
+      () => focusMaterialInput(elements, surface),
+    ),
+  );
+
+  return actions;
+}
+
 function renderAiRecipeSurface(
   state: AppState,
   elements: AppElements,
   surface: AiRecipeSurface,
+  services?: PromptPanelServices,
 ): void {
   const panel = getSurfacePanel(elements, surface);
   const aiRecipe = state.aiRecipe;
@@ -84,7 +182,7 @@ function renderAiRecipeSurface(
     panel.replaceChildren(
       renderPanelHeading("AIの料理候補", surface),
       renderPanelParagraph(
-        "材料の組み合わせを確認しています。",
+        getLoadingStatusText(aiRecipe.request),
         "ai-recipe-status-text",
         getTestId(surface, "ai-recipe-status"),
         live ? "status" : "",
@@ -101,7 +199,15 @@ function renderAiRecipeSurface(
       live ? "alert" : "",
     );
     message.className = "ai-recipe-error-message";
-    panel.replaceChildren(renderPanelHeading("AIへの依頼に失敗しました", surface), message);
+    const heading =
+      aiRecipe.request?.materials.length === 0
+        ? "材料を入力してください"
+        : "候補を表示できませんでした";
+    panel.replaceChildren(
+      renderPanelHeading(heading, surface),
+      message,
+      renderErrorActions(state, elements, services, surface),
+    );
     return;
   }
 
@@ -148,10 +254,14 @@ function renderAiRecipeSurface(
   panel.replaceChildren(renderPanelHeading("AIの料理候補", surface), status, content);
 }
 
-export function renderAiRecipePanel(state: AppState, elements: AppElements): void {
+export function renderAiRecipePanel(
+  state: AppState,
+  elements: AppElements,
+  services?: PromptPanelServices,
+): void {
   setGenerateButtonState(elements, state.aiRecipe.status === "loading");
-  renderAiRecipeSurface(state, elements, "desktop");
-  renderAiRecipeSurface(state, elements, "mobile");
+  renderAiRecipeSurface(state, elements, "desktop", services);
+  renderAiRecipeSurface(state, elements, "mobile", services);
 }
 
 function focusAiRecipeStatus(elements: AppElements, surface: AiRecipeSurface): void {
@@ -320,7 +430,7 @@ export async function createAiRecipe(
       errorMessage: EMPTY_MATERIALS_MESSAGE,
       requestId,
     };
-    renderAiRecipePanel(state, elements);
+    renderAiRecipePanel(state, elements, services);
     focusAiRecipeStatus(elements, surface);
     return;
   }
@@ -338,7 +448,7 @@ export async function createAiRecipe(
     errorMessage: "",
     requestId,
   };
-  renderAiRecipePanel(state, elements);
+  renderAiRecipePanel(state, elements, services);
   focusAiRecipeStatus(elements, surface);
 
   const result = await generateRecipe(request);
@@ -376,6 +486,6 @@ export async function createAiRecipe(
     };
   }
 
-  renderAiRecipePanel(state, elements);
+  renderAiRecipePanel(state, elements, services);
   focusAiRecipeStatus(elements, surface);
 }
