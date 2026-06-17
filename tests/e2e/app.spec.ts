@@ -74,12 +74,10 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await page.getByTestId("combo-input-targetDish").fill("カレー");
   await page.getByTestId("combo-input-targetDish").press("Enter");
   await expect(page.getByTestId("combo-input-targetDish")).toBeHidden();
-  await page.getByTestId("combo-targetDish").locator(".pill-label").click();
-  await page.getByTestId("combo-targetDish").locator(".pill-edit-input").fill("オムライス");
-  await page.getByTestId("combo-targetDish").locator(".pill-edit-input").press("Enter");
-  await expect(page.getByTestId("combo-targetDish").locator(".pill-label")).toHaveText(
-    "オムライス",
-  );
+  await page.getByTestId("combo-pill-label-targetDish").click();
+  await page.getByTestId("combo-pill-edit-targetDish").fill("オムライス");
+  await page.getByTestId("combo-pill-edit-targetDish").press("Enter");
+  await expect(page.getByTestId("combo-pill-label-targetDish")).toHaveText("オムライス");
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- オムライス/);
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/- カレー/);
 
@@ -155,8 +153,8 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
     /### 必ず使う食材・材料\n\n- 豆腐（家にある食材・材料に書いた量を使う）/,
   );
 
-  await page.getByTestId("combo-materials").locator(".pill-label").click();
-  const editInput = page.getByTestId("combo-materials").locator(".pill-edit-input");
+  await page.getByTestId("combo-pill-label-materials").click();
+  const editInput = page.getByTestId("combo-pill-edit-materials");
   await editInput.fill("豆腐150g");
   await editInput.press("Enter");
   await expect(page.getByTestId("material-use-panel")).toContainText("豆腐150g");
@@ -177,7 +175,7 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
     /### 使い切りたい食材・材料\n\n- 豆腐150g（使い切りたい量: 120g）/,
   );
 
-  await page.getByTestId("combo-materials").locator(".pill-remove").click();
+  await page.getByTestId("combo-pill-remove-materials").click();
   await expect(page.getByTestId("material-use-panel")).toContainText(
     "先に「家にある食材・材料」を追加すると",
   );
@@ -208,24 +206,16 @@ test("複数材料の使い方は編集後も別材料へ移らない", async ({
     /### 使い切りたい食材・材料\n\n- キャベツ（使い切りたい量: 1\/4玉）/,
   );
 
-  await page
-    .getByTestId("combo-materials")
-    .locator(".pill-label")
-    .filter({ hasText: "豆腐" })
-    .click();
-  const tofuEditInput = page.getByTestId("combo-materials").locator(".pill-edit-input");
+  await page.getByTestId("combo-pill-label-materials").filter({ hasText: "豆腐" }).click();
+  const tofuEditInput = page.getByTestId("combo-pill-edit-materials");
   await tofuEditInput.fill("豆腐150g");
   await tofuEditInput.press("Enter");
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
   );
 
-  await page
-    .getByTestId("combo-materials")
-    .locator(".pill-label")
-    .filter({ hasText: "キャベツ" })
-    .click();
-  const cabbageEditInput = page.getByTestId("combo-materials").locator(".pill-edit-input");
+  await page.getByTestId("combo-pill-label-materials").filter({ hasText: "キャベツ" }).click();
+  const cabbageEditInput = page.getByTestId("combo-pill-edit-materials");
   await cabbageEditInput.fill("もやし");
   await cabbageEditInput.press("Enter");
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 使い切りたい食材・材料/);
@@ -256,18 +246,13 @@ test("一緒に出す料理と複数品指定はブラウザ上で反映され�
   await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
   await page.getByTestId("combo-input-recipeRoles").press("Enter");
   await expect(page.getByTestId("combo-input-recipeRoles")).toBeHidden();
-  await expect(page.getByTestId("combo-recipeRoles").locator(".pill-label")).toHaveText(
-    "副菜・一品",
-  );
+  await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText("副菜・一品");
 
   await page.getByLabel("複数品を指定").check();
   await expect(page.getByTestId("combo-input-recipeRoles")).toBeVisible();
   await page.getByTestId("combo-input-recipeRoles").fill("汁物");
   await page.getByTestId("combo-input-recipeRoles").press("Enter");
-  await expect(page.getByTestId("combo-recipeRoles").locator(".pill-label")).toHaveText([
-    "副菜・一品",
-    "汁物",
-  ]);
+  await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText(["副菜・一品", "汁物"]);
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n複数品を指定/);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /指定された料理の役割・量感ごとに、1品ずつ作り方を書いてください。/,

@@ -36,6 +36,11 @@ const requiredStableHooks = [
   "combo-input-${",
   "combo-suggestions-${",
   "serving-stepper-${",
+  "serving-label-${",
+  "serving-minus-${",
+  "serving-count-${",
+  "serving-plus-${",
+  "custom-servings-panel",
 ] as const;
 
 const requiredDocs = [
@@ -148,6 +153,30 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
   const sourceText = sourceFiles.map((file) => file.text).join("\n");
   const e2eText = e2eFiles.map((file) => file.text).join("\n");
   const missingHooks = requiredStableHooks.filter((hook) => !sourceText.includes(hook));
+  const forbiddenBehaviorSelectors = [
+    ".combo",
+    ".combo-input",
+    ".combo-picker",
+    ".suggestions",
+    ".suggestion-option",
+    ".pill",
+    ".pill-label",
+    ".pill-edit-input",
+    ".pill-remove",
+    "[data-combo=",
+    "#output",
+    "#conditionChips",
+    ".serving-plus",
+    ".serving-minus",
+    ".serving-count",
+    ".serving-stepper",
+    ".serving-label",
+    ".serving-adjust",
+    ".custom-servings-panel",
+    ".chips",
+    "[data-serving-id=",
+    "#customServingsPanel",
+  ] as const;
 
   if (missingHooks.length > 0) {
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
@@ -155,6 +184,18 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
 
   if (!e2eText.includes("getByTestId(") && !e2eText.includes("data-testid")) {
     throw new Error("E2E tests must use stable hooks for at least one behavior-critical flow.");
+  }
+
+  const selectorViolations = e2eFiles.flatMap((file) =>
+    forbiddenBehaviorSelectors
+      .filter((selector) => file.text.includes(selector))
+      .map((selector) => `${file.path}: use stable hook or ARIA role instead of ${selector}`),
+  );
+
+  if (selectorViolations.length > 0) {
+    throw new Error(
+      `E2E behavior selectors must not depend on styling hooks:\n${selectorViolations.join("\n")}`,
+    );
   }
 }
 

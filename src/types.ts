@@ -95,6 +95,7 @@ export type PromptData = Record<ComboId, string[]> & {
 
 export type ChipItem = {
   label: string;
+  tone?: "condition" | "ingredient" | "workspace";
   removable?: boolean;
   action?: () => void;
 };

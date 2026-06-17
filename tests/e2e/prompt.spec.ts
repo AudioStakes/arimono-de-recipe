@@ -38,7 +38,7 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   expect(prompt).toContain("### 一緒に出す料理との相性");
   expect(prompt).toContain("### 調理のポイント");
 
-  await page.getByTestId("combo-pairingTargets").locator(".pill-remove").click();
+  await page.getByTestId("combo-pill-remove-pairingTargets").click();
   const promptWithoutPairing = await output.inputValue();
   expect(promptWithoutPairing).not.toContain("一緒に出す料理との相性");
   expect(promptWithoutPairing).toContain("### 使う材料");
