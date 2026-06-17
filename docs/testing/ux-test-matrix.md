@@ -7,9 +7,13 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 未指定項目をプロンプトに出力しない | required | smoke optional | source-of-truth guard |
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |
+| 材料の使い方を指定できる | required for validation | required | stable hook guard |
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
 | モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
 | AI候補カードから詳細表示する | parser/request required | required with `/api/recipe` mock and call count | stable hook guard |
+| 買い足しなしをdefaultにする | schema/function required | required with `/api/recipe` mock | stable hook guard |
+| 調理ビューのtabsを切り替える | optional | required | stable hook guard |
+| empty/loading/error/retry/fallback states | validation required | required | stable hook guard |
 | UI selector stability | no | yes | required |
 | Approved `/api/recipe` transmission boundary | required | required with mock | required |
 
@@ -37,26 +41,43 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 - `data-testid="copy-prompt-mobile-panel"`
 - `data-testid="generate-recipe"`
 - `data-testid="generate-recipe-mobile"`
+- `data-testid="material-card-{materialRequestId}"`
+- `data-testid="material-usage-control-{materialRequestId}"`
+- `data-testid="material-usage-option-{materialRequestId}-{usage}"`
+- `data-testid="material-amount-{materialRequestId}"`
+- `data-testid="material-use-up-error-{materialRequestId}"`
 - `data-testid="ai-recipe-panel"`
 - `data-testid="ai-recipe-status"`
 - `data-testid="ai-recipe-content"`
 - `data-testid="ai-recipe-error"`
-- `data-testid="ai-recipe-model"`
+- `data-testid="ai-recipe-retry"`
+- `data-testid="ai-recipe-adjust-input"`
 - `data-testid="recipe-candidate-list"`
 - `data-testid="recipe-candidate-{candidateId}"`
 - `data-testid="recipe-candidate-select-{candidateId}"`
 - `data-testid="recipe-candidate-detail"`
+- `data-testid="recipe-candidate-cook"`
 - `data-testid="recipe-candidate-back"`
+- `data-testid="recipe-cooking-view"`
+- `data-testid="recipe-cooking-tab-{tabId}"`
+- `data-testid="recipe-cooking-panel"`
+- `data-testid="recipe-cooking-back"`
 - `data-testid="mobile-ai-recipe-panel"`
 - `data-testid="mobile-ai-recipe-status"`
 - `data-testid="mobile-ai-recipe-content"`
 - `data-testid="mobile-ai-recipe-error"`
-- `data-testid="mobile-ai-recipe-model"`
+- `data-testid="mobile-ai-recipe-retry"`
+- `data-testid="mobile-ai-recipe-adjust-input"`
 - `data-testid="mobile-recipe-candidate-list"`
 - `data-testid="mobile-recipe-candidate-{candidateId}"`
 - `data-testid="mobile-recipe-candidate-select-{candidateId}"`
 - `data-testid="mobile-recipe-candidate-detail"`
+- `data-testid="mobile-recipe-candidate-cook"`
 - `data-testid="mobile-recipe-candidate-back"`
+- `data-testid="mobile-recipe-cooking-view"`
+- `data-testid="mobile-recipe-cooking-tab-{tabId}"`
+- `data-testid="mobile-recipe-cooking-panel"`
+- `data-testid="mobile-recipe-cooking-back"`
 - `data-testid="mobile-prompt-panel"`
 - `data-state="open|closed"` for collapsible panels and the mobile prompt panel.
 - `data-state="selected|idle"` for AI候補カード.

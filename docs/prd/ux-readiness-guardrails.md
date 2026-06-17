@@ -37,3 +37,17 @@ Prepare the repo so future UX changes are reviewable, testable, scoped, and reve
 ## Superseded Scope
 
 ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Function + Workers AI path. The guardrail intent still applies, but the old static-only non-goal is superseded for that approved route only.
+
+## Recipe-Decision UX Extension
+
+ADR 0012 centers the visible product flow on deciding 今日作る料理 from 家にある食材・材料.
+
+The guardrail intent now includes:
+
+- Material-first input on the home screen.
+- No-shopping default unless a future explicit opt-in is approved.
+- Prompt copy as a secondary fallback, not a removed legacy path.
+- Candidate cards, candidate detail, and cooking tabs as behavior-critical E2E surfaces.
+- Empty/loading/error/retry states for the in-app AI candidate path.
+
+The guardrail intent still excludes login, persistence, history, favorites, family settings, analytics, telemetry, and broad architecture changes.
