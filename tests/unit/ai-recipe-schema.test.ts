@@ -7,7 +7,7 @@ import {
   parseAiRecipeCandidatesResponse,
   validateAiRecipeCandidatesForRequest,
 } from "../../src/ai-recipe-schema";
-import type { AiRecipeCandidatesResponse } from "../../src/types";
+import type { AiRecipeCandidatesResponse, AiRecipeMaterialInput } from "../../src/types";
 
 const validCandidates = {
   items: [
@@ -47,11 +47,15 @@ const validCandidates = {
   ],
 } satisfies AiRecipeCandidatesResponse;
 
+function materials(...names: string[]): AiRecipeMaterialInput[] {
+  return names.map((name) => ({ name, usage: "auto" }));
+}
+
 describe("ai recipe schema", () => {
   test("candidate requestを検証し、compact model inputを作る", () => {
     const parsed = parseAiRecipeCandidateRequest({
       mode: "candidates",
-      materials: ["豆腐", "キャベツ"],
+      materials: materials("豆腐", "キャベツ"),
       servings: "2人分",
       time: "20分以内",
       directions: ["あっさり"],
@@ -63,30 +67,63 @@ describe("ai recipe schema", () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) throw new Error(parsed.reason);
     expect(buildCompactRecipeCandidateInput(parsed.value)).toBe(
-      '{"m":["豆腐","キャベツ"],"sv":"2人分","t":"20分以内","d":["あっさり"],"tl":["フライパン"],"ng":["にんにく"],"n":"薄味"}',
+      '{"m":[["豆腐","auto"],["キャベツ","auto"]],"sv":"2人分","t":"20分以内","d":["あっさり"],"tl":["フライパン"],"ng":["にんにく"],"n":"薄味"}',
     );
   });
 
   test("compact model inputに必須・使い切り材料をrqとして含める", () => {
     const parsed = parseAiRecipeCandidateRequest({
       mode: "candidates",
-      materials: ["豆腐", "キャベツ"],
-      notes: "必須:豆腐 / 使切:キャベツ(1/4玉)。薄味",
+      materials: [
+        { name: "豆腐", usage: "required" },
+        { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
+      ],
+      notes: "薄味",
     });
 
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) throw new Error(parsed.reason);
     expect(buildCompactRecipeCandidateInput(parsed.value)).toBe(
-      '{"m":["豆腐","キャベツ"],"rq":["豆腐","キャベツ"],"n":"必須:豆腐 / 使切:キャベツ(1/4玉)。薄味"}',
+      '{"m":[["豆腐","required"],["キャベツ","use_up","1/4玉"]],"rq":["豆腐","キャベツ"],"n":"薄味"}',
     );
   });
 
-  test("unknown fieldsや空材料を拒否する", () => {
+  test("材料usageと分量の組み合わせを検証する", () => {
+    const parsed = parseAiRecipeCandidateRequest({
+      mode: "candidates",
+      materials: [
+        { name: "豆腐", usage: "auto", amount: "150g" },
+        { name: "キャベツ", usage: "required" },
+        { name: "卵", usage: "required", amount: "2個" },
+        { name: "もやし", usage: "use_up", amount: "1袋" },
+      ],
+    });
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value.materials).toEqual([
+      { name: "豆腐", usage: "auto", amount: "150g" },
+      { name: "キャベツ", usage: "required" },
+      { name: "卵", usage: "required", amount: "2個" },
+      { name: "もやし", usage: "use_up", amount: "1袋" },
+    ]);
+  });
+
+  test("unknown fieldsや不正な材料指定を拒否する", () => {
     expect(
       parseAiRecipeCandidateRequest({
         mode: "candidates",
-        materials: ["豆腐"],
+        materials: materials("豆腐"),
         prompt: "legacy prompt",
+      }).ok,
+    ).toBe(false);
+    expect(parseAiRecipeCandidateRequest({ mode: "candidates", materials: ["豆腐"] }).ok).toBe(
+      false,
+    );
+    expect(
+      parseAiRecipeCandidateRequest({
+        mode: "candidates",
+        materials: [{ name: "豆腐", usage: "use_up" }],
       }).ok,
     ).toBe(false);
     expect(parseAiRecipeCandidateRequest({ mode: "candidates", materials: [] }).ok).toBe(false);
@@ -176,7 +213,7 @@ describe("ai recipe schema", () => {
     expect(
       validateAiRecipeCandidatesForRequest(validCandidates, {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
       }).ok,
     ).toBe(true);
 
@@ -186,7 +223,7 @@ describe("ai recipe schema", () => {
       },
       {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
       },
     );
     expect(normalizedUse.ok).toBe(true);
@@ -202,7 +239,7 @@ describe("ai recipe schema", () => {
         },
         {
           mode: "candidates",
-          materials: ["油揚げ", "キャベツ"],
+          materials: materials("油揚げ", "キャベツ"),
         },
       ).ok,
     ).toBe(false);
@@ -213,7 +250,7 @@ describe("ai recipe schema", () => {
       },
       {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
       },
     );
     expect(normalizedMissingRequestMaterial.ok).toBe(true);
@@ -229,7 +266,7 @@ describe("ai recipe schema", () => {
         },
         {
           mode: "candidates",
-          materials: ["豆腐", "キャベツ"],
+          materials: materials("豆腐", "キャベツ"),
         },
       ).ok,
     ).toBe(false);
@@ -237,15 +274,17 @@ describe("ai recipe schema", () => {
     expect(
       validateAiRecipeCandidatesForRequest(validCandidates, {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
-        notes: "必須:豆腐 / 使切:キャベツ",
+        materials: [
+          { name: "豆腐", usage: "required" },
+          { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
+        ],
       }).ok,
     ).toBe(false);
 
     expect(
       validateAiRecipeCandidatesForRequest(validCandidates, {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
         avoid: ["しょうゆ"],
       }).ok,
     ).toBe(false);
@@ -253,7 +292,7 @@ describe("ai recipe schema", () => {
     expect(
       validateAiRecipeCandidatesForRequest(validCandidates, {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
         avoid: ["キャベツ"],
       }).ok,
     ).toBe(false);
@@ -275,7 +314,7 @@ describe("ai recipe schema", () => {
       },
       {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
       },
     );
 
@@ -297,7 +336,7 @@ describe("ai recipe schema", () => {
       },
       {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
+        materials: materials("豆腐", "キャベツ"),
         avoid: ["辛い味"],
       },
     );
@@ -328,8 +367,10 @@ describe("ai recipe schema", () => {
       },
       {
         mode: "candidates",
-        materials: ["豆腐", "キャベツ"],
-        notes: "必須:キャベツ",
+        materials: [
+          { name: "豆腐", usage: "auto" },
+          { name: "キャベツ", usage: "required" },
+        ],
       },
     );
 
@@ -380,8 +421,11 @@ describe("ai recipe schema", () => {
     expect(
       validateAiRecipeCandidatesForRequest(realisticCandidates, {
         mode: "candidates",
-        materials: ["鶏もも肉", "玉ねぎ", "卵"],
-        notes: "必須:鶏もも肉",
+        materials: [
+          { name: "鶏もも肉", usage: "required" },
+          { name: "玉ねぎ", usage: "auto" },
+          { name: "卵", usage: "auto" },
+        ],
       }).ok,
     ).toBe(true);
   });

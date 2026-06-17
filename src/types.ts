@@ -105,9 +105,17 @@ export type ChipItem = {
 export type AiRecipeStatus = "idle" | "loading" | "success" | "error";
 export type AiRecipeSurface = "desktop" | "mobile";
 
+export type AiRecipeMaterialUsage = "auto" | "required" | "use_up";
+
+export type AiRecipeMaterialInput = {
+  name: string;
+  usage: AiRecipeMaterialUsage;
+  amount?: string;
+};
+
 export type AiRecipeCandidateRequest = {
   mode: "candidates";
-  materials: string[];
+  materials: AiRecipeMaterialInput[];
   servings?: string;
   time?: string;
   directions?: string[];

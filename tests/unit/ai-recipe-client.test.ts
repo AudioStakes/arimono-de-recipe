@@ -14,7 +14,10 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 
 const request = {
   mode: "candidates",
-  materials: ["豆腐", "キャベツ"],
+  materials: [
+    { name: "豆腐", usage: "auto" },
+    { name: "キャベツ", usage: "auto" },
+  ],
   servings: "2人分",
   directions: ["あっさり"],
 } satisfies AiRecipeCandidateRequest;
@@ -139,7 +142,7 @@ describe("generateRecipe", () => {
       generateRecipe(
         {
           mode: "candidates",
-          materials: ["豆腐"],
+          materials: [{ name: "豆腐", usage: "auto" }],
           notes: "あ".repeat(3000),
         },
         fetcher,

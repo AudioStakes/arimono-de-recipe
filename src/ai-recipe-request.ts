@@ -1,5 +1,10 @@
 import { aiRecipeCandidateLimits } from "./ai-recipe-schema";
-import type { AiRecipeCandidateRequest, PromptData } from "./types";
+import type {
+  AiRecipeCandidateRequest,
+  AiRecipeMaterialInput,
+  MaterialRequest,
+  PromptData,
+} from "./types";
 
 const aiRecipeRequestLimits = aiRecipeCandidateLimits.request;
 
@@ -30,11 +35,15 @@ function truncateText(value: string, limit: number): string {
   return normalizeText(value).slice(0, limit);
 }
 
-function getPrioritizedMaterials(data: PromptData): string[] {
+function getPrioritizedMaterialNames(data: PromptData): string[] {
   const specifiedMaterials =
     data.materialUseMode === "specified"
       ? data.materialRequests
-          .filter((request) => request.usage !== "auto")
+          .filter(
+            (request) =>
+              request.usage !== "auto" ||
+              (request.useUpAmountMode === "custom" && normalizeText(request.useUpAmount)),
+          )
           .map((request) => request.name)
       : [];
 
@@ -44,38 +53,61 @@ function getPrioritizedMaterials(data: PromptData): string[] {
   );
 }
 
-function buildMaterialRequestNote(data: PromptData, retainedMaterials: readonly string[]): string {
-  if (data.materialUseMode !== "specified") {
+function toAiMaterialUsage(request: MaterialRequest): AiRecipeMaterialInput["usage"] {
+  return request.usage === "use-up" ? "use_up" : request.usage;
+}
+
+function getMaterialAmount(request: MaterialRequest): string {
+  if (request.useUpAmountMode !== "custom") {
     return "";
   }
 
-  const retained = new Set(retainedMaterials.map(normalizeText));
-  const notes = data.materialRequests.flatMap((request) => {
-    const name = normalizeText(request.name);
-    if (!name || request.usage === "auto" || !retained.has(name)) {
-      return [];
-    }
-    const amount =
-      request.useUpAmountMode === "custom" && normalizeText(request.useUpAmount)
-        ? `(${normalizeText(request.useUpAmount)})`
-        : "";
-    const prefix = request.usage === "required" ? "必須" : "使切";
-    return [`${prefix}:${name}${amount}`];
-  });
-
-  return notes.join(" / ");
+  return normalizeText(request.useUpAmount);
 }
 
-function buildNotes(data: PromptData, retainedMaterials: readonly string[]): string {
-  return [buildMaterialRequestNote(data, retainedMaterials), normalizeText(data.supplementalNotes)]
-    .filter(Boolean)
-    .join("。");
+function getMaterialRequestByName(data: PromptData): Map<string, MaterialRequest> {
+  const requests = new Map<string, MaterialRequest>();
+  if (data.materialUseMode !== "specified") {
+    return requests;
+  }
+
+  for (const request of data.materialRequests) {
+    const name = normalizeText(request.name);
+    if (name && !requests.has(name)) {
+      requests.set(name, request);
+    }
+  }
+
+  return requests;
+}
+
+function buildMaterialInput(name: string, request?: MaterialRequest): AiRecipeMaterialInput {
+  const material: AiRecipeMaterialInput = {
+    name,
+    usage: request ? toAiMaterialUsage(request) : "auto",
+  };
+  const amount = request ? getMaterialAmount(request) : "";
+  if (amount) {
+    material.amount = amount;
+  }
+  return material;
+}
+
+function buildMaterialInputs(data: PromptData): AiRecipeMaterialInput[] {
+  const requestByName = getMaterialRequestByName(data);
+  return getPrioritizedMaterialNames(data).map((name) =>
+    buildMaterialInput(name, requestByName.get(name)),
+  );
+}
+
+function buildNotes(data: PromptData): string {
+  return normalizeText(data.supplementalNotes);
 }
 
 export function buildAiRecipeCandidateRequest(data: PromptData): AiRecipeCandidateRequest {
   const request: AiRecipeCandidateRequest = {
     mode: "candidates",
-    materials: getPrioritizedMaterials(data),
+    materials: buildMaterialInputs(data),
   };
 
   const servings = normalizeText(data.servings);
@@ -106,10 +138,7 @@ export function buildAiRecipeCandidateRequest(data: PromptData): AiRecipeCandida
     request.avoid = avoid;
   }
 
-  const notes = truncateText(
-    buildNotes(data, request.materials),
-    aiRecipeRequestLimits.maxNotesLength,
-  );
+  const notes = truncateText(buildNotes(data), aiRecipeRequestLimits.maxNotesLength);
   if (notes) {
     request.notes = notes;
   }

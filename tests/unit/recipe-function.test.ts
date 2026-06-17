@@ -9,7 +9,10 @@ const apiUrl = "https://example.test/api/recipe";
 
 const candidateRequest = {
   mode: "candidates",
-  materials: ["豆腐", "キャベツ"],
+  materials: [
+    { name: "豆腐", usage: "auto" },
+    { name: "キャベツ", usage: "auto" },
+  ],
   servings: "2人分",
   time: "20分以内",
   directions: ["あっさり"],
@@ -387,7 +390,7 @@ describe("POST /api/recipe", () => {
       expect.objectContaining({
         role: "user",
         content:
-          'r={"m":["豆腐","キャベツ"],"sv":"2人分","t":"20分以内","d":["あっさり"],"tl":["フライパン"],"ng":["にんにく"],"n":"薄味"}',
+          'r={"m":[["豆腐","auto"],["キャベツ","auto"]],"sv":"2人分","t":"20分以内","d":["あっさり"],"tl":["フライパン"],"ng":["にんにく"],"n":"薄味"}',
       }),
     );
     expect(String(user?.["content"])).not.toContain("materials");
@@ -427,7 +430,10 @@ describe("POST /api/recipe", () => {
       createContext(
         createRequest({
           mode: "candidates",
-          materials: Array.from({ length: 13 }, (_, index) => `材料${index}`),
+          materials: Array.from({ length: 13 }, (_, index) => ({
+            name: `材料${index}`,
+            usage: "auto",
+          })),
         }),
         {
           AI: { run },
