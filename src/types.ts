@@ -1,3 +1,5 @@
+import type { RecipeDecisionState } from "./recipe-decision/types";
+
 export type ComboId =
   | "materials"
   | "targetDish"
@@ -157,5 +159,6 @@ export type AppState = {
   ticking: boolean;
   mobileSheetOpen: boolean;
   materialRequests: MaterialRequest[];
+  recipeDecision: RecipeDecisionState;
   aiRecipe: AiRecipeState;
 };
