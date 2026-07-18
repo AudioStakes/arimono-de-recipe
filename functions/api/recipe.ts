@@ -78,11 +78,11 @@ const LEGACY_SYSTEM_MESSAGE = [
 const CANDIDATE_SYSTEM_MESSAGE = [
   "You generate Japanese home-cooking recipe candidates.",
   "Return only JSON matching the response_format schema.",
-  "Input m means available ingredients. Input rq means required ingredients that every candidate must use. Input tl means cooking tools. Input ng means avoid list.",
+  "Input m is compact material tuples: [name, usage, amount?]. usage is auto, required, or use_up. Input rq means required/use_up material names that every candidate must use. Input tl means cooking tools. Input ng means avoid list.",
   "Main ingredients must come from m.",
   "Return exactly 3 items.",
-  "Input keys: m materials, rq required materials, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
-  "Obey n constraints such as 必須 and 使切.",
+  "Input keys: m material tuples, rq required/use_up materials, sv servings, t time, d direction, tl tools, ng avoid, n notes.",
+  "For use_up materials, prefer recipes that consume the amount when practical.",
   "Every output item must include every rq ingredient in use and ing.",
   "Output use must be ingredient names copied from m only. Never put tl tools or seasonings in use.",
   "Output miss must be missing ingredient names only. Never put ng avoid items in miss.",
@@ -96,7 +96,7 @@ function uniqueList(values: readonly string[]): string[] {
 }
 
 function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknown {
-  const availableIngredients = uniqueList(request.materials);
+  const availableIngredients = uniqueList(request.materials.map((material) => material.name));
   const recipeIngredients = uniqueList([...availableIngredients, ...aiRecipeAssumedPantryIngredients]);
   const optionalMissingIngredients = aiRecipeAssumedPantryIngredients;
 

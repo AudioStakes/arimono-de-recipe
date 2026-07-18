@@ -112,7 +112,6 @@ describe("recipe-decision adapters", () => {
       directions: ["あっさり"],
       tools: [],
       avoid: [],
-      notes: "必須:豆腐150g / 使切:キャベツ(1/4玉)",
     });
   });
 

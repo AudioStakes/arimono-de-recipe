@@ -58,7 +58,7 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
     const body = route.request().postDataJSON() as Record<string, unknown>;
     expect(body["mode"]).toBe("candidates");
     expect(body["prompt"]).toBeUndefined();
-    expect(body["materials"]).toEqual(["未確定の豆腐"]);
+    expect(body["materials"]).toEqual([{ name: "未確定の豆腐", usage: "auto" }]);
     expect(JSON.stringify(body)).not.toContain("## 役割");
     await apiResponseReady;
     await route.fulfill({
@@ -146,8 +146,8 @@ test("使い切る量が未入力ならAI候補APIを呼ばず、量入力後に
   await page.route("**/api/recipe", async (route) => {
     callCount += 1;
     const body = route.request().postDataJSON() as Record<string, unknown>;
-    expect(body["materials"]).toEqual(["豆腐"]);
-    expect(body["notes"]).toBe("使切:豆腐(150g)");
+    expect(body["materials"]).toEqual([{ name: "豆腐", usage: "use_up", amount: "150g" }]);
+    expect(body["notes"]).toBeUndefined();
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -301,7 +301,7 @@ test("モバイルの固定CTAから候補を見て詳細選択しても追加AP
     callCount += 1;
     const body = route.request().postDataJSON() as Record<string, unknown>;
     expect(body["mode"]).toBe("candidates");
-    expect(body["materials"]).toEqual(["豆腐"]);
+    expect(body["materials"]).toEqual([{ name: "豆腐", usage: "auto" }]);
     await route.fulfill({
       status: 200,
       contentType: "application/json",

@@ -8,7 +8,10 @@ export function buildRecipeDecisionCandidateRequest(
 ): RecipeDecisionCandidateRequest {
   const aiRequest = buildAiRecipeCandidateRequest(data);
   const request: RecipeDecisionCandidateRequest = {
-    materials: getRecipeMaterialInputs(data, aiRequest.materials),
+    materials: getRecipeMaterialInputs(
+      data,
+      aiRequest.materials.map((material) => material.name),
+    ),
     directions: aiRequest.directions ?? [],
     tools: aiRequest.tools ?? [],
     avoid: aiRequest.avoid ?? [],

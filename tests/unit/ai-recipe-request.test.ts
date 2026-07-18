@@ -21,7 +21,10 @@ describe("buildAiRecipeCandidateRequest", () => {
 
     expect(request).toEqual({
       mode: "candidates",
-      materials: ["豆腐", "キャベツ"],
+      materials: [
+        { name: "豆腐", usage: "auto" },
+        { name: "キャベツ", usage: "auto" },
+      ],
       servings: "大人2人",
       directions: ["あっさり"],
     });
@@ -47,7 +50,7 @@ describe("buildAiRecipeCandidateRequest", () => {
     expect(request.notes).toHaveLength(aiRecipeRequestLimits.maxNotesLength);
   });
 
-  test("必ず使う・使い切りたい材料制約を短いnotesへ含める", () => {
+  test("必ず使う・使い切りたい材料制約をmaterialsへ含める", () => {
     const request = buildAiRecipeCandidateRequest(
       makeEmptyPromptData({
         materials: ["豆腐150g", "キャベツ"],
@@ -72,7 +75,41 @@ describe("buildAiRecipeCandidateRequest", () => {
       }),
     );
 
-    expect(request.notes).toBe("必須:豆腐150g / 使切:キャベツ(1/4玉)。薄味");
+    expect(request.materials).toEqual([
+      { name: "豆腐150g", usage: "required" },
+      { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
+    ]);
+    expect(request.notes).toBe("薄味");
+  });
+
+  test("自動・必ず使う材料の分量もmaterialsへ含める", () => {
+    const request = buildAiRecipeCandidateRequest(
+      makeEmptyPromptData({
+        materials: ["豆腐", "卵"],
+        materialUseMode: "specified",
+        materialRequests: [
+          {
+            id: "material-auto",
+            name: "豆腐",
+            usage: "auto",
+            useUpAmountMode: "custom",
+            useUpAmount: "150g",
+          },
+          {
+            id: "material-required",
+            name: "卵",
+            usage: "required",
+            useUpAmountMode: "custom",
+            useUpAmount: "2個",
+          },
+        ],
+      }),
+    );
+
+    expect(request.materials).toEqual([
+      { name: "豆腐", usage: "auto", amount: "150g" },
+      { name: "卵", usage: "required", amount: "2個" },
+    ]);
   });
 
   test("必ず使う・使い切りたい材料をmaterials上限内で優先する", () => {
@@ -92,16 +129,18 @@ describe("buildAiRecipeCandidateRequest", () => {
             id: "material-use-up",
             name: "材料12",
             usage: "use-up",
-            useUpAmountMode: "as-written",
-            useUpAmount: "",
+            useUpAmountMode: "custom",
+            useUpAmount: "1個",
           },
         ],
       }),
     );
 
     expect(request.materials).toHaveLength(aiRecipeRequestLimits.maxMaterials);
-    expect(request.materials.slice(0, 2)).toEqual(["材料13", "材料12"]);
-    expect(request.notes).toContain("必須:材料13");
-    expect(request.notes).toContain("使切:材料12");
+    expect(request.materials.slice(0, 2)).toEqual([
+      { name: "材料13", usage: "required" },
+      { name: "材料12", usage: "use_up", amount: "1個" },
+    ]);
+    expect(request.notes).toBeUndefined();
   });
 });
