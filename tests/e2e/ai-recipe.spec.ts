@@ -81,6 +81,7 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await expect(page.getByTestId("generate-recipe")).toHaveAttribute("aria-busy", "true");
   await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "loading");
   await expect(page.getByTestId("ai-recipe-status")).toHaveAttribute("role", "status");
+  await expect(page.getByTestId("ai-recipe-status")).toBeFocused();
   await expect(page.getByTestId("mobile-ai-recipe-status")).not.toHaveAttribute("role", "status");
   await expect(page.getByTestId("copy-prompt")).toBeEnabled();
 
@@ -161,6 +162,53 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   await expect(page.getByTestId("prompt-output")).toHaveValue(/未確定の豆腐/);
 });
 
+test("loading表示は使い切る・必ず使う材料制約を伝える", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let resolveApiResponse: (() => void) | undefined;
+  const apiResponseReady = new Promise<void>((resolve) => {
+    resolveApiResponse = resolve;
+  });
+  await page.route("**/api/recipe", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    expect(body["materials"]).toEqual([
+      { name: "豆腐", usage: "required" },
+      { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
+    ]);
+    await apiResponseReady;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: apiSuccessBody(),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+  await page.getByTestId("combo-input-materials").fill("キャベツ");
+  await page.getByTestId("combo-input-materials").press("Enter");
+
+  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
+  const cabbageRow = page.locator("[data-material-request-id]").filter({ hasText: "キャベツ" });
+  await tofuRow.locator('input[value="required"]').check();
+  await cabbageRow.locator('input[value="use-up"]').check();
+  await cabbageRow.getByLabel("量（必須）").fill("1/4玉");
+
+  const requestSeen = page.waitForRequest("**/api/recipe");
+  await page.getByTestId("generate-recipe").click();
+  await requestSeen;
+
+  await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "loading");
+  await expect(page.getByTestId("ai-recipe-status")).toContainText("今日の候補を探しています");
+  await expect(page.getByTestId("ai-recipe-status")).toContainText(
+    "使い切る材料: キャベツ（1/4玉）",
+  );
+  await expect(page.getByTestId("ai-recipe-status")).toContainText("必ず使う材料: 豆腐");
+
+  resolveApiResponse?.();
+  await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
+});
+
 test("食材未入力ではAI候補APIを呼ばず入力案内を表示する", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let callCount = 0;
@@ -177,9 +225,15 @@ test("食材未入力ではAI候補APIを呼ばず入力案内を表示する", 
   await page.getByTestId("generate-recipe").click();
 
   await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "error");
+  await expect(page.getByTestId("ai-recipe-heading")).toHaveText("材料を入力してください");
+  await expect(page.getByTestId("ai-recipe-error")).toBeFocused();
   await expect(page.getByTestId("ai-recipe-error")).toContainText(
-    "先に「家にある食材・材料」を入力してください",
+    "まずは家にある食材を入れてください",
   );
+  await expect(page.getByTestId("ai-recipe-adjust-input")).toBeVisible();
+  await expect(page.getByTestId("ai-recipe-retry")).toHaveCount(0);
+  await page.getByTestId("ai-recipe-adjust-input").click();
+  await expect(page.getByTestId("combo-input-materials")).toBeFocused();
   await expect(page.getByTestId("copy-prompt")).toBeEnabled();
   expect(callCount).toBe(0);
 });
@@ -256,6 +310,15 @@ test("API失敗時はエラーとコピー導線を維持し、コピーでき�
   let callCount = 0;
   await page.route("**/api/recipe", async (route) => {
     callCount += 1;
+    if (callCount > 1) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: apiSuccessBody(),
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 500,
       contentType: "application/json",
@@ -281,6 +344,8 @@ test("API失敗時はエラーとコピー導線を維持し、コピーでき�
   await expect(page.getByTestId("ai-recipe-error")).toHaveAttribute("role", "alert");
   await expect(page.getByTestId("mobile-ai-recipe-error")).not.toHaveAttribute("role", "alert");
   await expect(page.getByTestId("ai-recipe-error")).toContainText("AI向けレシピ依頼文をコピーして");
+  await expect(page.getByTestId("ai-recipe-retry")).toBeVisible();
+  await expect(page.getByTestId("ai-recipe-adjust-input")).toBeVisible();
   await expect(page.getByTestId("copy-prompt")).toBeVisible();
   await expect(page.getByTestId("copy-prompt")).toBeEnabled();
 
@@ -291,7 +356,11 @@ test("API失敗時はエラーとコピー導線を維持し、コピーでき�
   await expect
     .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
     .toContain("豆腐");
-  expect(callCount).toBe(1);
+  await page.getByTestId("ai-recipe-adjust-input").click();
+  await expect(page.getByTestId("combo-input-materials")).toBeFocused();
+  await page.getByTestId("ai-recipe-retry").click();
+  await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
+  expect(callCount).toBe(2);
 });
 
 test("モバイルのAPI失敗時も展開パネル内のコピー導線を維持する", async ({ page }) => {
