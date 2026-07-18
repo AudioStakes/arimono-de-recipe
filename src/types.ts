@@ -104,6 +104,7 @@ export type ChipItem = {
 
 export type AiRecipeStatus = "idle" | "loading" | "success" | "error";
 export type AiRecipeSurface = "desktop" | "mobile";
+export type AiRecipeCookingTab = "materials" | "instructions" | "taste";
 
 export type AiRecipeMaterialUsage = "auto" | "required" | "use_up";
 
@@ -157,6 +158,7 @@ export type AiRecipeState = {
   candidates: AiRecipeCandidatesResponse | null;
   selectedCandidateId: string;
   cookingCandidateId: string;
+  cookingTab: AiRecipeCookingTab;
   model: string;
   usage: unknown | null;
   errorMessage: string;

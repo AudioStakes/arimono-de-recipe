@@ -3,7 +3,7 @@ import { buildAiRecipeCandidateRequest } from "./ai-recipe-request";
 import type { AppElements } from "./app-elements";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
 import { renderRecipeCandidateList, renderRecipeCookingView } from "./recipe-candidate-list";
-import type { AiRecipeSurface, AppState } from "./types";
+import type { AiRecipeCookingTab, AiRecipeSurface, AppState } from "./types";
 
 const mobileAiRecipeTestIds = {
   "ai-recipe-heading": "mobile-ai-recipe-heading",
@@ -124,7 +124,10 @@ function renderAiRecipeSurface(
         renderRecipeCookingView({
           surface,
           candidate: cookingCandidate,
-          onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
+          materialInputs: aiRecipe.request?.materials ?? [],
+          activeTab: aiRecipe.cookingTab,
+          onTabChange: (tab) => changeCookingTab(state, elements, tab, surface),
+          onBack: () => returnToRecipeDetail(state, elements, surface),
         }),
       );
     } else {
@@ -175,6 +178,17 @@ function focusRecipeCookingView(elements: AppElements, surface: AiRecipeSurface)
   panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
 }
 
+function focusRecipeCookingTab(
+  elements: AppElements,
+  surface: AiRecipeSurface,
+  tab: AiRecipeCookingTab,
+): void {
+  const panel = getSurfacePanel(elements, surface);
+  const testId =
+    surface === "mobile" ? `mobile-recipe-cooking-tab-${tab}` : `recipe-cooking-tab-${tab}`;
+  panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
+}
+
 function selectRecipeCandidate(
   state: AppState,
   elements: AppElements,
@@ -186,6 +200,7 @@ function selectRecipeCandidate(
     activeSurface: surface,
     selectedCandidateId: candidateId,
     cookingCandidateId: "",
+    cookingTab: "materials",
   };
   renderAiRecipePanel(state, elements);
   focusRecipeCandidateDetail(elements, surface);
@@ -202,9 +217,39 @@ function startCookingCandidate(
     activeSurface: surface,
     selectedCandidateId: candidateId,
     cookingCandidateId: candidateId,
+    cookingTab: "materials",
   };
   renderAiRecipePanel(state, elements);
   focusRecipeCookingView(elements, surface);
+}
+
+function changeCookingTab(
+  state: AppState,
+  elements: AppElements,
+  tab: AiRecipeCookingTab,
+  surface: AiRecipeSurface,
+): void {
+  state.aiRecipe = {
+    ...state.aiRecipe,
+    activeSurface: surface,
+    cookingTab: tab,
+  };
+  renderAiRecipePanel(state, elements);
+  focusRecipeCookingTab(elements, surface, tab);
+}
+
+function returnToRecipeDetail(
+  state: AppState,
+  elements: AppElements,
+  surface: AiRecipeSurface,
+): void {
+  state.aiRecipe = {
+    ...state.aiRecipe,
+    activeSurface: surface,
+    cookingCandidateId: "",
+  };
+  renderAiRecipePanel(state, elements);
+  focusRecipeCandidateDetail(elements, surface);
 }
 
 function clearSelectedRecipeCandidate(
@@ -234,6 +279,7 @@ export function resetAiRecipeForInputChange(state: AppState, elements: AppElemen
     candidates: null,
     selectedCandidateId: "",
     cookingCandidateId: "",
+    cookingTab: "materials",
     model: "",
     usage: null,
     errorMessage: "",
@@ -268,6 +314,7 @@ export async function createAiRecipe(
       candidates: null,
       selectedCandidateId: "",
       cookingCandidateId: "",
+      cookingTab: "materials",
       model: "",
       usage: null,
       errorMessage: EMPTY_MATERIALS_MESSAGE,
@@ -285,6 +332,7 @@ export async function createAiRecipe(
     candidates: null,
     selectedCandidateId: "",
     cookingCandidateId: "",
+    cookingTab: "materials",
     model: "",
     usage: null,
     errorMessage: "",
@@ -306,6 +354,7 @@ export async function createAiRecipe(
       candidates: result.candidates,
       selectedCandidateId: "",
       cookingCandidateId: "",
+      cookingTab: "materials",
       model: result.model,
       usage: result.usage,
       errorMessage: "",
@@ -319,6 +368,7 @@ export async function createAiRecipe(
       candidates: null,
       selectedCandidateId: "",
       cookingCandidateId: "",
+      cookingTab: "materials",
       model: "",
       usage: null,
       errorMessage: FALLBACK_MESSAGE,

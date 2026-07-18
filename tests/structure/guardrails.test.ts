@@ -46,6 +46,8 @@ const requiredStableHooks = [
   "recipe-candidate-detail",
   "recipe-candidate-back",
   "recipe-cooking-view",
+  "recipe-cooking-tab-${",
+  "recipe-cooking-panel",
   "recipe-cooking-back",
   'data-state", selected ? "selected" : "idle"',
   "mobile-prompt-panel",
