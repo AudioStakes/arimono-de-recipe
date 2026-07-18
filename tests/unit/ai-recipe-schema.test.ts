@@ -15,7 +15,7 @@ const validCandidates = {
       id: "a",
       title: "豆腐のあんかけ",
       time: 15,
-      badges: ["no_shop", "quick"],
+      badges: ["quick"],
       use: ["豆腐"],
       miss: [],
       why: "豆腐を主役にして短時間で作れます。",
@@ -28,7 +28,7 @@ const validCandidates = {
       time: 12,
       badges: ["easy"],
       use: ["キャベツ"],
-      miss: ["卵"],
+      miss: [],
       why: "少ない材料で主菜寄りにできます。",
       ing: ["キャベツ", "油", "塩"],
       steps: ["切る", "炒める", "味を調える"],
@@ -37,7 +37,7 @@ const validCandidates = {
       id: "c",
       title: "豆腐スープ",
       time: 10,
-      badges: ["no_shop", "few_dishes"],
+      badges: ["few_dishes"],
       use: ["豆腐", "キャベツ"],
       miss: [],
       why: "鍋ひとつでありものを使えます。",
@@ -78,13 +78,14 @@ describe("ai recipe schema", () => {
         { name: "豆腐", usage: "required" },
         { name: "キャベツ", usage: "use_up", amount: "1/4玉" },
       ],
+      allowShopping: true,
       notes: "薄味",
     });
 
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) throw new Error(parsed.reason);
     expect(buildCompactRecipeCandidateInput(parsed.value)).toBe(
-      '{"m":[["豆腐","required"],["キャベツ","use_up","1/4玉"]],"rq":["豆腐","キャベツ"],"n":"薄味"}',
+      '{"m":[["豆腐","required"],["キャベツ","use_up","1/4玉"]],"rq":["豆腐","キャベツ"],"shop":1,"n":"薄味"}',
     );
   });
 
@@ -124,6 +125,13 @@ describe("ai recipe schema", () => {
       parseAiRecipeCandidateRequest({
         mode: "candidates",
         materials: [{ name: "豆腐", usage: "use_up" }],
+      }).ok,
+    ).toBe(false);
+    expect(
+      parseAiRecipeCandidateRequest({
+        mode: "candidates",
+        materials: materials("豆腐"),
+        allowShopping: "true",
       }).ok,
     ).toBe(false);
     expect(parseAiRecipeCandidateRequest({ mode: "candidates", materials: [] }).ok).toBe(false);
@@ -251,6 +259,7 @@ describe("ai recipe schema", () => {
       {
         mode: "candidates",
         materials: materials("豆腐", "キャベツ"),
+        allowShopping: true,
       },
     );
     expect(normalizedMissingRequestMaterial.ok).toBe(true);
@@ -298,6 +307,48 @@ describe("ai recipe schema", () => {
     ).toBe(false);
   });
 
+  test("shopping許可なしでは不足材料とshopping badgeを拒否し、許可ありなら不足材料を扱える", () => {
+    const [first, second, third] = validCandidates.items;
+    if (!first || !second || !third) {
+      throw new Error("candidate fixture must include three items.");
+    }
+    const request = {
+      mode: "candidates",
+      materials: materials("豆腐", "キャベツ"),
+    } as const;
+    const shoppingCandidates = {
+      items: [
+        first,
+        {
+          ...second,
+          badges: ["miss_optional", "easy"],
+          miss: ["卵"],
+          ing: ["キャベツ", "卵", "油", "塩"],
+        },
+        third,
+      ],
+    } satisfies AiRecipeCandidatesResponse;
+
+    expect(validateAiRecipeCandidatesForRequest(validCandidates, request).ok).toBe(true);
+    expect(validateAiRecipeCandidatesForRequest(shoppingCandidates, request).ok).toBe(false);
+    expect(
+      validateAiRecipeCandidatesForRequest(
+        {
+          items: [{ ...first, badges: ["miss_optional"] }, second, third],
+        },
+        request,
+      ).ok,
+    ).toBe(false);
+
+    const shoppingAllowed = validateAiRecipeCandidatesForRequest(shoppingCandidates, {
+      ...request,
+      allowShopping: true,
+    });
+    expect(shoppingAllowed.ok).toBe(true);
+    if (!shoppingAllowed.ok) throw new Error(shoppingAllowed.reason);
+    expect(shoppingAllowed.value.items[1]?.miss).toEqual(["卵"]);
+  });
+
   test("request材料がmissに混ざったAI応答を正規化する", () => {
     const [first, second, third] = validCandidates.items;
     if (!first || !second || !third) {
@@ -315,6 +366,7 @@ describe("ai recipe schema", () => {
       {
         mode: "candidates",
         materials: materials("豆腐", "キャベツ"),
+        allowShopping: true,
       },
     );
 
@@ -337,6 +389,7 @@ describe("ai recipe schema", () => {
       {
         mode: "candidates",
         materials: materials("豆腐", "キャベツ"),
+        allowShopping: true,
         avoid: ["辛い味"],
       },
     );
@@ -386,7 +439,7 @@ describe("ai recipe schema", () => {
           id: "a",
           title: "鶏もも親子煮",
           time: 18,
-          badges: ["no_shop", "quick"],
+          badges: ["quick"],
           use: ["鶏もも肉", "玉ねぎ", "卵"],
           miss: [],
           why: "家の材料だけで主菜になります。",
@@ -397,7 +450,7 @@ describe("ai recipe schema", () => {
           id: "b",
           title: "鶏玉炒め",
           time: 15,
-          badges: ["no_shop", "easy"],
+          badges: ["easy"],
           use: ["鶏もも肉", "玉ねぎ", "卵"],
           miss: [],
           why: "フライパンだけで短時間にできます。",
@@ -408,7 +461,7 @@ describe("ai recipe schema", () => {
           id: "c",
           title: "鶏肉の卵とじ",
           time: 20,
-          badges: ["no_shop", "few_dishes"],
+          badges: ["few_dishes"],
           use: ["鶏もも肉", "玉ねぎ", "卵"],
           miss: [],
           why: "汁気があり食べやすいです。",

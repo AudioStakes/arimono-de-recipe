@@ -21,6 +21,10 @@ export function buildRecipeDecisionCandidateRequest(
     request.servings = aiRequest.servings;
   }
 
+  if (aiRequest.allowShopping) {
+    request.allowShopping = aiRequest.allowShopping;
+  }
+
   if (aiRequest.time) {
     request.time = aiRequest.time;
   }

@@ -8,15 +8,39 @@ type RecipeCandidateListOptions = {
   onBack: () => void;
 };
 
-const badgeLabels = {
-  no_shop: "買い足しなし",
-  miss_optional: "不足は任意",
-  quick: "時短",
-  easy: "かんたん",
-  uses_up: "使い切り",
-  few_dishes: "洗い物少なめ",
-  kids: "子ども向け",
-} as const satisfies Record<AiRecipeCandidate["badges"][number], string>;
+function getNonShoppingBadgeLabel(badge: AiRecipeCandidate["badges"][number]): string {
+  switch (badge) {
+    case "quick":
+      return "時短";
+    case "easy":
+      return "かんたん";
+    case "uses_up":
+      return "使い切り";
+    case "few_dishes":
+      return "洗い物少なめ";
+    case "kids":
+      return "子ども向け";
+    default:
+      return "";
+  }
+}
+
+export function getVisibleCandidateBadgeLabels(candidate: AiRecipeCandidate): string[] {
+  const labels = candidate.miss.length > 0 ? ["買い足しあり"] : [];
+
+  for (const badge of candidate.badges) {
+    const label = getNonShoppingBadgeLabel(badge);
+    if (label && !labels.includes(label)) {
+      labels.push(label);
+    }
+  }
+
+  return labels;
+}
+
+export function getMissingIngredientLabels(candidate: AiRecipeCandidate): string[] {
+  return candidate.miss.map((ingredient) => `追加: ${ingredient}`);
+}
 
 function getTestId(surface: AiRecipeSurface, testId: string): string {
   return surface === "mobile" ? `mobile-${testId}` : testId;
@@ -75,22 +99,18 @@ function renderCandidate(
 
   const meta = document.createElement("p");
   meta.className = "recipe-candidate-meta";
-  meta.append(
-    document.createTextNode(`${candidate.time}分`),
-    document.createTextNode(" / "),
-    document.createTextNode(candidate.miss.length === 0 ? "買い足しなし" : "不足あり"),
-  );
+  meta.textContent = `${candidate.time}分`;
 
   const badges = renderInlineList(
-    candidate.badges.map((badge) => badgeLabels[badge]),
+    getVisibleCandidateBadgeLabels(candidate),
     "recipe-candidate-badges",
   );
 
   const use = renderInlineList(candidate.use, "recipe-candidate-use");
   use.setAttribute("aria-label", "使う材料");
 
-  const missing = renderInlineList(candidate.miss, "recipe-candidate-miss");
-  missing.setAttribute("aria-label", "不足材料");
+  const missing = renderInlineList(getMissingIngredientLabels(candidate), "recipe-candidate-miss");
+  missing.setAttribute("aria-label", "追加材料");
 
   const why = renderTextElement("p", candidate.why, "recipe-candidate-why");
 
@@ -138,8 +158,11 @@ function renderCandidateDetail(
   const ingredientsHeading = renderTextElement("h5", "材料", "recipe-candidate-subheading");
   const ingredients = renderInlineList(candidate.ing, "recipe-candidate-detail-list");
 
-  const missingHeading = renderTextElement("h5", "不足材料", "recipe-candidate-subheading");
-  const missing = renderInlineList(candidate.miss, "recipe-candidate-detail-list");
+  const missingHeading = renderTextElement("h5", "追加する材料", "recipe-candidate-subheading");
+  const missing = renderInlineList(
+    getMissingIngredientLabels(candidate),
+    "recipe-candidate-detail-list",
+  );
 
   const stepsHeading = renderTextElement("h5", "手順", "recipe-candidate-subheading");
   const steps = document.createElement("ol");
