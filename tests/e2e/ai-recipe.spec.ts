@@ -112,9 +112,22 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   );
   await expect(page.getByTestId("recipe-candidate-detail")).toBeFocused();
   await expect(page.getByTestId("recipe-candidate-detail")).toContainText("豆腐のあんかけ");
+  await expect(page.getByTestId("recipe-candidate-detail")).toContainText("使うもの");
   await expect(page.getByTestId("recipe-candidate-detail")).toContainText("片栗粉");
+  await expect(page.getByTestId("recipe-candidate-detail")).toContainText("作り方");
   await expect(page.getByTestId("recipe-candidate-detail")).toContainText("あんを作る");
+  await expect(page.getByTestId("recipe-candidate-detail")).toContainText("味の調整");
+  await expect(page.getByTestId("recipe-candidate-detail")).toContainText(
+    "塩・しょうゆは少量ずつ足す",
+  );
+  await expect(page.getByTestId("recipe-candidate-cook")).toHaveAccessibleName("この料理を作る");
   await page.getByTestId("recipe-candidate-back").click();
+  await expect(page.getByTestId("recipe-candidate-list")).toBeFocused();
+  await page.getByTestId("recipe-candidate-select-a").click();
+  await page.getByTestId("recipe-candidate-cook").click();
+  await expect(page.getByTestId("recipe-cooking-view")).toBeFocused();
+  await expect(page.getByTestId("recipe-cooking-view")).toContainText("豆腐のあんかけ");
+  await page.getByTestId("recipe-cooking-back").click();
   await expect(page.getByTestId("recipe-candidate-list")).toBeFocused();
   expect(callCount).toBe(1);
   await expect(page.getByTestId("prompt-output")).toHaveValue(/未確定の豆腐/);

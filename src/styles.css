@@ -949,7 +949,8 @@ input[type="range"] {
 }
 
 .recipe-candidate-card,
-.recipe-candidate-detail {
+.recipe-candidate-detail,
+.recipe-cooking-view {
   display: grid;
   gap: var(--space-3);
   min-inline-size: 0;

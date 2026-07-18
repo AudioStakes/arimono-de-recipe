@@ -2,7 +2,7 @@ import { generateRecipe } from "./ai-recipe-client";
 import { buildAiRecipeCandidateRequest } from "./ai-recipe-request";
 import type { AppElements } from "./app-elements";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
-import { renderRecipeCandidateList } from "./recipe-candidate-list";
+import { renderRecipeCandidateList, renderRecipeCookingView } from "./recipe-candidate-list";
 import type { AiRecipeSurface, AppState } from "./types";
 
 const mobileAiRecipeTestIds = {
@@ -116,16 +116,30 @@ function renderAiRecipeSurface(
   content.setAttribute("data-testid", getTestId(surface, "ai-recipe-content"));
 
   if (aiRecipe.candidates) {
-    content.appendChild(
-      renderRecipeCandidateList({
-        surface,
-        candidates: aiRecipe.candidates.items,
-        materialInputs: aiRecipe.request?.materials ?? [],
-        selectedCandidateId: aiRecipe.selectedCandidateId,
-        onSelect: (candidateId) => selectRecipeCandidate(state, elements, candidateId, surface),
-        onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
-      }),
+    const cookingCandidate = aiRecipe.candidates.items.find(
+      (candidate) => candidate.id === aiRecipe.cookingCandidateId,
     );
+    if (cookingCandidate) {
+      content.appendChild(
+        renderRecipeCookingView({
+          surface,
+          candidate: cookingCandidate,
+          onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
+        }),
+      );
+    } else {
+      content.appendChild(
+        renderRecipeCandidateList({
+          surface,
+          candidates: aiRecipe.candidates.items,
+          materialInputs: aiRecipe.request?.materials ?? [],
+          selectedCandidateId: aiRecipe.selectedCandidateId,
+          onSelect: (candidateId) => selectRecipeCandidate(state, elements, candidateId, surface),
+          onCook: (candidateId) => startCookingCandidate(state, elements, candidateId, surface),
+          onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
+        }),
+      );
+    }
   }
 
   panel.replaceChildren(renderPanelHeading("AIの料理候補", surface), status, content);
@@ -155,6 +169,12 @@ function focusRecipeCandidateList(elements: AppElements, surface: AiRecipeSurfac
   panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
 }
 
+function focusRecipeCookingView(elements: AppElements, surface: AiRecipeSurface): void {
+  const panel = getSurfacePanel(elements, surface);
+  const testId = surface === "mobile" ? "mobile-recipe-cooking-view" : "recipe-cooking-view";
+  panel.querySelector<HTMLElement>(`[data-testid="${testId}"]`)?.focus();
+}
+
 function selectRecipeCandidate(
   state: AppState,
   elements: AppElements,
@@ -165,9 +185,26 @@ function selectRecipeCandidate(
     ...state.aiRecipe,
     activeSurface: surface,
     selectedCandidateId: candidateId,
+    cookingCandidateId: "",
   };
   renderAiRecipePanel(state, elements);
   focusRecipeCandidateDetail(elements, surface);
+}
+
+function startCookingCandidate(
+  state: AppState,
+  elements: AppElements,
+  candidateId: string,
+  surface: AiRecipeSurface,
+): void {
+  state.aiRecipe = {
+    ...state.aiRecipe,
+    activeSurface: surface,
+    selectedCandidateId: candidateId,
+    cookingCandidateId: candidateId,
+  };
+  renderAiRecipePanel(state, elements);
+  focusRecipeCookingView(elements, surface);
 }
 
 function clearSelectedRecipeCandidate(
@@ -179,6 +216,7 @@ function clearSelectedRecipeCandidate(
     ...state.aiRecipe,
     activeSurface: surface,
     selectedCandidateId: "",
+    cookingCandidateId: "",
   };
   renderAiRecipePanel(state, elements);
   focusRecipeCandidateList(elements, surface);
@@ -195,6 +233,7 @@ export function resetAiRecipeForInputChange(state: AppState, elements: AppElemen
     request: null,
     candidates: null,
     selectedCandidateId: "",
+    cookingCandidateId: "",
     model: "",
     usage: null,
     errorMessage: "",
@@ -228,6 +267,7 @@ export async function createAiRecipe(
       request,
       candidates: null,
       selectedCandidateId: "",
+      cookingCandidateId: "",
       model: "",
       usage: null,
       errorMessage: EMPTY_MATERIALS_MESSAGE,
@@ -244,6 +284,7 @@ export async function createAiRecipe(
     request,
     candidates: null,
     selectedCandidateId: "",
+    cookingCandidateId: "",
     model: "",
     usage: null,
     errorMessage: "",
@@ -264,6 +305,7 @@ export async function createAiRecipe(
       request,
       candidates: result.candidates,
       selectedCandidateId: "",
+      cookingCandidateId: "",
       model: result.model,
       usage: result.usage,
       errorMessage: "",
@@ -276,6 +318,7 @@ export async function createAiRecipe(
       request,
       candidates: null,
       selectedCandidateId: "",
+      cookingCandidateId: "",
       model: "",
       usage: null,
       errorMessage: FALLBACK_MESSAGE,

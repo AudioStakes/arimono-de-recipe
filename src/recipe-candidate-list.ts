@@ -6,6 +6,13 @@ type RecipeCandidateListOptions = {
   materialInputs: readonly AiRecipeMaterialInput[];
   selectedCandidateId: string;
   onSelect: (candidateId: string) => void;
+  onCook: (candidateId: string) => void;
+  onBack: () => void;
+};
+
+type RecipeCookingViewOptions = {
+  surface: AiRecipeSurface;
+  candidate: AiRecipeCandidate;
   onBack: () => void;
 };
 
@@ -81,6 +88,10 @@ export function getUsedMaterialLabels(
     const details = [material.amount, getMaterialUsageLabel(material.usage)].filter(Boolean);
     return details.length > 0 ? `${materialName}（${details.join("・")}）` : materialName;
   });
+}
+
+export function getTasteAdjustmentLabels(): string[] {
+  return ["塩・しょうゆは少量ずつ足す", "濃ければ水かだしでのばす"];
 }
 
 function getTestId(surface: AiRecipeSurface, testId: string): string {
@@ -199,7 +210,13 @@ function renderCandidateDetail(
   const heading = renderTextElement("h4", candidate.title, "recipe-candidate-detail-title");
   heading.id = getTestId(options.surface, "recipe-candidate-detail-title");
 
-  const ingredientsHeading = renderTextElement("h5", "材料", "recipe-candidate-subheading");
+  const materialContextHeading = renderTextElement("h5", "使う材料", "recipe-candidate-subheading");
+  const materialContext = renderInlineList(
+    getUsedMaterialLabels(candidate, options.materialInputs),
+    "recipe-candidate-detail-list",
+  );
+
+  const ingredientsHeading = renderTextElement("h5", "使うもの", "recipe-candidate-subheading");
   const ingredients = renderInlineList(candidate.ing, "recipe-candidate-detail-list");
 
   const missingHeading = renderTextElement("h5", "追加する材料", "recipe-candidate-subheading");
@@ -208,7 +225,7 @@ function renderCandidateDetail(
     "recipe-candidate-detail-list",
   );
 
-  const stepsHeading = renderTextElement("h5", "手順", "recipe-candidate-subheading");
+  const stepsHeading = renderTextElement("h5", "作り方", "recipe-candidate-subheading");
   const steps = document.createElement("ol");
   steps.className = "recipe-candidate-detail-list";
   for (const step of candidate.steps) {
@@ -217,6 +234,16 @@ function renderCandidateDetail(
     steps.appendChild(item);
   }
 
+  const tasteHeading = renderTextElement("h5", "味の調整", "recipe-candidate-subheading");
+  const taste = renderInlineList(getTasteAdjustmentLabels(), "recipe-candidate-detail-list");
+
+  const cook = document.createElement("button");
+  cook.type = "button";
+  cook.className = "recipe-candidate-select recipe-candidate-cook";
+  cook.textContent = "この料理を作る";
+  cook.setAttribute("data-testid", getTestId(options.surface, "recipe-candidate-cook"));
+  cook.addEventListener("click", () => options.onCook(candidate.id));
+
   const back = document.createElement("button");
   back.type = "button";
   back.className = "button-secondary recipe-candidate-back";
@@ -224,11 +251,33 @@ function renderCandidateDetail(
   back.setAttribute("data-testid", getTestId(options.surface, "recipe-candidate-back"));
   back.addEventListener("click", options.onBack);
 
-  section.append(heading, ingredientsHeading, ingredients);
+  section.append(heading, materialContextHeading, materialContext, ingredientsHeading, ingredients);
   if (candidate.miss.length > 0) {
     section.append(missingHeading, missing);
   }
-  section.append(stepsHeading, steps, back);
+  section.append(stepsHeading, steps, tasteHeading, taste, cook, back);
+  return section;
+}
+
+export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "recipe-cooking-view";
+  section.setAttribute("data-testid", getTestId(options.surface, "recipe-cooking-view"));
+  section.setAttribute("aria-labelledby", getTestId(options.surface, "recipe-cooking-view-title"));
+  section.tabIndex = -1;
+
+  const heading = renderTextElement("h4", "調理ビュー", "recipe-candidate-detail-title");
+  heading.id = getTestId(options.surface, "recipe-cooking-view-title");
+  const title = renderTextElement("p", options.candidate.title, "recipe-candidate-why");
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "button-secondary recipe-candidate-back";
+  back.textContent = "候補に戻る";
+  back.setAttribute("data-testid", getTestId(options.surface, "recipe-cooking-back"));
+  back.addEventListener("click", options.onBack);
+
+  section.append(heading, title, back);
   return section;
 }
 
