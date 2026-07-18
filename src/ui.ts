@@ -22,6 +22,7 @@ import {
   markUserHasInput as markUserHasInputPanel,
   refreshPromptPanel as refreshPromptPanelPanel,
 } from "./output-panel";
+import { createInitialRecipeDecisionState } from "./recipe-decision/flow";
 import { getServingsMode, getServingsValue, updateServingSteppers } from "./serving-controls";
 import type {
   AppState,
@@ -45,6 +46,7 @@ const createInitialState = (): AppState => {
     ticking: false,
     mobileSheetOpen: false,
     materialRequests: [],
+    recipeDecision: createInitialRecipeDecisionState(),
     aiRecipe: {
       status: "idle",
       activeSurface: "desktop",
