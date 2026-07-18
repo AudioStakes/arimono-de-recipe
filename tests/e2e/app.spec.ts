@@ -99,10 +99,12 @@ test("モバイル初期表示は材料入力と今日の候補CTAを優先す�
   await expect(materialInput).toBeVisible();
   await expect(generate).toContainText("今日の候補を見る");
 
-  const materialBox = await materialInput.boundingBox();
-  const generateBox = await generate.boundingBox();
-  expect(materialBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(520);
-  expect(generateBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(700);
+  await expect
+    .poll(async () => (await materialInput.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(520);
+  await expect
+    .poll(async () => (await generate.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(700);
   await expect(page.getByTestId("prompt-output")).not.toBeVisible();
   await expect(page.getByTestId("copy-prompt")).toBeVisible();
 });
