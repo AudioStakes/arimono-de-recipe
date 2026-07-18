@@ -153,6 +153,7 @@ export type AiRecipeCandidatesResponse = {
 export type AiRecipeState = {
   status: AiRecipeStatus;
   activeSurface: AiRecipeSurface;
+  request: AiRecipeCandidateRequest | null;
   candidates: AiRecipeCandidatesResponse | null;
   selectedCandidateId: string;
   model: string;

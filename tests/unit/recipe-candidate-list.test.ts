@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   getMissingIngredientLabels,
+  getUsedMaterialLabels,
   getVisibleCandidateBadgeLabels,
 } from "../../src/recipe-candidate-list";
 import type { AiRecipeCandidate } from "../../src/types";
@@ -39,5 +40,14 @@ describe("recipe candidate list labels", () => {
 
     expect(getVisibleCandidateBadgeLabels(shoppingCandidate)).toEqual(["買い足しあり", "かんたん"]);
     expect(getMissingIngredientLabels(shoppingCandidate)).toEqual(["追加: 卵"]);
+  });
+
+  test("使う材料には分量と使い方の文脈を表示する", () => {
+    expect(
+      getUsedMaterialLabels(candidate({ use: ["豆腐", "キャベツ", "卵"] }), [
+        { name: "豆腐", usage: "use_up", amount: "150g" },
+        { name: "キャベツ", usage: "required" },
+      ]),
+    ).toEqual(["豆腐（150g・使い切り）", "キャベツ（必ず使う）", "卵"]);
   });
 });

@@ -87,6 +87,8 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   resolveApiResponse?.();
   await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
   await expect(page.getByTestId("ai-recipe-status")).toBeFocused();
+  await expect(page.getByTestId("ai-recipe-panel")).not.toContainText("使用モデル");
+  await expect(page.getByTestId("ai-recipe-panel")).not.toContainText("test-model");
   await expect(page.getByTestId(/^recipe-candidate-[abc]$/)).toHaveCount(3);
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐のあんかけ");
   await expect(page.getByTestId("recipe-candidate-a")).toContainText("15分");
@@ -178,6 +180,7 @@ test("使い切る量が未入力ならAI候補APIを呼ばず、量入力後に
   await page.getByTestId("generate-recipe").click();
   await requestSeen;
   await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
+  await expect(page.getByTestId("recipe-candidate-a")).toContainText("豆腐（150g・使い切り）");
   expect(callCount).toBe(1);
 });
 

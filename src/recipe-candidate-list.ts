@@ -1,8 +1,9 @@
-import type { AiRecipeCandidate, AiRecipeSurface } from "./types";
+import type { AiRecipeCandidate, AiRecipeMaterialInput, AiRecipeSurface } from "./types";
 
 type RecipeCandidateListOptions = {
   surface: AiRecipeSurface;
   candidates: readonly AiRecipeCandidate[];
+  materialInputs: readonly AiRecipeMaterialInput[];
   selectedCandidateId: string;
   onSelect: (candidateId: string) => void;
   onBack: () => void;
@@ -40,6 +41,46 @@ export function getVisibleCandidateBadgeLabels(candidate: AiRecipeCandidate): st
 
 export function getMissingIngredientLabels(candidate: AiRecipeCandidate): string[] {
   return candidate.miss.map((ingredient) => `追加: ${ingredient}`);
+}
+
+function normalizeForComparison(value: string): string {
+  return value.replace(/\s+/g, "").toLowerCase();
+}
+
+function findMaterialInput(
+  materialName: string,
+  materialInputs: readonly AiRecipeMaterialInput[],
+): AiRecipeMaterialInput | undefined {
+  const normalizedName = normalizeForComparison(materialName);
+  return materialInputs.find(
+    (material) => normalizeForComparison(material.name) === normalizedName,
+  );
+}
+
+function getMaterialUsageLabel(usage: AiRecipeMaterialInput["usage"]): string {
+  switch (usage) {
+    case "required":
+      return "必ず使う";
+    case "use_up":
+      return "使い切り";
+    default:
+      return "";
+  }
+}
+
+export function getUsedMaterialLabels(
+  candidate: AiRecipeCandidate,
+  materialInputs: readonly AiRecipeMaterialInput[],
+): string[] {
+  return candidate.use.map((materialName) => {
+    const material = findMaterialInput(materialName, materialInputs);
+    if (!material) {
+      return materialName;
+    }
+
+    const details = [material.amount, getMaterialUsageLabel(material.usage)].filter(Boolean);
+    return details.length > 0 ? `${materialName}（${details.join("・")}）` : materialName;
+  });
 }
 
 function getTestId(surface: AiRecipeSurface, testId: string): string {
@@ -106,8 +147,11 @@ function renderCandidate(
     "recipe-candidate-badges",
   );
 
-  const use = renderInlineList(candidate.use, "recipe-candidate-use");
-  use.setAttribute("aria-label", "使う材料");
+  const use = renderInlineList(
+    getUsedMaterialLabels(candidate, options.materialInputs),
+    "recipe-candidate-use",
+  );
+  use.setAttribute("aria-label", "使う材料と使い方");
 
   const missing = renderInlineList(getMissingIngredientLabels(candidate), "recipe-candidate-miss");
   missing.setAttribute("aria-label", "追加材料");

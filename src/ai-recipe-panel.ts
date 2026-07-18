@@ -10,7 +10,6 @@ const mobileAiRecipeTestIds = {
   "ai-recipe-status": "mobile-ai-recipe-status",
   "ai-recipe-content": "mobile-ai-recipe-content",
   "ai-recipe-error": "mobile-ai-recipe-error",
-  "ai-recipe-model": "mobile-ai-recipe-model",
 } as const;
 
 type AiRecipeTestId = keyof typeof mobileAiRecipeTestIds;
@@ -121,6 +120,7 @@ function renderAiRecipeSurface(
       renderRecipeCandidateList({
         surface,
         candidates: aiRecipe.candidates.items,
+        materialInputs: aiRecipe.request?.materials ?? [],
         selectedCandidateId: aiRecipe.selectedCandidateId,
         onSelect: (candidateId) => selectRecipeCandidate(state, elements, candidateId, surface),
         onBack: () => clearSelectedRecipeCandidate(state, elements, surface),
@@ -128,12 +128,7 @@ function renderAiRecipeSurface(
     );
   }
 
-  const meta = renderPanelParagraph(
-    `使用モデル: ${aiRecipe.model}`,
-    "ai-recipe-meta",
-    getTestId(surface, "ai-recipe-model"),
-  );
-  panel.replaceChildren(renderPanelHeading("AIの料理候補", surface), status, content, meta);
+  panel.replaceChildren(renderPanelHeading("AIの料理候補", surface), status, content);
 }
 
 export function renderAiRecipePanel(state: AppState, elements: AppElements): void {
@@ -197,6 +192,7 @@ export function resetAiRecipeForInputChange(state: AppState, elements: AppElemen
   state.aiRecipe = {
     status: "idle",
     activeSurface: state.aiRecipe.activeSurface,
+    request: null,
     candidates: null,
     selectedCandidateId: "",
     model: "",
@@ -229,6 +225,7 @@ export async function createAiRecipe(
     state.aiRecipe = {
       status: "error",
       activeSurface: surface,
+      request,
       candidates: null,
       selectedCandidateId: "",
       model: "",
@@ -244,6 +241,7 @@ export async function createAiRecipe(
   state.aiRecipe = {
     status: "loading",
     activeSurface: surface,
+    request,
     candidates: null,
     selectedCandidateId: "",
     model: "",
@@ -263,6 +261,7 @@ export async function createAiRecipe(
     state.aiRecipe = {
       status: "success",
       activeSurface: surface,
+      request,
       candidates: result.candidates,
       selectedCandidateId: "",
       model: result.model,
@@ -274,6 +273,7 @@ export async function createAiRecipe(
     state.aiRecipe = {
       status: "error",
       activeSurface: surface,
+      request,
       candidates: null,
       selectedCandidateId: "",
       model: "",
