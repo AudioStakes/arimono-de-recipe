@@ -8,14 +8,11 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.locator(".brand-fridge")).toBeVisible();
   await expect(page.locator(".brand-title-text")).toHaveText("ありもの de レシピ");
   await expect(
-    page.getByText("家にある食材から、今日作れそうな料理候補を見つけます。"),
+    page.getByText("冷蔵庫にある食材を入れて、今日作る料理候補をすぐ見つけます。"),
   ).toBeVisible();
-  await expect(page.locator(".use-flow")).toContainText("1. 条件を入力");
-  await expect(page.locator(".use-flow")).toContainText("3. 詳細を決める");
 
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText([
-    "今回やりたいこと",
     "家にある食材・材料",
     "材料の使い方",
     "人数・分量",
@@ -24,6 +21,7 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.getByTestId("recipe-item-pairingTargets")).toBeHidden();
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
   await expect(page.getByTestId("recipe-item-recipeCount")).toHaveAttribute("data-state", "closed");
+  await expect(page.getByTestId("generate-recipe")).toContainText("今日の候補を見る");
 
   const visibleToggles = page.locator('[data-testid^="recipe-item-toggle-"]:visible');
   await expect(visibleToggles).toHaveCount(6);
@@ -60,8 +58,6 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await page.getByLabel("作りたい料理がある").check();
   await expect(page.getByTestId("recipe-item-targetDish")).toBeVisible();
   await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
-    "今回やりたいこと",
-    "作りたい料理",
     "家にある食材・材料",
     "材料の使い方",
     "人数・分量",
@@ -85,8 +81,6 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await expect(page.getByTestId("recipe-item-targetDish")).toBeHidden();
   await expect(page.getByTestId("recipe-item-pairingTargets")).toBeVisible();
   await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
-    "今回やりたいこと",
-    "一緒に出す料理",
     "家にある食材・材料",
     "材料の使い方",
     "人数・分量",
@@ -94,6 +88,25 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
   await expect(page.getByTestId("recipe-item-recipeRoles")).toBeVisible();
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n1品だけ/);
+});
+
+test("モバイル初期表示は材料入力と今日の候補CTAを優先する", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/");
+
+  const materialInput = page.getByTestId("combo-input-materials");
+  const generate = page.getByTestId("generate-recipe-mobile");
+  await expect(materialInput).toBeVisible();
+  await expect(generate).toContainText("今日の候補を見る");
+
+  await expect
+    .poll(async () => (await materialInput.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(520);
+  await expect
+    .poll(async () => (await generate.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(700);
+  await expect(page.getByTestId("prompt-output")).not.toBeVisible();
+  await expect(page.getByTestId("copy-prompt")).toBeVisible();
 });
 
 test("intent 往復で対象外の値が依頼文とチップに残らない", async ({ page }) => {
@@ -278,7 +291,6 @@ test("基本項目の DOM 順序がフォーム定義と一致する", async ({ 
     .locator(".field-title:visible")
     .allTextContents();
   expect(labels.map((text) => text.trim())).toEqual([
-    "今回やりたいこと",
     "家にある食材・材料",
     "材料の使い方",
     "人数・分量",

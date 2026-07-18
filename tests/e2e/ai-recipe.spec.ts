@@ -69,7 +69,7 @@ test("AI生成は短い候補requestを送り、3候補から詳細をローカ�
   });
 
   await page.goto("/");
-  await expect(page.getByTestId("generate-recipe")).toContainText("AIで候補を見る");
+  await expect(page.getByTestId("generate-recipe")).toContainText("今日の候補を見る");
   await expect(page.getByTestId("copy-prompt")).toContainText("AI向けレシピ依頼文をコピー");
 
   await page.getByTestId("combo-input-materials").fill("未確定の豆腐");
