@@ -9,12 +9,10 @@ import {
   combos,
   cookTimeOptions,
   materialUsageOptions,
-  materialUseModeOptions,
   recipeCountOptions,
   requestIntentOptions,
   servingGroups,
   servingsModeOptions,
-  useUpAmountModeOptions,
 } from "./data";
 import { icon } from "./icons";
 import type { PromptPanelServices } from "./output-panel";
@@ -22,7 +20,11 @@ import {
   markUserHasInput as markUserHasInputPanel,
   refreshPromptPanel as refreshPromptPanelPanel,
 } from "./output-panel";
-import { createInitialRecipeDecisionState } from "./recipe-decision/flow";
+import {
+  createInitialRecipeDecisionState,
+  USE_UP_AMOUNT_REQUIRED_MESSAGE,
+  validateMaterialRequestAmounts,
+} from "./recipe-decision";
 import { getServingsMode, getServingsValue, updateServingSteppers } from "./serving-controls";
 import type {
   AppState,
@@ -30,7 +32,6 @@ import type {
   ComboId,
   MaterialRequest,
   MaterialUsage,
-  MaterialUseMode,
   RecipeCount,
   RequestIntent,
   UseUpAmountMode,
@@ -144,10 +145,6 @@ function getRequestIntentValue(): RequestIntent {
   return readCheckedValue<RequestIntent>("requestIntent", requestIntentOptions, "auto");
 }
 
-function getMaterialUseModeValue(): MaterialUseMode {
-  return readCheckedValue<MaterialUseMode>("materialUseMode", materialUseModeOptions, "auto");
-}
-
 function getRecipeCountValue(): RecipeCount {
   return readCheckedValue<RecipeCount>("recipeCount", recipeCountOptions, "auto");
 }
@@ -159,10 +156,6 @@ function getEffectiveRecipeCountValue(): RecipeCount {
 
 function isMaterialUsage(value: string | undefined): value is MaterialUsage {
   return materialUsageOptions.some((option) => option.value === value);
-}
-
-function isUseUpAmountMode(value: string | undefined): value is UseUpAmountMode {
-  return useUpAmountModeOptions.some((option) => option.value === value);
 }
 
 function isLikelyEditedMaterialName(previousName: string, nextName: string): boolean {
@@ -211,30 +204,80 @@ function readMaterialRequestControls(state: AppState): void {
     const usageValue = queryMaybeElement<HTMLInputElement>(
       `input[name="materialUsage-${CSS.escape(request.id)}"]:checked`,
     )?.value;
-    const useUpAmountModeValue = queryMaybeElement<HTMLInputElement>(
-      `input[name="useUpAmountMode-${CSS.escape(request.id)}"]:checked`,
-    )?.value;
     const useUpAmount =
       queryMaybeElement<HTMLInputElement>(`[data-material-amount-for="${CSS.escape(request.id)}"]`)
         ?.value ?? request.useUpAmount;
+    const useUpAmountMode: UseUpAmountMode = useUpAmount.trim() ? "custom" : "as-written";
 
     updateMaterialRequest(state, request.id, {
       ...(isMaterialUsage(usageValue) ? { usage: usageValue } : {}),
-      ...(isUseUpAmountMode(useUpAmountModeValue) ? { useUpAmountMode: useUpAmountModeValue } : {}),
+      useUpAmountMode,
       useUpAmount,
     });
   }
 }
 
+function getMaterialRequestErrors(state: AppState): Map<string, string> {
+  return new Map(
+    validateMaterialRequestAmounts(state.materialRequests).map((error) => [
+      error.requestId,
+      error.message,
+    ]),
+  );
+}
+
+function syncMaterialRequestValidationState(state: AppState): void {
+  const errors = getMaterialRequestErrors(state);
+  for (const request of state.materialRequests) {
+    const input = queryMaybeElement<HTMLInputElement>(
+      `[data-material-amount-for="${CSS.escape(request.id)}"]`,
+    );
+    const error = queryMaybeElement<HTMLElement>(
+      `[data-material-amount-error-for="${CSS.escape(request.id)}"]`,
+    );
+    const message = errors.get(request.id) ?? "";
+
+    if (input) {
+      input.required = request.usage === "use-up";
+      if (message) {
+        input.setAttribute("aria-invalid", "true");
+      } else {
+        input.removeAttribute("aria-invalid");
+      }
+    }
+
+    if (error) {
+      error.hidden = !message;
+      error.textContent = message;
+      if (message) {
+        error.setAttribute("role", "alert");
+      } else {
+        error.removeAttribute("role");
+      }
+    }
+  }
+}
+
+function validateMaterialRequestPanel(state: AppState): boolean {
+  readMaterialRequestControls(state);
+  const errors = validateMaterialRequestAmounts(state.materialRequests);
+  renderMaterialUsePanel(state);
+  syncMaterialRequestValidationState(state);
+
+  const firstError = errors[0];
+  if (!firstError) {
+    return true;
+  }
+
+  queryMaybeElement<HTMLInputElement>(
+    `[data-material-amount-for="${CSS.escape(firstError.requestId)}"]`,
+  )?.focus();
+  return false;
+}
+
 function renderMaterialUsePanel(state: AppState): void {
   const panel = queryMaybeElement<HTMLElement>("#materialUsePanel");
   if (!panel) return;
-
-  if (getMaterialUseModeValue() !== "specified") {
-    panel.hidden = true;
-    panel.innerHTML = "";
-    return;
-  }
 
   panel.hidden = false;
 
@@ -244,44 +287,60 @@ function renderMaterialUsePanel(state: AppState): void {
     return;
   }
 
-  const hasSpecifiedMaterial = state.materialRequests.some((request) => request.usage !== "auto");
-  const prompt = hasSpecifiedMaterial
-    ? ""
-    : '<p class="field-hint">必要な材料だけ「必ず使う」または「使い切る」を選んでください。</p>';
+  const errors = getMaterialRequestErrors(state);
 
   panel.innerHTML = `
-    ${prompt}
+    <p class="field-hint">必要な材料だけ「必ず使う」または「使い切る」を選びます。量はどの使い方でも入力できます。</p>
     <div class="material-request-list">
       ${state.materialRequests
         .map((request) => {
-          const amountLabel = request.usage === "use-up" ? "使い切りたい量" : "使う量";
+          const amountLabel = request.usage === "use-up" ? "量（必須）" : "量（任意）";
+          const amountId = `materialAmount-${request.id}`;
+          const errorId = `materialAmountError-${request.id}`;
+          const errorMessage = errors.get(request.id) ?? "";
+          const invalidAttributes = errorMessage ? ' aria-invalid="true"' : "";
+          const describedBy = errorMessage ? ` aria-describedby="${errorId}"` : "";
 
           return `
-            <fieldset class="material-request-row" data-material-request-id="${request.id}">
-              <legend>${escapeHtml(request.name)}</legend>
+            <fieldset class="material-request-row" data-material-request-id="${request.id}" data-testid="material-card-${request.id}">
+              <legend class="material-request-name">${escapeHtml(request.name)}</legend>
+              <button
+                class="material-request-remove"
+                type="button"
+                data-remove-material="${escapeHtml(request.name)}"
+                aria-label="${escapeHtml(request.name)}を材料から削除"
+              >削除</button>
+              <div class="material-request-controls">
               ${renderRadioOptions(
                 `materialUsage-${request.id}`,
                 materialUsageOptions,
                 request.usage,
                 "segmented-control",
               )}
-              <div class="material-amount-controls"${request.usage === "auto" ? " hidden" : ""}>
-                ${renderRadioOptions(
-                  `useUpAmountMode-${request.id}`,
-                  useUpAmountModeOptions,
-                  request.useUpAmountMode,
-                  "choice-grid compact-choice-grid",
-                )}
-                <label class="text-input-label"${request.useUpAmountMode === "custom" ? "" : " hidden"}>
+                <label class="text-input-label material-amount-field underlined-field" for="${amountId}">
                   <span>${amountLabel}</span>
                   <input
+                    id="${amountId}"
+                    class="material-amount-input"
                     type="text"
                     value="${escapeHtml(request.useUpAmount)}"
                     data-material-amount-for="${request.id}"
+                    data-testid="material-amount-${request.id}"
                     placeholder="例: 150g、1/2個"
                     autocomplete="off"
+                    ${request.usage === "use-up" ? "required" : ""}
+                    aria-errormessage="${errorId}"
+                    ${describedBy}
+                    ${invalidAttributes}
                   />
                 </label>
+                <p
+                  id="${errorId}"
+                  class="field-error material-amount-error"
+                  data-material-amount-error-for="${request.id}"
+                  data-testid="material-use-up-error-${request.id}"
+                  ${errorMessage ? 'role="alert"' : "hidden"}
+                >${escapeHtml(errorMessage || USE_UP_AMOUNT_REQUIRED_MESSAGE)}</p>
               </div>
             </fieldset>
           `;
@@ -643,8 +702,7 @@ function renderMaterialUseField(): string {
   return `
     <fieldset class="field fieldset" data-testid="recipe-item-materialUse">
       <legend class="field-title">${fieldLabelHtml("材料の使い方", "leaf")}</legend>
-      ${renderRadioOptions("materialUseMode", materialUseModeOptions, "auto")}
-      <div id="materialUsePanel" class="material-use-panel" data-testid="material-use-panel" hidden></div>
+      <div id="materialUsePanel" class="material-use-panel" data-testid="material-use-panel"></div>
     </fieldset>
   `;
 }
@@ -812,6 +870,7 @@ function createOutputPanelServices(
     );
     readMaterialRequestControls(state);
     syncMaterialRequests(state, comboRegistry.getValues("materials"));
+    syncMaterialRequestValidationState(state);
     if (!amountInputActive) {
       renderMaterialUsePanel(state);
     }
@@ -833,7 +892,7 @@ function createOutputPanelServices(
   const conditionReader = createPromptDataReaderFromInputs({
     comboRegistry,
     getRequestIntent: getRequestIntentValue,
-    getMaterialUseMode: getMaterialUseModeValue,
+    getMaterialUseMode: () => "specified",
     getMaterialRequests: () => state.materialRequests,
     getServingsText: getServingsValue,
     getServingsMode,
@@ -857,6 +916,9 @@ function createOutputPanelServices(
     setNearBottom: (value) => {
       state.nearBottom = value;
     },
+    removeComboValue: (group, value) => {
+      comboRegistry.removeValue(group, value);
+    },
     clearCombo: (group) => {
       comboRegistry.clear(group);
     },
@@ -869,6 +931,7 @@ function createOutputPanelServices(
       const textarea = queryMaybeElement<HTMLTextAreaElement>("#supplementalNotes");
       if (textarea) textarea.value = "";
     },
+    validateBeforeAiRecipe: () => validateMaterialRequestPanel(state),
     onChange: notifyOutputChange,
   };
 }

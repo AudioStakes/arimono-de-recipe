@@ -140,6 +140,72 @@ test("食材未入力ではAI候補APIを呼ばず入力案内を表示する", 
   expect(callCount).toBe(0);
 });
 
+test("使い切る量が未入力ならAI候補APIを呼ばず、量入力後に送信できる", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let callCount = 0;
+  await page.route("**/api/recipe", async (route) => {
+    callCount += 1;
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    expect(body["materials"]).toEqual(["豆腐"]);
+    expect(body["notes"]).toBe("使切:豆腐(150g)");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: apiSuccessBody(),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+
+  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
+  await tofuRow.locator('input[value="use-up"]').check();
+  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeVisible();
+
+  await page.getByTestId("generate-recipe").click();
+  await expect(tofuRow.getByLabel("量（必須）")).toBeFocused();
+  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toHaveAttribute(
+    "role",
+    "alert",
+  );
+  expect(callCount).toBe(0);
+
+  const requestSeen = page.waitForRequest("**/api/recipe");
+  await tofuRow.getByLabel("量（必須）").fill("150g");
+  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeHidden();
+  await page.getByTestId("generate-recipe").click();
+  await requestSeen;
+  await expect(page.getByTestId("ai-recipe-panel")).toHaveAttribute("data-state", "success");
+  expect(callCount).toBe(1);
+});
+
+test("モバイルでも使い切る量が未入力ならAI候補APIを呼ばない", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  let callCount = 0;
+  await page.route("**/api/recipe", async (route) => {
+    callCount += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: apiSuccessBody(),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+
+  const tofuRow = page.locator("[data-material-request-id]").filter({ hasText: "豆腐" });
+  await tofuRow.locator('input[value="use-up"]').check();
+  await page.getByTestId("generate-recipe-mobile").click();
+
+  await expect(tofuRow.getByLabel("量（必須）")).toBeFocused();
+  await expect(tofuRow.getByText("使い切る場合は量を入力してください。")).toBeVisible();
+  await expect(page.getByTestId("mobile-prompt-panel")).toHaveAttribute("data-state", "closed");
+  expect(callCount).toBe(0);
+});
+
 test("API失敗時はエラーとコピー導線を維持し、コピーできる", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let callCount = 0;

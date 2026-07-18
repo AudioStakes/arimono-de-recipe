@@ -10,6 +10,11 @@ export {
   showRecipeDetail,
   startCandidateLoading,
 } from "./flow";
-export { getRecipeMaterialInputs, toRecipeDecisionMaterialUsage } from "./materials";
+export {
+  getRecipeMaterialInputs,
+  toRecipeDecisionMaterialUsage,
+  USE_UP_AMOUNT_REQUIRED_MESSAGE,
+  validateMaterialRequestAmounts,
+} from "./materials";
 export { buildPromptCopyFallback } from "./prompt-fallback";
 export type * from "./types";

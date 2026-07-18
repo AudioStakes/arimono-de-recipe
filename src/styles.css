@@ -620,6 +620,7 @@ header {
 
 .material-request-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
   min-inline-size: 0;
   margin: 0;
@@ -629,9 +630,33 @@ header {
   border-radius: var(--radius-md);
 }
 
-.material-amount-controls {
+.material-request-name {
+  min-inline-size: 0;
+  padding-inline-end: var(--space-3);
+  font-size: 1rem;
+}
+
+.material-request-remove {
+  align-self: start;
+  min-block-size: var(--space-7);
+  padding: 7px 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 900;
+  background: rgba(255, 249, 242, 0.86);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.material-request-remove:hover {
+  color: var(--error);
+  border-color: rgba(198, 69, 69, 0.28);
+}
+
+.material-request-controls {
   display: grid;
   gap: var(--space-3);
+  grid-column: 1 / -1;
 }
 
 .text-input-label {
@@ -640,6 +665,37 @@ header {
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.material-amount-field {
+  margin-block-start: 0;
+}
+
+.material-amount-field:has(.material-amount-input[aria-invalid="true"]) {
+  border-color: var(--error);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.field-error::before {
+  content: "!";
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  margin-inline-end: var(--space-1);
+  color: var(--surface-solid);
+  background: var(--error);
+  border-radius: 50%;
+}
+
+.field-error[hidden] {
+  display: none;
 }
 
 .textarea-field textarea {
