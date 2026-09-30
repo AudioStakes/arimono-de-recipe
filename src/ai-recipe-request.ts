@@ -43,10 +43,12 @@ export function getAiRecipeInputLimitError(data: PromptData): string | null {
   if (textValues.some(([value, limit]) => normalizeText(value).length > limit)) {
     return "AI候補の依頼条件が長すぎます。内容を短くするか、依頼文コピーを使ってください。";
   }
-  if (
-    data.materials.length > 0 &&
-    !parseAiRecipeCandidateRequest(buildAiRecipeCandidateRequest(data)).ok
-  ) {
+  const request = buildAiRecipeCandidateRequest(data);
+  const constrainedMaterials = request.materials.filter((material) => material.usage !== "auto");
+  if (constrainedMaterials.length > aiRecipeCandidateLimits.response.maxIngredients) {
+    return `AI候補では「必ず使う・使い切る」材料は合計${aiRecipeCandidateLimits.response.maxIngredients}件までです。指定を減らすか、依頼文コピーを使ってください。`;
+  }
+  if (data.materials.length > 0 && !parseAiRecipeCandidateRequest(request).ok) {
     return "AI候補の依頼条件を確認してください。項目を減らすか、依頼文コピーを使ってください。";
   }
   return null;

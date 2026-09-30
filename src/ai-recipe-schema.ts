@@ -267,6 +267,11 @@ export function parseAiRecipeCandidateRequest(
 
   const request: AiRecipeCandidateRequest = { mode: "candidates", materials };
   if (
+    getConstrainedMaterialNames(request).length > aiRecipeCandidateLimits.response.maxIngredients
+  ) {
+    return invalid("too many constrained materials");
+  }
+  if (
     !appendOptionalBoolean(request, "allowShopping", value["allowShopping"]) ||
     !appendOptionalString(
       request,

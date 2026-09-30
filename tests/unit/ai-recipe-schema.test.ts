@@ -52,6 +52,18 @@ function materials(...names: string[]): AiRecipeMaterialInput[] {
   return names.map((name) => ({ name, usage: "auto" }));
 }
 
+test("候補の材料上限を超える必須指定はAPI入力でも拒否する", () => {
+  const inputs: AiRecipeMaterialInput[] = Array.from({ length: 7 }, (_, index) => ({
+    name: `材料${index}`,
+    usage: index % 2 === 0 ? "required" : "use_up",
+    amount: "1個",
+  }));
+  expect(parseAiRecipeCandidateRequest({ mode: "candidates", materials: inputs }).ok).toBe(false);
+  expect(
+    parseAiRecipeCandidateRequest({ mode: "candidates", materials: inputs.slice(0, 6) }).ok,
+  ).toBe(true);
+});
+
 describe("ai recipe schema", () => {
   test("candidate requestを検証し、compact model inputを作る", () => {
     const parsed = parseAiRecipeCandidateRequest({

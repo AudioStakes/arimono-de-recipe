@@ -9,6 +9,31 @@ import { makeEmptyPromptData } from "../../src/prompt";
 const aiRecipeRequestLimits = aiRecipeCandidateLimits.request;
 
 describe("buildAiRecipeCandidateRequest", () => {
+  test("候補に入りきらない必須材料の指定をAI送信前に案内する", () => {
+    const names = Array.from({ length: 7 }, (_, index) => `材料${index}`);
+    const data = makeEmptyPromptData({
+      materials: names,
+      materialUseMode: "specified",
+      materialRequests: names.map((name, index) => ({
+        id: `material-${index}`,
+        name,
+        usage: "required",
+        useUpAmountMode: "as-written",
+        useUpAmount: "",
+      })),
+    });
+    expect(getAiRecipeInputLimitError(data)).toContain("合計6件まで");
+    expect(getAiRecipeInputLimitError(data)).toContain("依頼文コピー");
+    data.materialRequests[0] = {
+      ...data.materialRequests[0],
+      id: "material-0",
+      name: "材料0",
+      usage: "auto",
+      useUpAmountMode: "as-written",
+      useUpAmount: "",
+    };
+    expect(getAiRecipeInputLimitError(data)).toBeNull();
+  });
   test("NG指定を上限で黙って切り捨てず、送信前のエラーにできる", () => {
     const data = makeEmptyPromptData({
       materials: ["豆腐"],

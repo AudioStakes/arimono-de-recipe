@@ -25,7 +25,7 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 
 | ID | 優先度 | 調査時の問題・影響 | 改善と証拠 |
 |---|---|---|---|
-| 01 | P0 | AI依頼の材料・要望・NG項目・補足が上限で切られ、入力した条件が黙って落ちる。NG9件なら9件目を送らない。 | `ai-recipe-request.ts` で送信前に上限を検証し、条件を減らすかコピーを使う案内を表示。NG9件でAPI呼び出し0回、コピーに全条件が残るE2Eを追加。 |
+| 01 | P0 | AI依頼の材料・要望・NG項目・補足が上限で切られ、入力した条件が黙って落ちる。NG9件なら9件目を送らない。必須材料7件以上も候補の材料6項目上限と両立しない。 | `ai-recipe-request.ts` で送信前に上限を検証し、条件を減らすかコピーを使う案内を表示。必須・使い切り指定は合計6件までとし、API入力でも検証。NG9件・必須7件でAPI呼び出し0回、コピーに条件が残るE2Eを追加。 |
 | 02 | P0 | 材料の部分一致で「塩漬け豚肉」を「塩」、「油揚げ」を「油」、「豆腐ハンバーグ」を「豆腐」として許可できる。買い足しなしの検証を迂回する。 | `ai-recipe-schema.ts` を材料名と限定した分量表記の照合へ変更。別食材を許可しない回帰テストを追加。 |
 | 03 | P0 | NG食材の検証対象に調理手順がなく、材料一覧から除外しても手順で使用できる。 | `steps` もNG照合の対象にし、手順にNG食材が出る応答を拒否するテストを追加。別名等の限界は項目28を参照。 |
 | 04 | P1 | 「必ず使う」材料をAIが `use` に申告するだけで通り、実際の材料一覧 `ing` に含まれない応答を許可する。 | 必須・使い切り材料が `ing` にもあることを検証。自己申告だけでは通らないテストを追加。 |
@@ -81,8 +81,8 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 | 確認 | 結果 |
 |---|---|
 | `npm run format` / `format:check` / `lint` / `typecheck` / `build` | 終了コード0。Node.js 24.19.0 / npm 11.9.0で確認。 |
-| `npx vitest run tests/unit tests/structure --reporter=default` | 終了コード0。ユニット137件・構造15件、合計152件が成功。 |
-| `npm run test:e2e -- --config /tmp/arimono-playwright.config.mjs --workers=2` | 終了コード0。Chromiumデスクトップ・Pixel 7相当で全98件成功。環境上のブラウザ制約は下記。 |
+| `npx vitest run tests/unit tests/structure --reporter=default` | 終了コード0。ユニット139件・構造15件、合計154件が成功。 |
+| `npm run test:e2e -- --config /tmp/arimono-playwright.config.mjs --workers=2` | 終了コード0。先行修正の98件がChromiumデスクトップ・Pixel 7相当で成功。追加した必須材料上限のE2Eは最新PRの標準CIで確認する。環境上のブラウザ制約は下記。 |
 | `npm audit --json` | 終了コード0。脆弱性11件→0件。開発用依存に関する検査時点の結果であり、将来の無脆弱性を保証しない。 |
 | `npx wrangler pages functions build --outdir /tmp/arimono-function-build` | 終了コード0。Functionのコンパイル成功。 |
 | `npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 --compatibility-date 2026-09-29` とHTTP/Playwright smoke | 静的配信200、CSP等のヘッダー、API GET 405、AI未設定500、APIのno-storeを確認。コピーだけのAPI呼び出し0回、候補要求で1回、エラー時のコピー・モバイル操作が成功。CSP違反・JavaScriptエラー0件。 |

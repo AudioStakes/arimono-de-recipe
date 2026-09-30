@@ -540,6 +540,27 @@ test("上限超過のNG指定は送信せず、コピーにはすべて残す", 
   expect(calls).toBe(0);
 });
 
+test("必須材料7件はAIへ送信せず、依頼文コピーに残す", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let calls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: "application/json", body: apiSuccessBody() });
+  });
+  await page.goto("/");
+  for (let index = 0; index < 7; index += 1) {
+    const name = `材料${index}`;
+    await page.getByTestId("combo-input-materials").fill(name);
+    await page.getByTestId("combo-input-materials").press("Enter");
+    await materialUsageOption(materialCard(page, name), "required").check();
+  }
+  await page.getByTestId("generate-recipe").click();
+  await expect(page.getByTestId("ai-recipe-error")).toContainText("合計6件まで");
+  await expect(page.getByTestId("copy-prompt")).toBeEnabled();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/材料6/);
+  expect(calls).toBe(0);
+});
+
 test("NGの調味料を候補詳細と調理ビューの味の調整でも勧めない", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.route("**/api/recipe", (route) =>
