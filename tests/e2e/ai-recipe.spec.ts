@@ -476,6 +476,107 @@ test("モバイルの固定CTAから候補を見て詳細選択しても追加AP
   expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
 });
 
+for (const { width, prefix, trigger } of [
+  { width: 1280, prefix: "", trigger: "generate-recipe" },
+  { width: 390, prefix: "mobile-", trigger: "generate-recipe-mobile" },
+]) {
+  test(`${prefix || "desktop-"}調理タブをキーボードだけで切り替えられる`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/api/recipe", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: apiSuccessBody(),
+      }),
+    );
+    await page.goto("/");
+    await expect(page.getByTestId("ai-privacy-notice")).toContainText("CloudflareのAIへ送信");
+    await page.getByTestId("combo-input-materials").fill("豆腐");
+    await page.getByTestId("combo-input-materials").press("Enter");
+    await page.getByTestId(trigger).click();
+    await page.getByTestId(`${prefix}recipe-candidate-select-a`).click();
+    await page.getByTestId(`${prefix}recipe-candidate-cook`).click();
+    const tab = (name: string) => page.getByTestId(`${prefix}recipe-cooking-tab-${name}`);
+    const panel = page.getByTestId(`${prefix}recipe-cooking-panel`);
+    await tab("materials").focus();
+    await tab("materials").press("ArrowRight");
+    await expect(tab("instructions")).toBeFocused();
+    await expect(tab("instructions")).toHaveAttribute("aria-selected", "true");
+    await expect(panel).toContainText("豆腐を温める");
+    await tab("instructions").press("End");
+    await expect(tab("taste")).toBeFocused();
+    await tab("taste").press("ArrowRight");
+    await expect(tab("materials")).toBeFocused();
+    await tab("materials").press("ArrowLeft");
+    await expect(tab("taste")).toBeFocused();
+    await tab("taste").press("Home");
+    await expect(tab("materials")).toBeFocused();
+    await tab("materials").press("Tab");
+    await expect(panel).toBeFocused();
+  });
+}
+
+test("上限超過のNG指定は送信せず、コピーにはすべて残す", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let calls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: "application/json", body: apiSuccessBody() });
+  });
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+  await page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings").click();
+  for (let index = 0; index < 9; index += 1) {
+    await page.getByTestId("combo-input-ngFoodsAndSeasonings").fill(`NG${index}`);
+    await page.getByTestId("combo-input-ngFoodsAndSeasonings").press("Enter");
+  }
+  await page.getByTestId("generate-recipe").click();
+  await expect(page.getByTestId("ai-recipe-error")).toContainText("8件まで");
+  await expect(page.getByTestId("copy-prompt")).toBeEnabled();
+  for (let index = 0; index < 9; index += 1) {
+    await expect(page.getByTestId("prompt-output")).toHaveValue(new RegExp(`NG${index}`));
+  }
+  expect(calls).toBe(0);
+});
+
+test("NGの調味料を候補詳細と調理ビューの味の調整でも勧めない", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.route("**/api/recipe", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        items: candidateResponse.items.map((candidate) => ({
+          ...candidate,
+          ing: candidate.ing.filter((name) => !["しょうゆ", "塩", "だし"].includes(name)),
+        })),
+        model: "test-model",
+        usage: null,
+      }),
+    }),
+  );
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+  await page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings").click();
+  for (const name of ["塩", "しょうゆ", "だし"]) {
+    await page.getByTestId("combo-input-ngFoodsAndSeasonings").fill(name);
+    await page.getByTestId("combo-input-ngFoodsAndSeasonings").press("Enter");
+  }
+  await page.getByTestId("generate-recipe").click();
+  await page.getByTestId("recipe-candidate-select-a").click();
+  const detail = page.getByTestId("recipe-candidate-detail");
+  await expect(detail).toContainText("NG食材・調味料を加えず");
+  await expect(detail).not.toContainText("しょうゆ");
+  await page.getByTestId("recipe-candidate-cook").click();
+  await page.getByTestId("recipe-cooking-tab-taste").click();
+  const panel = page.getByTestId("recipe-cooking-panel");
+  await expect(panel).toContainText("濃ければ水でのばす");
+  await expect(panel).not.toContainText("しょうゆ");
+  await expect(panel).not.toContainText("だし");
+});
+
 test("条件変更後の古いAI応答は表示しない", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let resolveApiResponse: (() => void) | undefined;

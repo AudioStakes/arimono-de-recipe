@@ -60,6 +60,17 @@ describe("recipe candidate list labels", () => {
     ]);
   });
 
+  test("味の調整でもNGの調味料と表記違いを勧めない", () => {
+    expect(getTasteAdjustmentLabels(["醤油", "鰹だし"])).toEqual([
+      "塩は少量ずつ足す",
+      "濃ければ水でのばす",
+    ]);
+    expect(getTasteAdjustmentLabels(["塩", "しょうゆ", "水", "出汁"])).toEqual([
+      "NG食材・調味料を加えず、少量ずつ味見する",
+      "少量ずつ味見し、濃さを確認する",
+    ]);
+  });
+
   test("調理ビューの材料tab用に調味料・その他を分ける", () => {
     expect(
       getSeasoningLabels(

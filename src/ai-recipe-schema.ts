@@ -27,7 +27,7 @@ export const aiRecipeCandidateLimits = {
     maxBadges: 4,
     maxUse: 12,
     maxMissing: 6,
-    maxListItemLength: 48,
+    maxListItemLength: 80,
     maxStepLength: 60,
     minTime: 1,
     maxTime: 240,
@@ -523,19 +523,27 @@ function matchesList(value: string, items: readonly string[]): boolean {
   return items.some((item) => normalizedValue === normalizeForComparison(item));
 }
 
+// Accept a literal ingredient name, optionally followed by a simple quantity.
+// Substring matching would also allow unrelated ingredients such as 塩漬け豚肉 for 塩.
+const ingredientAmountPattern =
+  /^[（(]?(?:約)?(?:(?:大さじ|小さじ)?[0-9０-９.,/／]+(?:kg|g|ml|l|グラム|個|玉|枚|本|袋|丁|束|片|缶|パック|カップ)?|少々|適量|ひとつまみ)[）)]?$/i;
+
 function mentionsListItem(value: string, items: readonly string[]): boolean {
   const normalizedValue = normalizeForComparison(value);
   return items.some((item) => {
     const normalizedItem = normalizeForComparison(item);
-    return normalizedValue === normalizedItem || normalizedValue.includes(normalizedItem);
+    if (normalizedValue === normalizedItem) {
+      return true;
+    }
+    return (
+      normalizedValue.startsWith(normalizedItem) &&
+      ingredientAmountPattern.test(normalizedValue.slice(normalizedItem.length))
+    );
   });
 }
 
 function mentionsAssumedPantryIngredient(value: string): boolean {
-  const normalizedValue = normalizeForComparison(value);
-  return [...assumedPantryIngredients].some(
-    (ingredient) => normalizedValue === ingredient || normalizedValue.includes(ingredient),
-  );
+  return mentionsListItem(value, [...assumedPantryIngredients]);
 }
 
 function findMentionedRequestMaterial(
@@ -647,6 +655,14 @@ export function validateAiRecipeCandidatesForRequest(
       return invalid("candidate must use constrained materials");
     }
 
+    if (
+      constrainedMaterials.some(
+        (material) => !item.ing.some((value) => mentionsListItem(value, [material])),
+      )
+    ) {
+      return invalid("candidate ingredients must include constrained materials");
+    }
+
     const unaccountedIngredients = item.ing.filter(
       (ingredient) =>
         !mentionsListItem(ingredient, requestMaterialNames) &&
@@ -660,7 +676,7 @@ export function validateAiRecipeCandidatesForRequest(
     }
 
     if (request.avoid?.length) {
-      const checkedValues = [...item.use, ...item.miss, ...item.ing];
+      const checkedValues = [...item.use, ...item.miss, ...item.ing, ...item.steps];
       if (checkedValues.some((value) => conflictsWithAvoid(value, request.avoid ?? []))) {
         return invalid("candidate conflicts with avoid list");
       }

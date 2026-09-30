@@ -41,7 +41,7 @@
 - ADR 0011 の `/api/recipe` 以外で、API 連携を行わない。
 - ADR 0011 の Cloudflare Pages Function 以外で、サーバー処理を行わない。
 - ログイン機能を持たない。
-- ユーザーが `AIでレシピを作成` を押した場合を除き、入力内容を外部送信しない。
+- ユーザーが `今日の候補を見る` を押した場合を除き、入力内容を外部送信しない。
 - ADR 0011 の Cloudflare Workers AI 送信以外で、外部送信や保存を前提とする設計にしない。
 - 未指定項目はプロンプトに出力しない。
 - 未指定項目に対応するルール文も出力しない。
@@ -72,7 +72,7 @@
 ## Expected Commands
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm run format:check
 npm run lint
@@ -147,9 +147,8 @@ If `npm run check` is too broad, run the smallest relevant subset and report why
 <!-- headroom:rtk-instructions -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
-When running shell commands, **always prefix with `rtk`**. This reduces context
-usage by 60-90% with zero behavior change. If rtk has no filter for a command,
-it passes through unchanged — so it is always safe to use.
+RTK is optional. If installed, it can reduce command output; if unavailable,
+run the documented Git/npm commands directly. It is not a setup prerequisite.
 
 ## Key Commands
 ```bash
@@ -182,7 +181,7 @@ rtk pip list            rtk pnpm install        rtk npm run <script>
 ```
 
 ## Rules
-- In command chains, prefix each segment: `rtk git add . && rtk git commit -m "msg"`
+- When using RTK in command chains, prefix each segment: `rtk git add . && rtk git commit -m "msg"`
 - For debugging, use raw command without rtk prefix
 - `rtk proxy <cmd>` runs command without filtering but tracks usage
 <!-- /headroom:rtk-instructions -->

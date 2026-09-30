@@ -99,7 +99,10 @@ function uniqueList(values: readonly string[]): string[] {
 function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknown {
   const allowShopping = request.allowShopping === true;
   const availableIngredients = uniqueList(request.materials.map((material) => material.name));
-  const recipeIngredients = uniqueList([...availableIngredients, ...aiRecipeAssumedPantryIngredients]);
+  const recipeIngredients = uniqueList([
+    ...availableIngredients,
+    ...aiRecipeAssumedPantryIngredients,
+  ]);
   const badgeValues = allowShopping
     ? ["miss_optional", "quick", "easy", "uses_up", "few_dishes", "kids"]
     : ["quick", "easy", "uses_up", "few_dishes", "kids"];
@@ -208,6 +211,8 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
   headers.set("content-type", "application/json; charset=utf-8");
+  headers.set("cache-control", "no-store");
+  headers.set("x-content-type-options", "nosniff");
   return Response.json(body, {
     ...init,
     headers,
@@ -303,6 +308,7 @@ async function readRequestText(request: Request): Promise<string | Response> {
     if (done) break;
     bytes += value.byteLength;
     if (bytes > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => undefined);
       return errorResponse(413, "body_too_large", "リクエスト本文が長すぎます。");
     }
     text += decoder.decode(value, { stream: true });
@@ -313,7 +319,7 @@ async function readRequestText(request: Request): Promise<string | Response> {
 
 function hasJsonContentType(request: Request): boolean {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  return contentType.includes("application/json");
+  return contentType.split(";", 1)[0]?.trim() === "application/json";
 }
 
 function hasAllowedOrigin(request: Request): boolean {
@@ -388,7 +394,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return errorResponse(500, "ai_binding_unavailable", "AI設定を確認してください。");
   }
 
-  const body = await readParsedRequestBody(context.request);
+  let body: RecipeParsedBody | Response;
+  try {
+    body = await readParsedRequestBody(context.request);
+  } catch {
+    return errorResponse(400, "invalid_request", "リクエスト本文を読み取れませんでした。");
+  }
   if (body instanceof Response) {
     return body;
   }

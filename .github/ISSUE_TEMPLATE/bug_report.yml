@@ -1,0 +1,33 @@
+name: 不具合の報告
+description: 画面やコピー、料理候補の不具合を報告する
+body:
+  - type: markdown
+    attributes:
+      value: |
+        個人情報や秘密情報を含めないでください。脆弱性はSECURITY.mdの非公開報告手順を確認してください。
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      description: 入力例は実ユーザーのデータを避け、ダミーの材料を使ってください。
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 期待した結果と実際の結果
+      description: AI候補の問題の場合は、依頼文コピーを利用できるかも書いてください。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: ブラウザ・OS・端末
+      placeholder: Chrome / Windows / PC、Safari / iOS / iPhone 等
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 補足・スクリーンショット
+      description: 自分で動かしている場合は、コミット・Node.jsバージョン・ViteかPagesかも分かる範囲で記載してください。

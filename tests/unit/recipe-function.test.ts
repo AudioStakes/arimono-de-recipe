@@ -83,6 +83,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 describe("POST /api/recipe", () => {
+  test("成功・エラーとも入力由来の応答をキャッシュさせない", async () => {
+    const env = { AI: { run: vi.fn().mockResolvedValue({ response: candidateResponse }) } };
+    for (const request of [createRequest(candidateRequest), new Request(apiUrl)]) {
+      const response = await onRequest(createContext(request, env));
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    }
+    expect(env.AI.run).toHaveBeenCalledTimes(1);
+  });
+
+  test("JSONに見せかけた別media typeはAIを呼ばず拒否する", async () => {
+    const request = createRequest(candidateRequest);
+    request.headers.set("content-type", "text/plain; application/json");
+    const run = vi.fn();
+    const response = await onRequest(createContext(request, { AI: { run } }));
+    expect(response.status).toBe(415);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test("本文ストリームの例外は入力や内部エラーを漏らさず扱う", async () => {
+    const request = new Request(apiUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://example.test" },
+      body: new ReadableStream({
+        start(controller) {
+          controller.error(new Error("private input"));
+        },
+      }),
+      duplex: "half",
+    } as RequestInit);
+    const run = vi.fn();
+    const response = await onRequest(createContext(request, { AI: { run } }));
+    expect(response.status).toBe(400);
+    expect(await response.text()).not.toContain("private input");
+    expect(run).not.toHaveBeenCalled();
+  });
+
   test("POST以外を405で拒否する", async () => {
     const response = await onRequest(
       createContext(new Request(apiUrl, { method: "GET" }), {

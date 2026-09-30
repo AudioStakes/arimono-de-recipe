@@ -43,3 +43,5 @@ Implementation order for the recipe-decision redesign:
 11. #17 Documentation and ADR update.
 
 This ADR extends ADR 0011. ADR 0011 remains the approved boundary for `/api/recipe`, Cloudflare Workers AI, and the prompt-copy fallback.
+
+Implementation note: the current button is `今日の候補を見る`. It sends compact structured candidate conditions to `/api/recipe`, rather than the full copied request text described in ADR 0011. `buildPrompt(data)` remains the source of truth for the independent prompt-copy path. See `src/ai-recipe-request.ts` and `src/ai-recipe-schema.ts` for the candidate payload and limits.

@@ -1,5 +1,5 @@
 import { generateRecipe } from "./ai-recipe-client";
-import { buildAiRecipeCandidateRequest } from "./ai-recipe-request";
+import { buildAiRecipeCandidateRequest, getAiRecipeInputLimitError } from "./ai-recipe-request";
 import type { AppElements } from "./app-elements";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
 import { renderRecipeCandidateList, renderRecipeCookingView } from "./recipe-candidate-list";
@@ -231,6 +231,7 @@ function renderAiRecipeSurface(
           surface,
           candidate: cookingCandidate,
           materialInputs: aiRecipe.request?.materials ?? [],
+          avoid: aiRecipe.request?.avoid ?? [],
           activeTab: aiRecipe.cookingTab,
           onTabChange: (tab) => changeCookingTab(state, elements, tab, surface),
           onBack: () => returnToRecipeDetail(state, elements, surface),
@@ -242,6 +243,7 @@ function renderAiRecipeSurface(
           surface,
           candidates: aiRecipe.candidates.items,
           materialInputs: aiRecipe.request?.materials ?? [],
+          avoid: aiRecipe.request?.avoid ?? [],
           selectedCandidateId: aiRecipe.selectedCandidateId,
           onSelect: (candidateId) => selectRecipeCandidate(state, elements, candidateId, surface),
           onCook: (candidateId) => startCookingCandidate(state, elements, candidateId, surface),
@@ -415,19 +417,21 @@ export async function createAiRecipe(
   }
 
   const requestId = state.aiRecipe.requestId + 1;
-  const request = buildAiRecipeCandidateRequest(services.readConditions());
-  if (request.materials.length === 0) {
+  const data = services.readConditions();
+  const request = buildAiRecipeCandidateRequest(data);
+  const inputLimitError = getAiRecipeInputLimitError(data);
+  if (request.materials.length === 0 || inputLimitError) {
     state.aiRecipe = {
       status: "error",
       activeSurface: surface,
-      request,
+      request: inputLimitError ? null : request,
       candidates: null,
       selectedCandidateId: "",
       cookingCandidateId: "",
       cookingTab: "materials",
       model: "",
       usage: null,
-      errorMessage: EMPTY_MATERIALS_MESSAGE,
+      errorMessage: inputLimitError ?? EMPTY_MATERIALS_MESSAGE,
       requestId,
     };
     renderAiRecipePanel(state, elements, services);
@@ -481,7 +485,10 @@ export async function createAiRecipe(
       cookingTab: "materials",
       model: "",
       usage: null,
-      errorMessage: FALLBACK_MESSAGE,
+      errorMessage:
+        result.error.code === "request_timed_out"
+          ? `${result.error.message} ${FALLBACK_MESSAGE}`
+          : FALLBACK_MESSAGE,
       requestId,
     };
   }

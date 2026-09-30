@@ -10,11 +10,13 @@
     "includes": [
       "index.html",
       "src/**/*.ts",
+      "functions/**/*.ts",
       "src/**/*.css",
       "tests/**/*.ts",
       "*.json",
       "*.ts",
       "*.md",
+      "public/_routes.json",
       ".github/**/*.yml"
     ]
   },

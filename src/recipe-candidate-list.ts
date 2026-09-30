@@ -9,6 +9,7 @@ type RecipeCandidateListOptions = {
   surface: AiRecipeSurface;
   candidates: readonly AiRecipeCandidate[];
   materialInputs: readonly AiRecipeMaterialInput[];
+  avoid?: readonly string[];
   selectedCandidateId: string;
   onSelect: (candidateId: string) => void;
   onCook: (candidateId: string) => void;
@@ -19,6 +20,7 @@ type RecipeCookingViewOptions = {
   surface: AiRecipeSurface;
   candidate: AiRecipeCandidate;
   materialInputs: readonly AiRecipeMaterialInput[];
+  avoid?: readonly string[];
   activeTab: AiRecipeCookingTab;
   onTabChange: (tab: AiRecipeCookingTab) => void;
   onBack: () => void;
@@ -114,8 +116,25 @@ export function getSeasoningLabels(candidate: AiRecipeCandidate): string[] {
   });
 }
 
-export function getTasteAdjustmentLabels(): string[] {
-  return ["塩・しょうゆは少量ずつ足す", "濃ければ水かだしでのばす"];
+export function getTasteAdjustmentLabels(avoid: readonly string[] = []): string[] {
+  const isAvoided = (names: readonly string[]) =>
+    avoid.some((value) => names.some((name) => normalizeForComparison(value).includes(name)));
+  const seasonings = [
+    ...(!isAvoided(["塩"]) ? ["塩"] : []),
+    ...(!isAvoided(["しょうゆ", "醤油"]) ? ["しょうゆ"] : []),
+  ];
+  const diluents = [
+    ...(!isAvoided(["水"]) ? ["水"] : []),
+    ...(!isAvoided(["だし", "出汁"]) ? ["だし"] : []),
+  ];
+  return [
+    seasonings.length > 0
+      ? `${seasonings.join("・")}は少量ずつ足す`
+      : "NG食材・調味料を加えず、少量ずつ味見する",
+    diluents.length > 0
+      ? `濃ければ${diluents.join("か")}でのばす`
+      : "少量ずつ味見し、濃さを確認する",
+  ];
 }
 
 function getTestId(surface: AiRecipeSurface, testId: string): string {
@@ -259,7 +278,10 @@ function renderCandidateDetail(
   }
 
   const tasteHeading = renderTextElement("h5", "味の調整", "recipe-candidate-subheading");
-  const taste = renderInlineList(getTasteAdjustmentLabels(), "recipe-candidate-detail-list");
+  const taste = renderInlineList(
+    getTasteAdjustmentLabels(options.avoid),
+    "recipe-candidate-detail-list",
+  );
 
   const cook = document.createElement("button");
   cook.type = "button";
@@ -299,7 +321,7 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
   tabList.setAttribute("aria-label", "調理内容");
 
   const panelId = getTestId(options.surface, "recipe-cooking-panel");
-  for (const tab of cookingTabs) {
+  for (const [index, tab] of cookingTabs.entries()) {
     const selected = tab.id === options.activeTab;
     const button = document.createElement("button");
     button.type = "button";
@@ -312,6 +334,28 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
     button.tabIndex = selected ? 0 : -1;
     button.setAttribute("data-testid", getTestId(options.surface, `recipe-cooking-tab-${tab.id}`));
     button.addEventListener("click", () => options.onTabChange(tab.id));
+    button.addEventListener("keydown", (event) => {
+      let nextIndex: number;
+      switch (event.key) {
+        case "ArrowRight":
+          nextIndex = (index + 1) % cookingTabs.length;
+          break;
+        case "ArrowLeft":
+          nextIndex = (index + cookingTabs.length - 1) % cookingTabs.length;
+          break;
+        case "Home":
+          nextIndex = 0;
+          break;
+        case "End":
+          nextIndex = cookingTabs.length - 1;
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      const nextTab = cookingTabs[nextIndex];
+      if (nextTab) options.onTabChange(nextTab.id);
+    });
     tabList.appendChild(button);
   }
 
@@ -319,6 +363,7 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
   panel.className = "recipe-cooking-panel";
   panel.id = panelId;
   panel.setAttribute("role", "tabpanel");
+  panel.tabIndex = 0;
   panel.setAttribute(
     "aria-labelledby",
     getTestId(options.surface, `recipe-cooking-tab-${options.activeTab}`),
@@ -357,7 +402,10 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
 
   if (options.activeTab === "taste") {
     const tasteHeading = renderTextElement("h5", "味の調整", "recipe-candidate-subheading");
-    const taste = renderInlineList(getTasteAdjustmentLabels(), "recipe-candidate-detail-list");
+    const taste = renderInlineList(
+      getTasteAdjustmentLabels(options.avoid),
+      "recipe-candidate-detail-list",
+    );
     panel.append(tasteHeading, taste);
   }
 

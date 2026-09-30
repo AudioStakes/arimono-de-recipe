@@ -19,6 +19,7 @@ export type GenerateRecipeFailure = {
 export type GenerateRecipeResult = GenerateRecipeSuccess | GenerateRecipeFailure;
 
 const maxAiRecipeRequestBodyLength = 2400;
+export const aiRecipeRequestTimeoutMs = 30_000;
 
 type ApiErrorResponse = {
   error: {
@@ -72,6 +73,8 @@ export async function generateRecipe(
   }
 
   let response: Response;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), aiRecipeRequestTimeoutMs);
 
   try {
     response = await fetcher("/api/recipe", {
@@ -80,17 +83,30 @@ export async function generateRecipe(
         "content-type": "application/json",
       },
       body,
+      signal: controller.signal,
     });
+    const result = await readRecipeResponse(response);
+    return controller.signal.aborted ? connectionFailure(true) : result;
   } catch {
-    return {
-      ok: false,
-      error: {
-        code: "network_error",
-        message: "AIへの接続に失敗しました。",
-      },
-    };
+    return connectionFailure(controller.signal.aborted);
+  } finally {
+    clearTimeout(timeout);
   }
+}
 
+function connectionFailure(timedOut: boolean): GenerateRecipeFailure {
+  return {
+    ok: false,
+    error: {
+      code: timedOut ? "request_timed_out" : "network_error",
+      message: timedOut
+        ? "AIの応答待ちが長くなったため中断しました。"
+        : "AIへの接続に失敗しました。",
+    },
+  };
+}
+
+async function readRecipeResponse(response: Response): Promise<GenerateRecipeResult> {
   const payload = await readJson(response);
 
   if (!response.ok) {

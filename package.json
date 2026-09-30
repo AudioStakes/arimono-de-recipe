@@ -1,6 +1,18 @@
 {
   "name": "arimono-de-recipe",
   "version": "0.1.0",
+  "description": "家にある食材・材料から料理候補とAI向けレシピ依頼文を作るWebアプリ",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AudioStakes/arimono-de-recipe.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AudioStakes/arimono-de-recipe/issues"
+  },
+  "license": "UNLICENSED",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,14 +36,13 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test:unit && npm run test:structure && npm run test:e2e"
   },
   "devDependencies": {
-    "@biomejs/biome": "latest",
-    "@cloudflare/workers-types": "^4.20260617.1",
-    "@playwright/test": "latest",
-    "@types/node": "^25.9.3",
-    "htmlhint": "latest",
-    "typescript": "latest",
-    "vite": "latest",
-    "vitest": "^4.1.7",
-    "wrangler": "^4.101.0"
+    "@biomejs/biome": "2.4.15",
+    "@playwright/test": "1.60.0",
+    "@types/node": "22.20.4",
+    "htmlhint": "1.9.2",
+    "typescript": "6.0.3",
+    "vite": "8.0.16",
+    "vitest": "4.1.11",
+    "wrangler": "4.144.0"
   }
 }
