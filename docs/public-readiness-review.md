@@ -82,13 +82,13 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 |---|---|
 | `npm run format` / `format:check` / `lint` / `typecheck` / `build` | 終了コード0。Node.js 24.19.0 / npm 11.9.0で確認。 |
 | `npx vitest run tests/unit tests/structure --reporter=default` | 終了コード0。ユニット139件・構造15件、合計154件が成功。 |
-| `npm run test:e2e -- --config /tmp/arimono-playwright.config.mjs --workers=2` | 終了コード0。先行修正の98件がChromiumデスクトップ・Pixel 7相当で成功。追加した必須材料上限のE2Eは最新PRの標準CIで確認する。環境上のブラウザ制約は下記。 |
+| `npm run check`（GitHub Actions） | 終了コード0。[標準CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36654321661)でNode.js 22.23.2と標準Chromiumを使用。ユニット139件・構造15件・E2E100件、計254件が成功。必須材料上限の追加テストも含む。 |
 | `npm audit --json` | 終了コード0。脆弱性11件→0件。開発用依存に関する検査時点の結果であり、将来の無脆弱性を保証しない。 |
 | `npx wrangler pages functions build --outdir /tmp/arimono-function-build` | 終了コード0。Functionのコンパイル成功。 |
 | `npx wrangler pages dev dist --ip 127.0.0.1 --port 8788 --compatibility-date 2026-09-29` とHTTP/Playwright smoke | 静的配信200、CSP等のヘッダー、API GET 405、AI未設定500、APIのno-storeを確認。コピーだけのAPI呼び出し0回、候補要求で1回、エラー時のコピー・モバイル操作が成功。CSP違反・JavaScriptエラー0件。 |
 | `git diff --check` / 秘密情報パターン検査 | 差分の空白エラーなし。調査したテキストで該当パターンの検出なし。 |
 
-ローカルのPlaywright標準ブラウザ（Chromium 148）はCDNダウンロードが破損して取得できなかったため、作業環境だけにChromium 153を用意し、一時configで実行した。これはリポジトリの依存やCI設定には追加していない。CIでは標準の `npx playwright install --with-deps chromium` と `npm run check` を使う。PR上のCI結果も併せて確認する。
+ローカルのPlaywright標準ブラウザ（Chromium 148）はCDNダウンロードが破損して取得できなかったため、作業環境だけにChromium 153を用意し、一時configで先行修正の98件を実行した。これはリポジトリの依存やCI設定には追加していない。追加修正を含む100件のE2Eは、CIで標準の `npx playwright install --with-deps chromium` と `npm run check` を使い、成功を確認した。CIのHTMLレポートも保存される。
 
 未実施: 実Workers AIの呼び出し・品質測定、Cloudflareの本番設定・料金制御、Safari/Firefox実機、履歴のバイナリと非到達オブジェクト、非公開脆弱性報告の実送信。アカウント設定・費用・機密データ・第三者への送信を伴うものは、所有者が公開前に確認する。
 
