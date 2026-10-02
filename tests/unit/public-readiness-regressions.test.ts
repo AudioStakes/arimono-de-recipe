@@ -80,7 +80,7 @@ describe("公開準備の独立レビュー回帰", () => {
     const output = {
       items: candidates.items.map((item) => ({
         ...item,
-        steps: ["あ".repeat(aiRecipeCandidateLimits.response.maxStepLength) + "にんにくを加える"],
+        steps: [`${"あ".repeat(aiRecipeCandidateLimits.response.maxStepLength)}にんにくを加える`],
       })),
     };
     expect(parseAiRecipeCandidatesResponse(output).ok).toBe(false);
@@ -98,7 +98,7 @@ describe("公開準備の独立レビュー回帰", () => {
     { why: "あ".repeat(81) },
     { use: ["あ".repeat(81)] },
     { miss: ["あ".repeat(81)] },
-    { ing: ["豆腐" + "あ".repeat(79)] },
+    { ing: [`豆腐${"あ".repeat(79)}`] },
   ])("AI応答の文字数超過も切り捨てず拒否する: %j", (fields) => {
     expect(
       parseAiRecipeCandidatesResponse({
