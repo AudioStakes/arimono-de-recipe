@@ -125,8 +125,7 @@ describe("公開準備の独立レビュー回帰", () => {
         materials: [{ name: "豆腐", usage: "required" }],
       }).ok,
     ).toBe(true);
-    },
-  );
+  });
 
   test.each([
     "豆腐ハンバーグ",
@@ -141,8 +140,7 @@ describe("公開準備の独立レビュー回帰", () => {
         request,
       ).ok,
     ).toBe(false);
-    },
-  );
+  });
 
   test("おまかせ材料もuseの申告だけでなく実際の材料一覧に少なくとも1件必要", () => {
     expect(
@@ -215,4 +213,37 @@ describe("公開準備の独立レビュー回帰", () => {
     expect(body.locked).toBe(false);
     expect(run).not.toHaveBeenCalled();
   });
+  test("Workers AIに渡す材料名のschemaも80文字の入力と一致する", async () => {
+    const name = "あ".repeat(aiRecipeCandidateLimits.request.maxItemLength);
+    const output = {
+      items: candidates.items.map((item) => ({ ...item, use: [name], ing: [name] })),
+    };
+    const run = vi.fn<Env["AI"]["run"]>().mockResolvedValue({ response: output });
+    const response = await onRequest({
+      request: apiRequest({
+        ...request,
+        materials: [{ name, usage: "required" }],
+        allowShopping: true,
+      }),
+      env: { AI: { run } },
+    });
+    expect(response.status).toBe(200);
+    expect(run.mock.calls[0]?.[1]).toMatchObject({
+      response_format: {
+        json_schema: {
+          properties: {
+            items: {
+              items: {
+                properties: {
+                  ing: { items: { maxLength: aiRecipeCandidateLimits.response.maxListItemLength } },
+                  miss: { items: { maxLength: aiRecipeCandidateLimits.response.maxListItemLength } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
 });
