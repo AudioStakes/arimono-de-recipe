@@ -149,7 +149,41 @@ CI失敗時のGitHub形式のログだけでは整形差分が見えなかった
 
 - 修正前の回帰確認: head `1797e49c96ae671ae2df258f094df8a59c5a38b9` の[CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36959181475)で `npm run check` は終了コード1。整形・lint・型検査・ビルドは成功し、追加ユニット回帰テスト23件が期待どおり失敗した。構造・E2Eは先行するユニット失敗により未実行。
 - 重複指定の追加後: head `a54c7a3490e2b63613256c9eea1e31c0885dec42` の[CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36960139556)も整形・lint・型検査・ビルドを通り、ユニット回帰26件が失敗（終了コード1）。同一条件の重複など正常系は失敗していない。構造・E2Eはユニット失敗により未実行。
-- 修正後の最新検証は、コミット・CIの確定後にここへ追記する。
+- 修正コミット: `9afc8de074a29cfbacf40ef6620b0f0ff4ce80bf`。上記10項目を修正し、[対応するCI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36960288541)は成功した。
+- このCIの環境はUbuntu / Node.js 22.23.3 / npm 10.9.9 / Playwright標準Chromium。以下の終了コードはこのコミットで確認した結果であり、初回実装者の結果の転記ではない。
+
+| 実行したコマンド | 終了コード | 確認結果 |
+|---|---:|---|
+| `npm ci` | 0 | lockfileを用いた新しいCI環境の依存導入が成功。 |
+| `npx playwright install --with-deps chromium` | 0 | CI指定のブラウザと必要な依存を導入。 |
+| `npm run check` | 0 | 整形、lint、型検査、ビルド、ユニット、構造、E2Eを順に完了。 |
+| `npm run format:check` / `npm run lint` / `npm run typecheck` / `npm run build` | 各0 | check内の前半の品質ゲートが成功。 |
+| `npm run test:unit` / `npm run test:structure` / `npm run test:e2e` | 各0 | check内で全スイートが終了し、回帰テストを含め失敗なし。 |
+
+追加したテストはユニット41件、E2E8件（4シナリオを2プロジェクトで実行）。既存の成功時ログを省略するreporterを維持しているため、今回のCIログには成功件数の総計は出ない。合計件数の過去記録を新しい実行結果として転記せず、各コマンドの成功と追加したケース数を記録する。既存テストは削除・変更・skipしていない。
+
+E2Eは実フォームから目的・品数を選んで送信データを確認し、上限で送信0回とコピー本文の条件保持を確認した。コピーAPI拒否・代替コピー例外・Clipboard API未対応を操作で再現し、エラー案内、JavaScript例外なし、一時textareaの解放、外部送信0回を確認した。[HTMLレポートのartifact](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36960288541/artifacts/11207816585)はアップロード成功し、保持期限は7日。
+
+関連文書7ファイルのローカルリンク14件を取得したGitツリーと突合し、欠落0件だった（限定的なJavaScript検査であり、shellコマンドの実行ではない）。`npm audit` の独立再実行、WranglerのFunction build/Pages smoke、Node 24での実行、実AIの呼出しは今回行っていない。FunctionはTypeScript検査とモックのFunctionテスト、画面はViteを起動する既存E2Eで確認した。
+
+### 追加したコミット
+
+既存headの履歴を引き継ぎ、各push前にリモートheadを確認してfast-forwardで追加した。force pushや履歴の書換えはしていない。
+
+| SHA | 内容 |
+|---|---|
+| [`59367e87de6ab3b207d60db19a84a3e868a0e25e`](https://github.com/AudioStakes/arimono-de-recipe/commit/59367e87de6ab3b207d60db19a84a3e868a0e25e) | 入力・応答・条件保持・streamの回帰テストを追加 |
+| [`457d973c504de120bbbf927b4e4cf90a9739c3bb`](https://github.com/AudioStakes/arimono-de-recipe/commit/457d973c504de120bbbf927b4e4cf90a9739c3bb) | 回帰fixtureのlint・整形を修正 |
+| [`d0e7d3705318321a7539d78baff18405535bb58a`](https://github.com/AudioStakes/arimono-de-recipe/commit/d0e7d3705318321a7539d78baff18405535bb58a) | 表形式テストの整形を修正 |
+| [`587f908c97ab5b641e15bf76f963dca0e19ea6ca`](https://github.com/AudioStakes/arimono-de-recipe/commit/587f908c97ab5b641e15bf76f963dca0e19ea6ca) | コピー例外・実フォーム条件保持のE2E、AI schema回帰を追加 |
+| [`89777c02d31171cc1cb31ddbba0a4b1431197086`](https://github.com/AudioStakes/arimono-de-recipe/commit/89777c02d31171cc1cb31ddbba0a4b1431197086) | CI失敗時の詳細Biome診断を追加（元の品質ゲートは維持） |
+| [`1797e49c96ae671ae2df258f094df8a59c5a38b9`](https://github.com/AudioStakes/arimono-de-recipe/commit/1797e49c96ae671ae2df258f094df8a59c5a38b9) | CI診断に基づき回帰テストを整形し、23件の不具合を再現 |
+| [`47d005d67fa100cd51ccd137a979792afa9fb34e`](https://github.com/AudioStakes/arimono-de-recipe/commit/47d005d67fa100cd51ccd137a979792afa9fb34e) | 同名材料の矛盾する指定・同一指定の回帰を追加 |
+| [`f295049a5ef0242b32509df0756749afb3a05d0d`](https://github.com/AudioStakes/arimono-de-recipe/commit/f295049a5ef0242b32509df0756749afb3a05d0d) | Clipboard API未対応時の一時要素解放の回帰を追加 |
+| [`a54c7a3490e2b63613256c9eea1e31c0885dec42`](https://github.com/AudioStakes/arimono-de-recipe/commit/a54c7a3490e2b63613256c9eea1e31c0885dec42) | 拡張したE2Eを整形し、ユニット26件の不具合を再現 |
+| [`9afc8de074a29cfbacf40ef6620b0f0ff4ce80bf`](https://github.com/AudioStakes/arimono-de-recipe/commit/9afc8de074a29cfbacf40ef6620b0f0ff4ce80bf) | 10項目の最小修正、README・貢献手順・独立レビューの更新 |
+
+この検証記録を確定する後続の文書コミットとそのCIは、PR本文に記録する。
 
 ### 残る判断とリスク
 
