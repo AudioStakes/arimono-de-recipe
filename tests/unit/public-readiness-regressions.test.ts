@@ -42,6 +42,35 @@ function apiRequest(body: unknown): Request {
 
 describe("公開準備の独立レビュー回帰", () => {
   test.each([
+    [{ name: "豆腐", usage: "auto" }, { name: "豆腐", usage: "required" }],
+    [
+      { name: "豆腐", usage: "required" },
+      { name: "豆腐", usage: "use_up", amount: "1丁" },
+    ],
+    [
+      { name: "豆腐", usage: "use_up", amount: "1丁" },
+      { name: "豆腐", usage: "use_up", amount: "2丁" },
+    ],
+  ])("同名材料の異なる指定を黙って捨てない: %j", async (...materials) => {
+    const body = { ...request, materials };
+    expect(parseAiRecipeCandidateRequest(body).ok).toBe(false);
+    const run = vi.fn<Env["AI"]["run"]>();
+    const response = await onRequest({ request: apiRequest(body), env: { AI: { run } } });
+    expect(response.status).toBe(400);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test("同じ条件の材料の重複は従来どおり正規化する", () => {
+    const parsed = parseAiRecipeCandidateRequest({
+      ...request,
+      materials: [...request.materials, ...request.materials],
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(parsed.value).toEqual(request);
+  });
+
+  test.each([
     { materials: [{ name: "あ".repeat(81), usage: "auto" }] },
     { materials: [{ name: "豆腐", usage: "use_up", amount: "あ".repeat(81) }] },
     { servings: "あ".repeat(81) },
