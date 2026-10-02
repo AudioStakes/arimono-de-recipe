@@ -5,7 +5,9 @@ for (const [width, clipboardAvailable] of [
   [390, true],
   [1280, false],
 ] as const) {
-  test(`${width}px、Clipboard API=${clipboardAvailable}でコピー失敗を案内する`, async ({ page }) => {
+  test(`${width}px、Clipboard API=${clipboardAvailable}でコピー失敗を案内する`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width, height: 900 });
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -14,27 +16,24 @@ for (const [width, clipboardAvailable] of [
       apiCalls += 1;
       await route.abort();
     });
-    await page.addInitScript(
-      (available) => {
-        Object.defineProperty(navigator, "clipboard", {
-          configurable: true,
-          value: available
-            ? {
-                writeText: async () => {
-                  throw new DOMException("Clipboard denied", "NotAllowedError");
-                },
-              }
-            : undefined,
-        });
-        Object.defineProperty(document, "execCommand", {
-          configurable: true,
-          value: () => {
-            throw new DOMException("Copy denied", "SecurityError");
-          },
-        });
-      },
-      clipboardAvailable,
-    );
+    await page.addInitScript((available) => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: available
+          ? {
+              writeText: async () => {
+                throw new DOMException("Clipboard denied", "NotAllowedError");
+              },
+            }
+          : undefined,
+      });
+      Object.defineProperty(document, "execCommand", {
+        configurable: true,
+        value: () => {
+          throw new DOMException("Copy denied", "SecurityError");
+        },
+      });
+    }, clipboardAvailable);
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await page.getByTestId("combo-input-materials").press("Enter");
