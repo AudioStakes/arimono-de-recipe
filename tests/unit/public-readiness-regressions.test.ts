@@ -107,33 +107,40 @@ describe("公開準備の独立レビュー回帰", () => {
     ).toBe(false);
   });
 
-  test.each(["豆腐（半丁）", "豆腐1丁（300g）", "豆腐２００ｇ", "豆腐（150g）"])(
-    "材料名の後の通常の分量表記を拒否しない: %s",
-    (ingredient) => {
-      const output = {
-        items: candidates.items.map((item) => ({ ...item, ing: [ingredient, "水"] })),
-      };
-      const parsed = parseAiRecipeCandidatesResponse(output);
-      expect(parsed.ok).toBe(true);
-      if (!parsed.ok) throw new Error(parsed.reason);
-      expect(
-        validateAiRecipeCandidatesForRequest(parsed.value, {
-          ...request,
-          materials: [{ name: "豆腐", usage: "required" }],
-        }).ok,
-      ).toBe(true);
+  test.each([
+    "豆腐（半丁）",
+    "豆腐1丁（300g）",
+    "豆腐２００ｇ",
+    "豆腐（150g）",
+  ])("材料名の後の通常の分量表記を拒否しない: %s", (ingredient) => {
+    const output = {
+      items: candidates.items.map((item) => ({ ...item, ing: [ingredient, "水"] })),
+    };
+    const parsed = parseAiRecipeCandidatesResponse(output);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(
+      validateAiRecipeCandidatesForRequest(parsed.value, {
+        ...request,
+        materials: [{ name: "豆腐", usage: "required" }],
+      }).ok,
+    ).toBe(true);
     },
   );
 
-  test.each(["豆腐ハンバーグ", "豆腐（豚肉）", "豆腐1丁（卵）", "塩漬け豚肉", "油揚げ"])(
-    "別の材料は分量として許可しない: %s",
-    (ingredient) => {
-      expect(
-        validateAiRecipeCandidatesForRequest(
-          { items: candidates.items.map((item) => ({ ...item, ing: [ingredient] })) },
-          request,
-        ).ok,
-      ).toBe(false);
+  test.each([
+    "豆腐ハンバーグ",
+    "豆腐（豚肉）",
+    "豆腐1丁（卵）",
+    "塩漬け豚肉",
+    "油揚げ",
+  ])("別の材料は分量として許可しない: %s", (ingredient) => {
+    expect(
+      validateAiRecipeCandidatesForRequest(
+        { items: candidates.items.map((item) => ({ ...item, ing: [ingredient] })) },
+        request,
+      ).ok,
+    ).toBe(false);
     },
   );
 
@@ -187,29 +194,25 @@ describe("公開準備の独立レビュー回帰", () => {
     expect(getAiRecipeInputLimitError(data)).toContain("依頼文コピー");
   });
 
-  test(
-    "本文超過の取消処理が止まっても413を返しreaderを解放する",
-    async () => {
-      const cancel = vi.fn(() => new Promise<void>(() => undefined));
-      const body = new ReadableStream<Uint8Array>({
-        start(controller) {
-          controller.enqueue(new Uint8Array(recipeFunctionLimits.maxBodyBytes + 1));
-        },
-        cancel,
-      });
-      const input = new Request("https://example.test/api/recipe", {
-        method: "POST",
-        headers: { "content-type": "application/json", origin: "https://example.test" },
-        body,
-        duplex: "half",
-      } as RequestInit);
-      const run = vi.fn<Env["AI"]["run"]>();
-      const response = await onRequest({ request: input, env: { AI: { run } } });
-      expect(response.status).toBe(413);
-      expect(cancel).toHaveBeenCalledTimes(1);
-      expect(body.locked).toBe(false);
-      expect(run).not.toHaveBeenCalled();
-    },
-    1_000,
-  );
+  test("本文超過の取消処理が止まっても413を返しreaderを解放する", async () => {
+    const cancel = vi.fn(() => new Promise<void>(() => undefined));
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(recipeFunctionLimits.maxBodyBytes + 1));
+      },
+      cancel,
+    });
+    const input = new Request("https://example.test/api/recipe", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://example.test" },
+      body,
+      duplex: "half",
+    } as RequestInit);
+    const run = vi.fn<Env["AI"]["run"]>();
+    const response = await onRequest({ request: input, env: { AI: { run } } });
+    expect(response.status).toBe(413);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(body.locked).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+  });
 });
