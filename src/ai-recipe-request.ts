@@ -1,4 +1,5 @@
 import { aiRecipeCandidateLimits, parseAiRecipeCandidateRequest } from "./ai-recipe-schema";
+import { recipeCountOptions, requestIntentOptions } from "./data";
 import type {
   AiRecipeCandidateRequest,
   AiRecipeMaterialInput,
@@ -35,7 +36,7 @@ export function getAiRecipeInputLimitError(data: PromptData): string | null {
   const textValues = [
     [data.servings, aiRecipeRequestLimits.maxServingsLength],
     [data.cookTime, aiRecipeRequestLimits.maxTimeLength],
-    [data.supplementalNotes, aiRecipeRequestLimits.maxNotesLength],
+    [buildNotes(data), aiRecipeRequestLimits.maxNotesLength],
     ...data.materialRequests.map(
       (request) => [request.useUpAmount, aiRecipeRequestLimits.maxItemLength] as const,
     ),
@@ -147,7 +148,23 @@ function buildMaterialInputs(data: PromptData): AiRecipeMaterialInput[] {
 }
 
 function buildNotes(data: PromptData): string {
-  return normalizeText(data.supplementalNotes);
+  const intent =
+    data.requestIntent === "auto"
+      ? ""
+      : requestIntentOptions.find((option) => option.value === data.requestIntent)?.label;
+  const count =
+    data.recipeCount === "auto"
+      ? ""
+      : recipeCountOptions.find((option) => option.value === data.recipeCount)?.label;
+  return normalizeText(
+    [
+      intent ? `今回やりたいこと: ${intent}` : "",
+      count ? `作りたい品数: ${count}` : "",
+      data.supplementalNotes,
+    ]
+      .filter(Boolean)
+      .join(" / "),
+  );
 }
 
 export function buildAiRecipeCandidateRequest(data: PromptData): AiRecipeCandidateRequest {

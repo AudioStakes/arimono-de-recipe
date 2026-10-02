@@ -1,5 +1,6 @@
 import {
   aiRecipeAssumedPantryIngredients,
+  aiRecipeCandidateLimits,
   buildCompactRecipeCandidateInput,
   isAiRecipeCandidateRequest,
   parseAiRecipeCandidateRequest,
@@ -109,7 +110,7 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
   const missingItemsSchema = allowShopping
     ? {
         type: "string",
-        maxLength: 48,
+        maxLength: aiRecipeCandidateLimits.response.maxListItemLength,
       }
     : {
         type: "string",
@@ -117,7 +118,7 @@ function buildCandidateResponseFormat(request: AiRecipeCandidateRequest): unknow
   const recipeIngredientItemsSchema = allowShopping
     ? {
         type: "string",
-        maxLength: 48,
+        maxLength: aiRecipeCandidateLimits.response.maxListItemLength,
       }
     : {
         type: "string",
@@ -303,18 +304,23 @@ async function readRequestText(request: Request): Promise<string | Response> {
   let bytes = 0;
   let text = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    bytes += value.byteLength;
-    if (bytes > MAX_BODY_BYTES) {
-      await reader.cancel().catch(() => undefined);
-      return errorResponse(413, "body_too_large", "リクエスト本文が長すぎます。");
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_BODY_BYTES) {
+        // Cancellation may never settle; rejecting an oversized body must not wait for it.
+        void reader.cancel().catch(() => undefined);
+        return errorResponse(413, "body_too_large", "リクエスト本文が長すぎます。");
+      }
+      text += decoder.decode(value, { stream: true });
     }
-    text += decoder.decode(value, { stream: true });
-  }
 
-  return text + decoder.decode();
+    return text + decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
 }
 
 function hasJsonContentType(request: Request): boolean {

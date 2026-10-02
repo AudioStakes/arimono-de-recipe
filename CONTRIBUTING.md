@@ -21,10 +21,10 @@ npx playwright install --with-deps chromium
 
 | 場所 | 役割 |
 |---|---|
-| `src/data.ts`、`src/recipe-items.ts` | 候補値と項目の設定 |
+| `src/data.ts`、`src/candidate-values/` | 候補値と項目の設定 |
 | `src/prompt.ts` | コピーする依頼文の生成 |
 | `src/ui.ts`、`src/styles.css` | 画面の構成とスタイル |
-| `src/app-events.ts`、`src/app-state.ts` | 入力操作と状態 |
+| `src/app-events.ts`、`src/types.ts`、`src/ui.ts` | 入力操作と状態 |
 | `src/ai-recipe-request.ts`、`src/ai-recipe-client.ts` | AI候補への依頼と通信 |
 | `src/ai-recipe-schema.ts`、`functions/api/recipe.ts` | リクエスト・応答の検証とWorkers AI呼び出し |
 | `src/recipe-candidate-list.ts` | 候補の詳細と調理ビュー |
