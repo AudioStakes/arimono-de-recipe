@@ -42,7 +42,10 @@ function apiRequest(body: unknown): Request {
 
 describe("公開準備の独立レビュー回帰", () => {
   test.each([
-    [{ name: "豆腐", usage: "auto" }, { name: "豆腐", usage: "required" }],
+    [
+      { name: "豆腐", usage: "auto" },
+      { name: "豆腐", usage: "required" },
+    ],
     [
       { name: "豆腐", usage: "required" },
       { name: "豆腐", usage: "use_up", amount: "1丁" },

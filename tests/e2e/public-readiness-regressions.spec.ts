@@ -1,7 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-for (const width of [1280, 390]) {
-  test(`${width}pxでコピーAPIと代替コピーが例外でも手動コピーを案内する`, async ({ page }) => {
+for (const [width, clipboardAvailable] of [
+  [1280, true],
+  [390, true],
+  [1280, false],
+] as const) {
+  test(`${width}px、Clipboard API=${clipboardAvailable}でコピー失敗を案内する`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -10,25 +14,31 @@ for (const width of [1280, 390]) {
       apiCalls += 1;
       await route.abort();
     });
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, "clipboard", {
-        configurable: true,
-        value: {
-          writeText: async () => {
-            throw new DOMException("Clipboard denied", "NotAllowedError");
+    await page.addInitScript(
+      (available) => {
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: available
+            ? {
+                writeText: async () => {
+                  throw new DOMException("Clipboard denied", "NotAllowedError");
+                },
+              }
+            : undefined,
+        });
+        Object.defineProperty(document, "execCommand", {
+          configurable: true,
+          value: () => {
+            throw new DOMException("Copy denied", "SecurityError");
           },
-        },
-      });
-      Object.defineProperty(document, "execCommand", {
-        configurable: true,
-        value: () => {
-          throw new DOMException("Copy denied", "SecurityError");
-        },
-      });
-    });
+        });
+      },
+      clipboardAvailable,
+    );
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await page.getByTestId("combo-input-materials").press("Enter");
+    const textareaCount = await page.locator("textarea").count();
     const mobile = width < 1024;
     await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
     const feedback = page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt");
@@ -36,6 +46,7 @@ for (const width of [1280, 390]) {
     await expect(page.getByTestId(mobile ? "mobile-prompt-output" : "prompt-output")).toHaveValue(
       /豆腐/,
     );
+    await expect(page.locator("textarea")).toHaveCount(textareaCount);
     expect(pageErrors).toEqual([]);
     expect(apiCalls).toBe(0);
   });
