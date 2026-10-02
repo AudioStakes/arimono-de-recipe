@@ -33,17 +33,15 @@ for (const width of [1280, 390]) {
     await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
     const feedback = page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt");
     await expect(feedback).toContainText("本文を選択してコピーしてください");
-    await expect(
-      page.getByTestId(mobile ? "mobile-prompt-output" : "prompt-output"),
-    ).toHaveValue(/豆腐/);
+    await expect(page.getByTestId(mobile ? "mobile-prompt-output" : "prompt-output")).toHaveValue(
+      /豆腐/,
+    );
     expect(pageErrors).toEqual([]);
     expect(apiCalls).toBe(0);
   });
 }
 
-test("料理の目的と品数を実際のフォーム操作から送信し、上限時はコピーを残す", async ({
-  page,
-}) => {
+test("料理の目的と品数を実際のフォーム操作から送信し、上限時はコピーを残す", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   const requests: Record<string, unknown>[] = [];
   await page.route("**/api/recipe", async (route) => {

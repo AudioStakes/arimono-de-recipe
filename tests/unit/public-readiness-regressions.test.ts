@@ -236,7 +236,9 @@ describe("公開準備の独立レビュー回帰", () => {
               items: {
                 properties: {
                   ing: { items: { maxLength: aiRecipeCandidateLimits.response.maxListItemLength } },
-                  miss: { items: { maxLength: aiRecipeCandidateLimits.response.maxListItemLength } },
+                  miss: {
+                    items: { maxLength: aiRecipeCandidateLimits.response.maxListItemLength },
+                  },
                 },
               },
             },
