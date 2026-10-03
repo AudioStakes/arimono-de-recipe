@@ -13,6 +13,10 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | AI候補カードから詳細表示する | parser/request required | required with `/api/recipe` mock and call count | stable hook guard |
 | 買い足しなしをdefaultにする | schema/function required | required with `/api/recipe` mock | stable hook guard |
 | 調理ビューのtabsを切り替える | optional | required | stable hook guard |
+| AI入力上限の超過で条件を黙って落とさず、コピーを残す | required | required with no API calls | no |
+| NG食材を手順・味の調整でも勧めない | required | required | no |
+| 調理tabsのArrow/Home/End操作とpanelへのfocus | optional | required on desktop/mobile | no |
+| AI通信のtimeoutとtimer解放 | required | mocked errors covered | no |
 | empty/loading/error/retry/fallback states | validation required | required | stable hook guard |
 | UI selector stability | no | yes | required |
 | Approved `/api/recipe` transmission boundary | required | required with mock | required |

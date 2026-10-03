@@ -474,6 +474,7 @@ function renderAppShell(): string {
         </span>
       </h1>
       <p class="lead" id="appLead">冷蔵庫にある食材を入れて、今日作る料理候補をすぐ見つけます。</p>
+      <p class="field-hint" id="aiPrivacyNotice" data-testid="ai-privacy-notice">「今日の候補を見る」を押すと、材料や要望をCloudflareのAIへ送信します。依頼文コピーは外部へ自動送信しません。</p>
     </header>
     <div class="app-layout">
       <form class="form" id="recipeForm" data-testid="recipe-form" novalidate aria-describedby="appLead">
@@ -494,6 +495,7 @@ function renderAppShell(): string {
               class="action-button button-primary"
               type="button"
               data-testid="generate-recipe"
+              aria-describedby="aiPrivacyNotice"
             >
               <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
               <span class="action-button-label">今日の候補を見る</span>
@@ -566,6 +568,7 @@ function renderAppShell(): string {
             class="action-button button-primary"
             type="button"
             data-testid="generate-recipe-mobile"
+            aria-describedby="aiPrivacyNotice"
           >
             <span class="action-button-icon" aria-hidden="true" data-icon="zap"></span>
             <span class="action-button-label">今日の候補を見る</span>

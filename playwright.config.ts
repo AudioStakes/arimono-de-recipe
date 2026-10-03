@@ -9,13 +9,14 @@ declare const process: {
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
-  reporter: "./tests/reporters/playwright-error-only-reporter.ts",
+  ...(process.env.CI ? { workers: 2 } : {}),
+  reporter: [["./tests/reporters/playwright-error-only-reporter.ts"], ["html", { open: "never" }]],
   quiet: true,
   preserveOutput: "failures-only",
   reportSlowTests: null,
   use: {
     baseURL: "http://127.0.0.1:4173",
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
   },
   webServer: {
     command: "npm exec vite -- --host 127.0.0.1 --port 4173 --logLevel error --clearScreen false",

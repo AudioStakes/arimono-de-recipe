@@ -27,7 +27,7 @@ export const aiRecipeCandidateLimits = {
     maxBadges: 4,
     maxUse: 12,
     maxMissing: 6,
-    maxListItemLength: 48,
+    maxListItemLength: 80,
     maxStepLength: 60,
     minTime: 1,
     maxTime: 240,
@@ -92,8 +92,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeText(value: string, limit: number): string {
-  return value.replace(/\s+/g, " ").trim().slice(0, limit);
+function normalizeText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function parseString(value: unknown, limit: number): string | null {
@@ -101,8 +101,8 @@ function parseString(value: unknown, limit: number): string | null {
     return null;
   }
 
-  const text = normalizeText(value, limit);
-  return text || null;
+  const text = normalizeText(value);
+  return text && text.length <= limit ? text : null;
 }
 
 function parseRequiredString(value: unknown, limit: number): string | null {
@@ -121,7 +121,10 @@ function parseStringList(value: unknown, maxItems: number, maxItemLength: number
     if (typeof item !== "string") {
       return null;
     }
-    const text = normalizeText(item, maxItemLength);
+    const text = normalizeText(item);
+    if (text.length > maxItemLength) {
+      return null;
+    }
     if (!text || seen.has(text)) {
       continue;
     }
@@ -172,7 +175,7 @@ function parseMaterialInputs(value: unknown): AiRecipeMaterialInput[] | null {
     return null;
   }
 
-  const seen = new Set<string>();
+  const seen = new Map<string, AiRecipeMaterialInput>();
   const materials: AiRecipeMaterialInput[] = [];
 
   for (const item of value) {
@@ -180,10 +183,14 @@ function parseMaterialInputs(value: unknown): AiRecipeMaterialInput[] | null {
     if (!material) {
       return null;
     }
-    if (seen.has(material.name)) {
+    const existing = seen.get(material.name);
+    if (existing) {
+      if (existing.usage !== material.usage || existing.amount !== material.amount) {
+        return null;
+      }
       continue;
     }
-    seen.add(material.name);
+    seen.set(material.name, material);
     materials.push(material);
   }
 
@@ -266,6 +273,11 @@ export function parseAiRecipeCandidateRequest(
   }
 
   const request: AiRecipeCandidateRequest = { mode: "candidates", materials };
+  if (
+    getConstrainedMaterialNames(request).length > aiRecipeCandidateLimits.response.maxIngredients
+  ) {
+    return invalid("too many constrained materials");
+  }
   if (
     !appendOptionalBoolean(request, "allowShopping", value["allowShopping"]) ||
     !appendOptionalString(
@@ -506,7 +518,7 @@ function extractJsonObjectText(text: string): string | null {
 }
 
 function normalizeForComparison(value: string): string {
-  return value.replace(/\s+/g, "").toLowerCase();
+  return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
 function matchesRequestMaterial(value: string, materials: readonly string[]): boolean {
@@ -523,19 +535,38 @@ function matchesList(value: string, items: readonly string[]): boolean {
   return items.some((item) => normalizedValue === normalizeForComparison(item));
 }
 
+// Accept a literal ingredient name, optionally followed by a simple quantity.
+// Substring matching would also allow unrelated ingredients such as 塩漬け豚肉 for 塩.
+const ingredientAmountPattern =
+  /^(?:約)?(?:(?:大さじ|小さじ)?[0-9]+(?:[.,/][0-9]+)?(?:kg|g|mg|ml|l|グラム|個|玉|枚|本|袋|丁|束|片|缶|パック|カップ)?|半(?:個|玉|枚|本|袋|丁|束|片|缶|パック|カップ)?|少々|適量|ひとつまみ)$/i;
+
+function isIngredientAmount(value: string): boolean {
+  const match = value.match(/^(?:([^()]+)|\(([^()]+)\))(?:\(([^()]+)\))?$/);
+  return (
+    match !== null &&
+    match
+      .slice(1)
+      .filter((amount): amount is string => amount !== undefined)
+      .every((amount) => ingredientAmountPattern.test(amount))
+  );
+}
+
 function mentionsListItem(value: string, items: readonly string[]): boolean {
   const normalizedValue = normalizeForComparison(value);
   return items.some((item) => {
     const normalizedItem = normalizeForComparison(item);
-    return normalizedValue === normalizedItem || normalizedValue.includes(normalizedItem);
+    if (normalizedValue === normalizedItem) {
+      return true;
+    }
+    return (
+      normalizedValue.startsWith(normalizedItem) &&
+      isIngredientAmount(normalizedValue.slice(normalizedItem.length))
+    );
   });
 }
 
 function mentionsAssumedPantryIngredient(value: string): boolean {
-  const normalizedValue = normalizeForComparison(value);
-  return [...assumedPantryIngredients].some(
-    (ingredient) => normalizedValue === ingredient || normalizedValue.includes(ingredient),
-  );
+  return mentionsListItem(value, [...assumedPantryIngredients]);
 }
 
 function findMentionedRequestMaterial(
@@ -635,8 +666,11 @@ export function validateAiRecipeCandidatesForRequest(
   const normalizedItems = response.items.map((item) => normalizeCandidateForRequest(item, request));
 
   for (const item of normalizedItems) {
-    if (item.use.length === 0) {
-      return invalid("candidate use is required");
+    if (
+      item.use.length === 0 ||
+      !item.ing.some((ingredient) => mentionsListItem(ingredient, requestMaterialNames))
+    ) {
+      return invalid("candidate ingredients must use request materials");
     }
 
     if (item.use.some((used) => !matchesRequestMaterial(used, requestMaterialNames))) {
@@ -645,6 +679,14 @@ export function validateAiRecipeCandidatesForRequest(
 
     if (constrainedMaterials.some((material) => !matchesList(material, item.use))) {
       return invalid("candidate must use constrained materials");
+    }
+
+    if (
+      constrainedMaterials.some(
+        (material) => !item.ing.some((value) => mentionsListItem(value, [material])),
+      )
+    ) {
+      return invalid("candidate ingredients must include constrained materials");
     }
 
     const unaccountedIngredients = item.ing.filter(
@@ -660,7 +702,7 @@ export function validateAiRecipeCandidatesForRequest(
     }
 
     if (request.avoid?.length) {
-      const checkedValues = [...item.use, ...item.miss, ...item.ing];
+      const checkedValues = [...item.use, ...item.miss, ...item.ing, ...item.steps];
       if (checkedValues.some((value) => conflictsWithAvoid(value, request.avoid ?? []))) {
         return invalid("candidate conflicts with avoid list");
       }

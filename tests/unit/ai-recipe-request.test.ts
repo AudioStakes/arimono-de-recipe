@@ -1,11 +1,81 @@
 import { describe, expect, test } from "vitest";
-import { buildAiRecipeCandidateRequest } from "../../src/ai-recipe-request";
+import {
+  buildAiRecipeCandidateRequest,
+  getAiRecipeInputLimitError,
+} from "../../src/ai-recipe-request";
 import { aiRecipeCandidateLimits } from "../../src/ai-recipe-schema";
 import { makeEmptyPromptData } from "../../src/prompt";
 
 const aiRecipeRequestLimits = aiRecipeCandidateLimits.request;
 
 describe("buildAiRecipeCandidateRequest", () => {
+  test("候補に入りきらない必須材料の指定をAI送信前に案内する", () => {
+    const names = Array.from({ length: 7 }, (_, index) => `材料${index}`);
+    const data = makeEmptyPromptData({
+      materials: names,
+      materialUseMode: "specified",
+      materialRequests: names.map((name, index) => ({
+        id: `material-${index}`,
+        name,
+        usage: "required",
+        useUpAmountMode: "as-written",
+        useUpAmount: "",
+      })),
+    });
+    expect(getAiRecipeInputLimitError(data)).toContain("合計6件まで");
+    expect(getAiRecipeInputLimitError(data)).toContain("依頼文コピー");
+    data.materialRequests[0] = {
+      ...data.materialRequests[0],
+      id: "material-0",
+      name: "材料0",
+      usage: "auto",
+      useUpAmountMode: "as-written",
+      useUpAmount: "",
+    };
+    expect(getAiRecipeInputLimitError(data)).toBeNull();
+  });
+  test("NG指定を上限で黙って切り捨てず、送信前のエラーにできる", () => {
+    const data = makeEmptyPromptData({
+      materials: ["豆腐"],
+      ngFoodsAndSeasonings: Array.from({ length: 9 }, (_, index) => `NG${index}`),
+    });
+    expect(getAiRecipeInputLimitError(data)).toContain("8件まで");
+    expect(getAiRecipeInputLimitError(data)).toContain("依頼文コピー");
+  });
+
+  test("材料や自由記述を黙って切り捨てず、入力上限を知らせる", () => {
+    expect(
+      getAiRecipeInputLimitError(
+        makeEmptyPromptData({
+          materials: Array.from({ length: 13 }, (_, index) => `材料${index}`),
+        }),
+      ),
+    ).toContain("12件まで");
+    expect(
+      getAiRecipeInputLimitError(
+        makeEmptyPromptData({
+          materials: ["豆腐"],
+          supplementalNotes: "あ".repeat(181),
+        }),
+      ),
+    ).toContain("長すぎます");
+    expect(
+      getAiRecipeInputLimitError(
+        makeEmptyPromptData({
+          materials: ["あ".repeat(81)],
+        }),
+      ),
+    ).toContain("80文字まで");
+    expect(
+      getAiRecipeInputLimitError(
+        makeEmptyPromptData({
+          materials: ["豆腐"],
+          ngFoodsAndSeasonings: ["  卵", "卵  "],
+        }),
+      ),
+    ).toBeNull();
+  });
+
   test("短い構造化JSONを作り、空項目を省略する", () => {
     const request = buildAiRecipeCandidateRequest(
       makeEmptyPromptData({

@@ -79,10 +79,14 @@ async function copyText(text: string): Promise<void> {
   fallback.setAttribute("readonly", "");
   fallback.className = "clipboard-fallback";
   document.body.appendChild(fallback);
-  fallback.focus();
-  fallback.select();
-  const copied = document.execCommand("copy");
-  fallback.remove();
+  let copied = false;
+  try {
+    fallback.focus();
+    fallback.select();
+    copied = document.execCommand("copy");
+  } finally {
+    fallback.remove();
+  }
 
   if (!copied) {
     throw new Error("Clipboard copy failed.");
@@ -259,8 +263,12 @@ export async function copyPrompt(
       feedbackButton = elements.copyPromptMobile;
     }
     const fallbackTarget = useMobileFallback ? elements.mobileOutput : elements.output;
-    fallbackTarget.select();
-    copied = document.execCommand("copy");
+    try {
+      fallbackTarget.select();
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    }
   }
 
   if (copied) {

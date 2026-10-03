@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { generateRecipe } from "../../src/ai-recipe-client";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { aiRecipeRequestTimeoutMs, generateRecipe } from "../../src/ai-recipe-client";
 import type { AiRecipeCandidateRequest, AiRecipeCandidatesResponse } from "../../src/types";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -61,6 +61,55 @@ const candidates = {
 } satisfies AiRecipeCandidatesResponse;
 
 describe("generateRecipe", () => {
+  afterEach(() => vi.useRealTimers());
+
+  test("応答が止まっても通信を中断してタイムアウトを返す", async () => {
+    vi.useFakeTimers();
+    let requestSignal: AbortSignal | undefined;
+    const fetcher: typeof fetch = async (_input, init) => {
+      const signal = init?.signal;
+      if (!signal) throw new Error("AbortSignal is required");
+      requestSignal = signal;
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+      });
+    };
+    const pending = generateRecipe(request, fetcher);
+    await vi.advanceTimersByTimeAsync(aiRecipeRequestTimeoutMs);
+    expect(await pending).toMatchObject({ ok: false, error: { code: "request_timed_out" } });
+    expect(requestSignal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  test("HTTP応答後に本文の読み取りが止まってもタイムアウトする", async () => {
+    vi.useFakeTimers();
+    const fetcher: typeof fetch = async (_input, init) => {
+      const signal = init?.signal;
+      if (!signal) throw new Error("AbortSignal is required");
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            signal.addEventListener("abort", () =>
+              controller.error(new DOMException("Aborted", "AbortError")),
+            );
+          },
+        }),
+      );
+    };
+    const pending = generateRecipe(request, fetcher);
+    await vi.advanceTimersByTimeAsync(aiRecipeRequestTimeoutMs);
+    expect(await pending).toMatchObject({ ok: false, error: { code: "request_timed_out" } });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  test("成功した通信のタイマーを残さない", async () => {
+    vi.useFakeTimers();
+    const fetcher: typeof fetch = async () =>
+      jsonResponse({ ...candidates, model: "test", usage: null });
+    expect((await generateRecipe(request, fetcher)).ok).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   test("候補成功レスポンスを扱える", async () => {
     const fetcher: typeof fetch = async (input, init) => {
       expect(input).toBe("/api/recipe");

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  aiRecipeCandidateLimits,
   buildCompactRecipeCandidateInput,
   parseAiRecipeCandidateRequest,
   parseAiRecipeCandidatesJson,
@@ -50,6 +51,18 @@ const validCandidates = {
 function materials(...names: string[]): AiRecipeMaterialInput[] {
   return names.map((name) => ({ name, usage: "auto" }));
 }
+
+test("候補の材料上限を超える必須指定はAPI入力でも拒否する", () => {
+  const inputs: AiRecipeMaterialInput[] = Array.from({ length: 7 }, (_, index) => ({
+    name: `材料${index}`,
+    usage: index % 2 === 0 ? "required" : "use_up",
+    amount: "1個",
+  }));
+  expect(parseAiRecipeCandidateRequest({ mode: "candidates", materials: inputs }).ok).toBe(false);
+  expect(
+    parseAiRecipeCandidateRequest({ mode: "candidates", materials: inputs.slice(0, 6) }).ok,
+  ).toBe(true);
+});
 
 describe("ai recipe schema", () => {
   test("candidate requestを検証し、compact model inputを作る", () => {
@@ -449,6 +462,63 @@ describe("ai recipe schema", () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) throw new Error(parsed.reason);
     expect(parsed.value.items[0]?.use).toEqual(["豆腐", "キャベツ"]);
+  });
+
+  test.each([
+    "塩漬け豚肉",
+    "砂糖漬け果物",
+    "油揚げ",
+    "豆腐ハンバーグ",
+  ])("部分一致だけで入力にない主材料「%s」を許可しない", (ingredient) => {
+    const response = {
+      items: validCandidates.items.map((item) => ({ ...item, ing: ["豆腐", ingredient] })),
+    };
+    expect(
+      validateAiRecipeCandidatesForRequest(response, {
+        mode: "candidates",
+        materials: materials("豆腐", "キャベツ"),
+      }).ok,
+    ).toBe(false);
+  });
+
+  test("必ず使う材料はuseの自己申告だけでなく材料一覧にも必要", () => {
+    const response = {
+      items: validCandidates.items.map((item) => ({ ...item, use: ["豆腐"], ing: ["塩"] })),
+    };
+    expect(
+      validateAiRecipeCandidatesForRequest(response, {
+        mode: "candidates",
+        materials: [{ name: "豆腐", usage: "required" }],
+      }).ok,
+    ).toBe(false);
+  });
+
+  test("避ける材料を作り方だけに追加した応答も拒否する", () => {
+    const response = {
+      items: validCandidates.items.map((item) => ({ ...item, steps: ["にんにくを加えて煮る"] })),
+    };
+    expect(
+      validateAiRecipeCandidatesForRequest(response, {
+        mode: "candidates",
+        materials: materials("豆腐", "キャベツ"),
+        avoid: ["にんにく"],
+      }).ok,
+    ).toBe(false);
+  });
+
+  test("受付可能な長さの材料名を応答でも欠落させない", () => {
+    const name = "あ".repeat(aiRecipeCandidateLimits.request.maxItemLength);
+    const parsed = parseAiRecipeCandidatesResponse({
+      items: validCandidates.items.map((item) => ({ ...item, use: [name], ing: [name] })),
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(
+      validateAiRecipeCandidatesForRequest(parsed.value, {
+        mode: "candidates",
+        materials: [{ name, usage: "required" }],
+      }).ok,
+    ).toBe(true);
   });
 
   test("ingの分量付き材料と常備調味料をrequest材料として扱う", () => {

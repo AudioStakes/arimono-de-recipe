@@ -1,0 +1,17 @@
+name: 改善案
+description: 使い勝手や開発環境の改善を提案する
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: どの場面で困っていますか
+      description: 利用したい場面や、今の操作で困ることを書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 望む動作
+      description: 解決案や代わりに試した方法があれば書いてください。
+    validations:
+      required: true
