@@ -272,3 +272,67 @@ Production/Preview/代替ドメインのBindings・WAF・呼び出し制限・�
 さらに独立レビュー担当が、desktop向けCSSだけでもdialogが非表示となり、通常の `getByRole("dialog")` ではhandler実行前にcount0となる可能性を指摘した。12回成功という実行結果は維持しつつ、「完了状態」の待機条件を厳密にするため、resize後のassertだけを `getByRole("dialog", { includeHidden: true })` に補強した。非表示でもroleが残る要素を数え、handlerによるrole削除まで待つ。同じ12回・2workerの反復はこの補強後もexit0（12成功）。製品変更や期待値の緩和はない。
 
 補強後も `CI=true npm run check` はexit0で全品質ゲートが成功した。補強前の `940cd1957338c69a4d165b2c38b5c7974bad8ce2` に対応する[CI run 37165299705](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37165299705)もsuccessだったが、最終補強を含むSHAのCI結果とは区別し、後者をDraft PR本文と最終報告で確認する。
+
+## 2026-10-04 依頼文コピーと全文AI送信の追加レビュー
+
+### 対象と変更の理由
+
+所有者から、依頼文の作成・コピーと、その依頼文をAIへ送って返答を確認する操作の両方を使えるようにする追加依頼を受けた。開始時のアプリはコピーと短い構造化条件による候補生成に対応していたが、画面で確認する依頼文全文を送る操作はなかった。これはPR #29の回帰として扱わず、追加要望への機能改善とした。既存FunctionにはADR 0011の `{prompt}` 経路があり、これを利用した。
+
+作業前のheadは `bbcc043cbf76b97f95cc7e0730369cf8155e943f`。製品・テスト・利用文書の追加コミットは `f7852529e1e90a7681464ab18000ca84be892be2`。push前に再取得した `origin/main` は引き続き `df307d826970cb33764d47ef457811913502e9da` で、先行修正PR #36のheadは `0721ef347ef4b3d919595d6b912018072954a065` だった。[Draft PR #37](https://github.com/AudioStakes/arimono-de-recipe/pull/37)はPR #36の専用ブランチをbaseにしている。mainや閉じたPR #29へpushしていない。
+
+コピーの本文は引き続き `buildPrompt(data)` だけで生成する。desktopの依頼文previewとmobileの展開パネルに「この依頼文をAIへ送信」と自由文の回答欄を追加した。未確定入力を確定してから同じ全文を送信し、候補用の件数制限は流用しない。既存の12,000文字・JSON全体32,000 UTF-8バイトの上限をFunctionと共有し、超過時もコピー本文を切り捨てない。候補生成は別の状態・検証・調理タブを維持した。
+
+### 独立したレビュー・修正ループ
+
+- `dual_flow_map` がコピー／候補／既存legacy APIと入力確定・失効・mobile modalの接続点を読み取り調査した。
+- `spec_review` が設計、実装、最終文書を3段階で確認した。独立したメモリ内probeでも、必須・使い切り材料7件と13材料では候補上限と全文送信を分けられ、分量・NG・人数・目的・品数・補足が残ることを確認した。7材料のケースを永続E2Eへ追加した。
+- `standards_review` が送信の入口、サイズ境界、共有transport、timer/listener解除、abort、古い回答の破棄、文字列表示、コピーとの独立を読み取り確認した。具体的な必須修正は見つからなかった。
+- 最終文書レビューではdeploymentの「候補要求の場合だけ通信」という古い説明と、UX matrixのNG照合対象が自由文にも見える点を指摘された。両送信の成功結果とAI候補に限定した検証範囲へ修正した。好みのためのUI再設計は行っていない。
+
+### 検証環境と結果
+
+macOS arm64、Node 22.20.0、npm 10.9.3、Playwright 1.60.0の標準Chromium、Wrangler 4.144.0。shellは `rtk`、Node選択は `ASDF_NODEJS_VERSION=22.20.0`、E2EはCIと同じ2workerで実行した。下表の成功結果は上記製品コミットに含まれるコード・テストに対応する。この記録だけを追加する後続コミットのSHAとCIはPR本文・最終報告で区別する。
+
+| コマンド | 終了コード | 主要な結果 |
+|---|---:|---|
+| `npm run test:unit -- --run tests/unit/ai-prompt-client.test.ts`（実装前） | 1 | 全文送信関数が未実装で追加テストが失敗。既存の経路に全文送信クライアントがないことを確認。 |
+| `npx vitest run tests/unit/ai-prompt-client.test.ts tests/unit/ai-recipe-client.test.ts tests/unit/recipe-function.test.ts` | 0 | 新旧のクライアントとFunction（AIスタブ）が成功。 |
+| `npx vitest run tests/unit/ai-prompt-client.test.ts --reporter=json --outputFile=/private/tmp/arimono-dual-flow-unit-report.json` | 0 | 18/18成功。全文一致、空・文字数・UTF-8とescapeの境界、不正応答、APIエラー、接続・本文待機timeout、中断とtimer解除。 |
+| `npx playwright test tests/e2e/ai-prompt.spec.ts`（最初の9シナリオ） | 0 | 1280/390pxの明示送信・native copy・失敗/再試行・上限時の全文保持・安全な回答表示・閉じたpreviewのfocus・古い応答破棄。 |
+| `CI=true npm run check`（追加中） | 1 | 初回はimport順。次は既存modal testが「出力欄が最後」と仮定したTab期待値2件で失敗。新ボタンを含むoutput→send→firstと逆方向へ更新し、背景inert/Escape/resizeのassertは維持した。品質gateは緩和していない。 |
+| focused E2E（7材料ケースの最初の追加） | 1 | 新テストの存在しないhook `material-use-card` が原因。既存 `material-card` hookへ修正。製品の失敗と区別した。 |
+| `npx playwright test tests/e2e/ai-prompt.spec.ts --grep '候補上限\|コピー本文全文'` | 0 | 7材料の制約保持と、送信前・回答後のmobile Tab循環も成功。 |
+| `CI=true npm run check`（最終） | 0 | format/lint/typecheck/build/unit/structure/E2Eすべて成功。HTML reportは138 expected、unexpected/flaky/skipped各0。 |
+| `npx wrangler pages functions build functions --outdir /private/tmp/arimono-dual-flow-function-build` | 0 | 共有上限定数を含むFunctionをコンパイル。 |
+| `npx wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-26` + `node /private/tmp/arimono-dual-flow-pages-smoke.mjs` | probe 0 | **AI bindingなし**。実Functionの全文POSTは500 `ai_binding_unavailable` + no-store/nosniff。静的200のCSP/frame拒否/nosniffを確認。1280/390pxのpreview/copyは送信0回、明示送信は表示本文と完全一致、失敗後もcopy可能。成功回答はbrowser mockで文字列表示・copy・mobile Tab/inert/Escapeを確認。CSP違反/pageerror各0。確認後にserver停止、終了0。 |
+| `git diff --check` / `git fetch origin --prune` | 0 | 余分な差分エラーなし。mainとbaseの更新なし。他者の履歴を保持。 |
+
+Pages smokeの最初の試行では、AI未設定のまま本文超過が413になると想定してexit1になった。既存Functionは本文解析より先にAI設定の有無を確認するため500になる。製品を変更せず、実行可能な未設定エラーの検証へ修正した。本文上限はAIスタブを用いるFunction単体テストで確認しており、このPages smokeから本文解析を確認済みとはしていない。
+
+### 判断待ちと未確認の範囲
+
+表示の優先順は既存の候補先行を維持した。依頼文コピーを先に案内するか、アプリ内AIを先に案内するかは所有者の選択待ちで、どちらの場合も自動送信は行わない。全文送信の自由文回答には候補用の材料・NG自動照合を適用せず、画面とREADMEへ明記した。既存の応答トークン上限による途中終了もあり得る。
+
+実Workers AI、実モデルの品質・入力条件の遵守・アレルギーや加熱の安全性、Safari/Firefox実機、本番・Previewの課金/呼出し制御は未確認。推論・課金・公開運用に関する以前の所有者判断は残る。client abortがサーバーの推論停止や課金取消を保証するとはしていない。新しい提供元・認証・保存・解析・API経路は追加していない。デプロイ・マージ・本番負荷試験は行っていない。
+
+## 2026-10-04 デフォルトの案内順の確定
+
+所有者が「アプリ内AI優先。ただしコピーも同じ画面から選べる」と回答した。以前の「選択待ち」は上記時点の履歴として保持し、この回答で解消した。`cadcd33b7dfe651a13073cfb86b892497895b219` の画面を読み取りサブエージェント `dual_flow_map` と `spec_review` で独立に確認したところ、既存のAI先行と同時選択の構成が要望に合っていたため、追加のモード切替やUI再設計は行わなかった。
+
+desktopはAIカードの次にコピーカード、mobileは収納中のfooterにもAI・依頼文確認・コピーを表示する。展開中はパネル内のコピーを使える。READMEの説明をAI→コピーの順へ揃え、ADR 0012に確定した優先順と同じ画面からコピーを選べる方針を記録した。優先順は自動送信を意味しない。
+
+実際に選べる証拠を補強するため、`tests/e2e/action-choice.spec.ts` を追加した。1280/390/320pxで初期表示のAIと文字付きコピーの可視性・有効状態・表示順、通常クリックとEnterによるネイティブClipboardへの全文コピー、入力・確認・コピー時のAPI送信0回、明示AI要求の未設定エラー後もコピーできることを確認する。旧 `copy.spec.ts` のmobile合成クリックは、可視性・有効状態を検査する通常クリックへ変更した。既存assertの削除・弱体化・skipはない。
+
+最終レビューで、Enter前から同じ本文がClipboardにあるとキーボードコピーが動かなくてもassertが成功する点を指摘された。各コピーの直前に異なる文字列を書き込み、実クリック・Enterによって本文へ更新されることを検査する形へ補強した。アプリのコピー処理をモックしていない。
+
+環境は上記と同じmacOS arm64 / Node22.20.0 / npm10.9.3 / Playwright1.60.0標準Chromium。対象はcadcd33を基準にした今回の文書・テスト変更で、製品コード・Function・配信設定・依存関係は変更していない。
+
+| コマンド | 終了コード | 主要な結果 |
+|---|---:|---|
+| `CI=true npx playwright test tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts`（追加前） | 0 | 既存のコピー・モバイル展開のbaselineが成功。 |
+| `CI=true npx playwright test tests/e2e/action-choice.spec.ts tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts` | 0 | 新しい3画面幅の選択操作と通常クリックへ補強した既存テストが成功。 |
+| `CI=true npm run check` | 0 | 全品質gate成功。reportの144件すべてexpected、unexpected/flaky/skipped各0。 |
+| `git diff --check` | 0 | 差分の空白エラーなし。 |
+
+新しいAI提供元・送信経路・保存・解析・設定画面は追加していない。実AI・有料呼出し・デプロイ・マージは行っていない。今回は文書・テストだけの変更なのでFunctionコンパイルやPages配信は再実行せず、上記f7852529の既存実装に対する証拠と区別する。最終コミットSHAとCIの結果はDraft PR #37と最終報告で確認する。

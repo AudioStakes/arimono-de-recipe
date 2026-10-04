@@ -1,10 +1,19 @@
 import { expect, test } from "@playwright/test";
 
 test("依頼文欄は初期表示と自動更新の両方が機能する", async ({ page }) => {
+  let apiCalls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    apiCalls += 1;
+    await route.abort();
+  });
   await page.goto("/");
 
   const output = page.getByTestId("prompt-output");
-  await expect(page.locator(".prompt-heading h2")).toHaveText("今日の料理候補");
+  await expect(
+    page.getByRole("heading", { name: "料理候補とレシピ依頼文", exact: true }),
+  ).toBeVisible();
+  await page.getByText("コピーする依頼文を確認する", { exact: true }).click();
+  await expect(output).toHaveAccessibleName("コピーするレシピ依頼文");
   await expect(output).toHaveAttribute("readonly");
   await expect(output).toHaveValue(/## 役割/);
   await expect(output).toHaveValue(/## 出力形式/);
@@ -43,4 +52,5 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   expect(promptWithoutPairing).not.toContain("一緒に出す料理との相性");
   expect(promptWithoutPairing).toContain("### 使う材料");
   expect(promptWithoutPairing).toContain("### 調理のポイント");
+  expect(apiCalls).toBe(0);
 });

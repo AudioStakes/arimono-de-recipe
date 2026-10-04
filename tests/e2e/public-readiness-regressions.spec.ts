@@ -10,19 +10,22 @@ test("モバイル展開中は背景を操作せずTabをパネル内で循環�
   const close = page.getByRole("button", { name: "閉じる", exact: true });
   const first = page.getByRole("button", { name: "レシピ依頼文全文を閉じる" });
   const output = page.getByTestId("mobile-prompt-output");
+  const send = page.getByTestId("mobile-ai-prompt-send");
   await expect(close).toBeFocused();
   await output.focus();
   await output.press("Tab");
+  await expect(send).toBeFocused();
+  await send.press("Tab");
   await expect(first).toBeFocused();
   await first.press("Shift+Tab");
-  await expect(output).toBeFocused();
+  await expect(send).toBeFocused();
   await page.getByTestId("combo-input-materials").evaluate((element) => {
     (element as HTMLElement).focus();
   });
-  await expect(output).toBeFocused();
+  await expect(send).toBeFocused();
   const dialog = page.getByRole("dialog", { name: "AIに渡す依頼文" });
   await expect(dialog).toHaveAttribute("aria-modal", "true");
-  await output.press("Escape");
+  await send.press("Escape");
   await expect(opener).toBeFocused();
   await page.getByTestId("combo-input-materials").focus();
   await expect(page.getByTestId("combo-input-materials")).toBeFocused();

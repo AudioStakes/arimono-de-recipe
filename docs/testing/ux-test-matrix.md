@@ -14,7 +14,11 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 買い足しなしをdefaultにする | schema/function required | required with `/api/recipe` mock | stable hook guard |
 | 調理ビューのtabsを切り替える | optional | required | stable hook guard |
 | AI入力上限の超過で条件を黙って落とさず、コピーを残す | required | required with no API calls | no |
-| NG食材を料理名・理由・手順・味の調整でも勧めない（既知の調味料表記を含む） | required | required for taste display | no |
+| 表示・コピーと同じ依頼文全文を明示操作だけで送信する | required for client contract | required desktop/mobile, pending input and native copy | no |
+| 全文送信の文字数・JSON全体UTF-8上限を超えてもコピー本文を保持する | required boundary cases | required with no API calls | no |
+| 全文回答の型・空応答・timeout・入力変更によるabortと古い応答を検査する | required client lifecycle | required retry and stale-response flows | no |
+| 全文回答を文字列として表示し、確認画面を閉じた後もfocusを奪わない | no | required desktop/mobile, accessible name and status | no |
+| AI候補ではNG食材を料理名・理由・手順・味の調整でも勧めない（既知の調味料表記を含む） | required | required for taste display | no |
 | 調理ビューに受理した材料の分量と入力の使い方指定を保持する | parser required | required on desktop/mobile | no |
 | Clipboard API未対応時の代替コピーでfocusを保持する | no | required with native copy | no |
 | モバイル展開パネルのTab循環・背景操作禁止・Escape/resizeでの解除 | no | required | no |

@@ -1,3 +1,8 @@
+import {
+  renderAiPromptControls,
+  renderAiPromptPanel,
+  resetAiPromptForInputChange,
+} from "./ai-prompt-panel";
 import { renderAiRecipePanel, resetAiRecipeForInputChange } from "./ai-recipe-panel";
 import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
@@ -48,6 +53,15 @@ const createInitialState = (): AppState => {
     mobileSheetOpen: false,
     materialRequests: [],
     recipeDecision: createInitialRecipeDecisionState(),
+    aiPrompt: {
+      status: "idle",
+      activeSurface: "desktop",
+      submittedPrompt: "",
+      recipe: "",
+      errorMessage: "",
+      requestId: 0,
+      controller: null,
+    },
     aiRecipe: {
       status: "idle",
       activeSurface: "desktop",
@@ -457,6 +471,7 @@ export function initializeApp(root: HTMLElement): void {
   updateServingSteppers();
   refreshPromptPanelPanel(state, elements, outputPanel);
   renderAiRecipePanel(state, elements);
+  renderAiPromptPanel(state, elements);
 }
 
 function renderAppShell(): string {
@@ -473,22 +488,22 @@ function renderAppShell(): string {
           <span class="brand-title-text">ありもの de レシピ</span>
         </span>
       </h1>
-      <p class="lead" id="appLead">冷蔵庫にある食材を入れて、今日作る料理候補をすぐ見つけます。</p>
-      <p class="field-hint" id="aiPrivacyNotice" data-testid="ai-privacy-notice">「今日の候補を見る」を押すと、材料や要望をCloudflareのAIへ送信します。依頼文コピーは外部へ自動送信しません。</p>
+      <p class="lead" id="appLead">家にある食材から、このアプリでAIの料理候補を見るか、レシピ依頼文を作って普段使っているAIに渡せます。</p>
+      <p class="field-hint" id="aiPrivacyNotice" data-testid="ai-privacy-notice">「今日の候補を見る」または「この依頼文をAIへ送信」を押すと、材料や要望をCloudflareのAIへ送信します。入力・依頼文の確認・コピーだけでは送信しません。</p>
     </header>
     <div class="app-layout">
       <form class="form" id="recipeForm" data-testid="recipe-form" novalidate aria-describedby="appLead">
         <div id="basicFields" data-testid="basic-fields"></div>
         <section class="prompt-section" aria-label="料理候補と依頼文">
         <div class="prompt-heading">
-          <h2 id="promptHeading">今日の料理候補</h2>
-          <p id="promptDescription">家にある材料をもとに候補を見ます。依頼文コピーは別のAIで使うための補助です。</p>
+          <h2 id="promptHeading">料理候補とレシピ依頼文</h2>
+          <p id="promptDescription">同じ材料・要望から、アプリ内AIの料理候補を確認する方法と、依頼文をコピーして使う方法を選べます。</p>
         </div>
         <div class="prompt-action-grid" aria-label="実行方法">
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
-              <h3>今日の候補を見る</h3>
-              <p>家にある食材をもとに、短い料理候補を3つ表示します。</p>
+              <h3>このアプリでAIに聞く</h3>
+              <p>入力した材料・要望をCloudflareのAIへ送信し、短い料理候補を3つ表示します。</p>
             </div>
             <button
               id="generateRecipe"
@@ -503,8 +518,8 @@ function renderAppShell(): string {
           </article>
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
-              <h3>依頼文をコピー</h3>
-              <p>ChatGPT、Claude、Geminiなど、普段使っているAIに貼り付けて使えます。</p>
+              <h3>依頼文を作ってコピー</h3>
+              <p>依頼文は入力に合わせて作成されます。ChatGPT、Claude、Geminiなどへ貼り付けて使えます。「コピーする依頼文を確認する」から、同じ全文をこのアプリのAIへ送って返答を確認することもできます。コピーだけでは送信しません。</p>
             </div>
             <button
               id="copyPrompt"
@@ -531,17 +546,18 @@ function renderAppShell(): string {
         >
         </div>
         <details class="prompt-preview-details">
-          <summary>AI向け依頼文を確認する</summary>
+          <summary>コピーする依頼文を確認する</summary>
           <div class="output-shell">
             <textarea
               id="output"
               class="output"
               data-testid="prompt-output"
-              aria-labelledby="promptHeading"
+              aria-label="コピーするレシピ依頼文"
               aria-describedby="promptDescription"
               readonly
             ></textarea>
           </div>
+          ${renderAiPromptControls("desktop")}
         </details>
       </section>
         <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
@@ -647,6 +663,7 @@ function renderAppShell(): string {
               readonly
             ></textarea>
           </div>
+          ${renderAiPromptControls("mobile")}
         </div>
       </div>
     </div>
@@ -672,6 +689,10 @@ function getAppElements(): AppElements {
     copyPromptMobile: queryElement("#copyPromptMobile") as HTMLButtonElement,
     aiRecipePanel: queryElement("#aiRecipePanel") as HTMLElement,
     aiRecipePanelMobile: queryElement("#aiRecipePanelMobile") as HTMLElement,
+    sendPrompt: queryElement("#sendPrompt") as HTMLButtonElement,
+    sendPromptMobile: queryElement("#sendPromptMobile") as HTMLButtonElement,
+    aiPromptPanel: queryElement("#aiPromptPanel") as HTMLElement,
+    aiPromptPanelMobile: queryElement("#aiPromptPanelMobile") as HTMLElement,
   };
 }
 
@@ -897,6 +918,7 @@ function createOutputPanelServices(
     syncDynamicFormState();
     resetAiRecipeForInputChange(state, elements);
     markUserHasInputPanel(state, elements, outputPanelServices);
+    resetAiPromptForInputChange(state, elements, elements.output.value);
   };
 
   const conditionReader = createPromptDataReaderFromInputs({

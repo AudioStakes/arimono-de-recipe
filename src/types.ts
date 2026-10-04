@@ -174,4 +174,13 @@ export type AppState = {
   materialRequests: MaterialRequest[];
   recipeDecision: RecipeDecisionState;
   aiRecipe: AiRecipeState;
+  aiPrompt: {
+    status: AiRecipeStatus;
+    activeSurface: AiRecipeSurface;
+    submittedPrompt: string;
+    recipe: string;
+    errorMessage: string;
+    requestId: number;
+    controller: AbortController | null;
+  };
 };
