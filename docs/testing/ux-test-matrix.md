@@ -3,7 +3,7 @@
 Structure tests are mechanical guardrails. They are not proof of runtime behavior; runtime behavior belongs in unit and E2E tests.
 
 | Behavior | Unit | E2E | Structure |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 未指定項目をプロンプトに出力しない | required | smoke optional | source-of-truth guard |
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |

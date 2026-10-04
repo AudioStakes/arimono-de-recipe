@@ -9,6 +9,7 @@ declare const process: {
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  forbidOnly: true,
   ...(process.env.CI ? { workers: 2 } : {}),
   reporter: [["./tests/reporters/playwright-error-only-reporter.ts"], ["html", { open: "never" }]],
   quiet: true,

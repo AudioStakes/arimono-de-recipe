@@ -26,13 +26,13 @@ ChatGPT / Claude / Gemini の公式プロンプトガイドを比較し、3つ�
 参考にした公式ページ:
 
 - OpenAI: Prompt engineering  
-  https://developers.openai.com/api/docs/guides/prompt-engineering
+  <https://developers.openai.com/api/docs/guides/prompt-engineering>
 - Claude: Prompting best practices  
-  https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+  <https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices>
 - Claude: Prompt engineering overview  
-  https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview
+  <https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/overview>
 - Gemini: Prompt design strategies  
-  https://ai.google.dev/gemini-api/docs/prompting-strategies
+  <https://ai.google.dev/gemini-api/docs/prompting-strategies>
 
 ### 共通して重要だったこと
 

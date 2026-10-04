@@ -13,6 +13,7 @@ type PackageJson = {
 };
 
 const projectRoot = process.cwd();
+const isScriptFile = (projectPath: string): boolean => /\.[cm]?[jt]sx?$/.test(projectPath);
 
 const requiredStableHooks = [
   "app-shell",
@@ -310,6 +311,7 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
   }
 
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: verify the literal source template, without evaluating it.
   if (!sourceText.includes("`mobile-${testId}`")) {
     throw new Error("Missing stable mobile recipe-candidate hook prefix generation.");
   }
@@ -376,30 +378,30 @@ function extractAdrLinks(text: string): string[] {
 
 describe("current repository guardrails", () => {
   it("keeps client network use limited to the approved recipe API", async () => {
-    const sourceFiles = await collectFiles("src", (projectPath) => projectPath.endsWith(".ts"));
+    const sourceFiles = await collectFiles("src", isScriptFile);
     assertClientNetworkBoundary(sourceFiles);
   });
 
   it("keeps Pages Functions limited to the approved Workers AI boundary", async () => {
     const hasFunctionsDirectory = await pathExists("functions");
     const functionFiles = hasFunctionsDirectory
-      ? await collectFiles("functions", (projectPath) => projectPath.endsWith(".ts"))
+      ? await collectFiles("functions", isScriptFile)
       : [];
     assertApprovedFunctionBoundary(functionFiles);
   });
 
   it("keeps prompt output rules out of generic UI rendering modules", async () => {
-    const sourceFiles = await collectFiles("src", (projectPath) => projectPath.endsWith(".ts"));
+    const sourceFiles = await collectFiles("src", isScriptFile);
     const hasFunctionsDirectory = await pathExists("functions");
     const functionFiles = hasFunctionsDirectory
-      ? await collectFiles("functions", (projectPath) => projectPath.endsWith(".ts"))
+      ? await collectFiles("functions", isScriptFile)
       : [];
     assertPromptRulesStayOutOfUi([...sourceFiles, ...functionFiles]);
   });
 
   it("keeps stable hooks documented and used by E2E", async () => {
-    const sourceFiles = await collectFiles("src", (projectPath) => projectPath.endsWith(".ts"));
-    const e2eFiles = await collectFiles("tests/e2e", (projectPath) => projectPath.endsWith(".ts"));
+    const sourceFiles = await collectFiles("src", isScriptFile);
+    const e2eFiles = await collectFiles("tests/e2e", isScriptFile);
 
     assertStableHooks(sourceFiles, e2eFiles);
   });

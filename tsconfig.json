@@ -10,6 +10,8 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
     "pretty": false,
 
     "strict": true,
@@ -21,8 +23,12 @@
     "noPropertyAccessFromIndexSignature": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
 
-    "skipLibCheck": true
+    "skipLibCheck": false
   },
   "include": [
     "src",

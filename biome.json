@@ -8,16 +8,12 @@
   },
   "files": {
     "includes": [
-      "index.html",
-      "src/**/*.ts",
-      "functions/**/*.ts",
-      "src/**/*.css",
-      "tests/**/*.ts",
-      "*.json",
-      "*.ts",
-      "*.md",
-      "public/_routes.json",
-      ".github/**/*.yml"
+      "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,css,html,json,jsonc}",
+      "!!**/package-lock.json",
+      "!!dist",
+      "!!coverage",
+      "!!playwright-report",
+      "!!test-results"
     ]
   },
   "formatter": {
@@ -31,23 +27,43 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "useAwaitThenable": "error"
+      },
       "correctness": {
+        "noUnknownProperty": "error",
+        "noUnknownFunction": "error",
+        "noUnknownPseudoClass": "error",
+        "noUnknownPseudoElement": "error",
+        "noUnknownUnit": "error",
         "noUnusedImports": "error",
         "noUnusedVariables": "error"
       },
       "style": {
-        "noNonNullAssertion": "warn",
+        "noNonNullAssertion": "error",
         "noParameterAssign": "error",
         "useConst": "error",
         "useImportType": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "useThrowOnlyError": "error"
       },
       "suspicious": {
-        "noConsole": "warn",
+        "noConsole": "error",
         "noDebugger": "error",
         "noDoubleEquals": "error",
-        "noExplicitAny": "error"
+        "noExplicitAny": "error",
+        "noUnusedExpressions": "error",
+        "noSkippedTests": "error",
+        "noFocusedTests": "error",
+        "noDuplicateProperties": "error",
+        "noUnknownAtRules": "error",
+        "noShorthandPropertyOverrides": "error"
       }
     }
   },
@@ -71,6 +87,48 @@
       "quoteStyle": "double"
     }
   },
+  "html": {
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "process": "Browser code cannot use Node.js process.",
+                  "Buffer": "Browser code cannot use Node.js Buffer.",
+                  "require": "Browser code must use ESM imports.",
+                  "__dirname": "Browser code cannot use Node.js __dirname.",
+                  "__filename": "Browser code cannot use Node.js __filename.",
+                  "global": "Browser code must use globalThis."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}", "tests/reporters/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {

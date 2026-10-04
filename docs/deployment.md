@@ -62,7 +62,7 @@ npx wrangler pages dev dist
 ## よくある問題
 
 | 症状 | 確認すること |
-|---|---|
+| --- | --- |
 | Viteの開発画面でAI候補が出ない | `npm run dev` にFunctionはありません。コピーを使うかPages devへ切り替える。 |
 | 本番で候補生成に失敗する | `AI` の名前、Production/Previewの設定、再デプロイ、使用量・モデルの利用可否を確認する。 |
 | Function自体が動かない | `functions/` を含むPagesのビルドか、`dist/` だけの静的配信かを確認する。 |

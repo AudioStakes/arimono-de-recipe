@@ -24,8 +24,8 @@
 # Commands Run
 
 | Command | Exit Code | Relevant Output |
-|---|---:|---|
-|  |  |  |
+| --- | ---: | --- |
+| | | |
 
 # Skipped Checks
 

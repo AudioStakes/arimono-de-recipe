@@ -499,7 +499,7 @@ function renderAppShell(): string {
           <h2 id="promptHeading">料理候補とレシピ依頼文</h2>
           <p id="promptDescription">同じ材料・要望から、アプリ内AIの料理候補を確認する方法と、依頼文をコピーして使う方法を選べます。</p>
         </div>
-        <div class="prompt-action-grid" aria-label="実行方法">
+        <div class="prompt-action-grid" role="group" aria-label="実行方法">
           <article class="prompt-action-card">
             <div class="prompt-action-copy">
               <h3>このアプリでAIに聞く</h3>
@@ -627,7 +627,7 @@ function renderAppShell(): string {
             <h2 id="mobilePromptHeading">AIに渡す依頼文</h2>
             <button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button>
           </div>
-          <div class="mobile-sheet-action-grid" aria-label="実行方法">
+          <div class="mobile-sheet-action-grid" role="group" aria-label="実行方法">
             <article class="mobile-action-card">
               <p>普段使っているAIへ貼り付け</p>
               <button
@@ -744,12 +744,13 @@ function renderRecipeCountField(): string {
     "作りたい品数",
     "bowl",
     `
-      <fieldset class="panel-fieldset" aria-label="作りたい品数">
+      <fieldset class="panel-fieldset">
+        <legend class="visually-hidden">作りたい品数</legend>
         ${renderRadioOptions("recipeCount", recipeCountOptions, "auto")}
       </fieldset>
       <div id="recipeRolesField" class="recipe-role-subfield" data-testid="recipe-item-recipeRoles" hidden>
         <label class="subfield-label" for="recipeRolesInput">料理の役割・量感</label>
-        ${renderComboFieldControl(getCombo("recipeRoles"))}
+        ${renderComboFieldControl(getCombo("recipeRoles"), "", true)}
       </div>
     `,
   );
@@ -759,15 +760,20 @@ function renderComboField(combo: ComboConfig, describedBy = ""): string {
   return `
     <div class="field" data-testid="recipe-item-${combo.id}">
       <label class="field-title" for="${combo.id}Input">${fieldLabelHtml(combo.label, combo.icon)}</label>
-      ${renderComboFieldControl(combo, describedBy)}
+      ${renderComboFieldControl(combo, describedBy, true)}
     </div>
   `;
 }
 
-function renderComboFieldControl(combo: ComboConfig, describedBy = ""): string {
+function renderComboFieldControl(
+  combo: ComboConfig,
+  describedBy = "",
+  hasVisibleLabel = false,
+): string {
   const inputId = `${combo.id}Input`;
   const suggestionsId = `${combo.id}Suggestions`;
   const describedByAttribute = describedBy ? ` aria-describedby="${describedBy}"` : "";
+  const accessibleLabelAttribute = hasVisibleLabel ? "" : ` aria-label="${combo.label}"`;
   return `
     <div class="combo" data-combo="${combo.id}" data-testid="combo-${combo.id}">
       <div class="floating-chip-row" aria-live="polite"></div>
@@ -782,7 +788,7 @@ function renderComboFieldControl(combo: ComboConfig, describedBy = ""): string {
           autocapitalize="off"
           spellcheck="false"
           enterkeyhint="done"
-          aria-label="${combo.label}"
+          ${accessibleLabelAttribute}
           role="combobox"
           aria-autocomplete="list"
           aria-controls="${suggestionsId}"
@@ -862,7 +868,7 @@ function renderServingsField(): string {
       ({ id, label, icon: iconName }) => `
         <div class="serving-card">
           <div class="serving-label" id="${id}Label" data-testid="serving-label-${id}"><span aria-hidden="true">${icon(iconName)}</span>${label}</div>
-          <div class="serving-stepper" data-serving-id="${id}" data-testid="serving-stepper-${id}" data-count="0" aria-labelledby="${id}Label">
+          <div class="serving-stepper" role="group" data-serving-id="${id}" data-testid="serving-stepper-${id}" data-count="0" aria-labelledby="${id}Label">
             <button class="serving-adjust serving-minus" data-testid="serving-minus-${id}" type="button" aria-label="${label}を1人減らす">−</button>
             <span class="serving-count" data-testid="serving-count-${id}" aria-live="polite">0人</span>
             <button class="serving-adjust serving-plus" data-testid="serving-plus-${id}" type="button" aria-label="${label}を1人増やす">+</button>
@@ -877,7 +883,7 @@ function renderServingsField(): string {
       <legend class="field-title">${fieldLabelHtml("人数・分量", "users")}</legend>
       ${renderRadioOptions("servingsMode", servingsModeOptions, "unspecified")}
       <div id="customServingsPanel" class="custom-servings-panel" data-testid="custom-servings-panel" hidden>
-        <div class="serving-grid" aria-label="詳しい人数">${controls}</div>
+        <div class="serving-grid" role="group" aria-label="詳しい人数">${controls}</div>
       </div>
     </fieldset>
   `;

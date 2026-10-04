@@ -24,7 +24,7 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 ### このPRで改善した項目
 
 | ID | 優先度 | 調査時の問題・影響 | 改善と証拠 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 01 | P0 | AI依頼の材料・要望・NG項目・補足が上限で切られ、入力した条件が黙って落ちる。NG9件なら9件目を送らない。必須材料7件以上も候補の材料6項目上限と両立しない。 | `ai-recipe-request.ts` で送信前に上限を検証し、条件を減らすかコピーを使う案内を表示。独立レビューの修正で、目的・品数の説明を補足とともに保持し、API側も文字数超過を切り捨てず拒否する。必須・使い切り指定は合計6件までとし、API入力でも検証。NG9件・必須7件でAPI呼び出し0回、コピーに条件が残るE2Eを追加。 |
 | 02 | P0 | 材料の部分一致で「塩漬け豚肉」を「塩」、「油揚げ」を「油」、「豆腐ハンバーグ」を「豆腐」として許可できる。買い足しなしの検証を迂回する。 | `ai-recipe-schema.ts` を材料名と限定した分量表記の照合へ変更。独立レビューの修正で全角の分量・半丁・括弧で補記した重量も扱う。別食材を許可しない回帰テストを追加。 |
 | 03 | P0 | NG食材の検証対象に調理手順がなく、材料一覧から除外しても手順で使用できる。 | `steps` もNG照合の対象にし、手順にNG食材が出る応答を拒否するテストを追加。独立レビューの修正で長い手順や材料名を先に切り捨てず、上限超過の応答全体を拒否する。別名等の限界は項目28を参照。 |
@@ -52,7 +52,7 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 ### 未解決・所有者の判断が必要な項目
 
 | ID | 優先度 | 現状と根拠 | 次に行うこと・完了条件 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 24 | P0（コード再利用を許諾する場合） | `LICENSE` がなく、GitHubのlicense情報もない。publicにするだけではコードの改変・再配布の一般的な許諾は明示されない。 | 所有者がMIT/Apache-2.0等、意図する条件を選び `LICENSE`、package metadata、READMEを更新する。このPRは選択せず、`UNLICENSED` と未設定状態を明示した。 |
 | 25 | P0（公開AIを運用する場合） | `/api/recipe` に認証・回数制限がない。Originを設定した直接HTTP送信は可能。本文とトークン上限だけではAIの連続呼び出しや費用増加を防げない。 | Cloudflareで適用可能なRate limiting/WAFを設定し、本番・Preview・代替ドメインで確認。使用量の監視・停止方法も決める。コードへ新しい保存・認証・別APIは追加しなかった。 |
 | 26 | P1 | Security案内を追加したが、GitHubのPrivate vulnerability reporting有効化状態と連絡方法の運用は未確認。 | 所有者が非公開報告を有効化し、報告先を実際に利用できるか確認する。回答期限は合意前に約束しない。 |
@@ -81,7 +81,7 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 以下はこのPRの初回実装者が記録した履歴です。2026-10-02の独立レビューで実行した検証は末尾の追記に分けて記録し、この履歴を新しいheadの検証結果として扱いません。
 
 | 確認 | 結果 |
-|---|---|
+| --- | --- |
 | `npm run format` / `format:check` / `lint` / `typecheck` / `build` | 終了コード0。Node.js 24.19.0 / npm 11.9.0で確認。 |
 | `npx vitest run tests/unit tests/structure --reporter=default` | 終了コード0。ユニット139件・構造15件、合計154件が成功。 |
 | `npm run check`（GitHub Actions） | 終了コード0。[標準CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/36654321661)でNode.js 22.23.2と標準Chromiumを使用。ユニット139件・構造15件・E2E100件、計254件が成功。必須材料上限の追加テストも含む。 |
@@ -129,7 +129,7 @@ P0: 対象の公開・利用形態では先に解決したい項目。P1: 他の
 位置はレビュー開始時点のheadの関数・設定を示す。P1は利用結果や条件保持に影響する不具合、P2は特定経路の不具合・導入保守上の問題。
 
 | ID | 優先度 | 位置・発生条件・影響 | 由来と根拠 | 対応 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | R1 | P1 | `src/ai-recipe-schema.ts:normalizeText/parseString/parseStringList`。APIへ81文字の材料・NG、181文字の補足等を送ると、上限まで切った条件で受理する。 | PR以前から存在。取得した関数本体で切り捨てを再現し、APIの上限超過8種と上限ちょうど8種の回帰テストを追加。 | 超過を拒否し、AIを呼ばない。空白の正規化は維持。 |
 | R2 | P1 | 同ファイルの応答parser。手順の61文字目以降のNGや、長い材料名の後半を検証前に除去するため、途中までの内容で成功できる。 | 切り捨て自体は既存。今回の手順NG検証でも残っていた穴。60文字の後に「にんにくを加える」を置くFunction境界テストを追加。 | 応答文字数超過を拒否し、短縮した内容で成功しない。 |
 | R3 | P1 | `src/ai-recipe-request.ts:buildNotes/buildAiRecipeCandidateRequest`。カレーを作る指定とカレーに合わせる指定が同じJSONとなり、品数も送らない。 | PR以前から存在。入力reader・コピー本文では区別されるがAIアダプタでは失われる。ユニットと実フォーム操作のE2Eを追加。 | 既存のnotesに選択した目的と品数の説明を保持。補足との合計180文字を送信前に検証し、超過時もコピーを維持。 |
@@ -153,7 +153,7 @@ CI失敗時のGitHub形式のログだけでは整形差分が見えなかった
 - このCIの環境はUbuntu / Node.js 22.23.3 / npm 10.9.9 / Playwright標準Chromium。以下の終了コードはこのコミットで確認した結果であり、初回実装者の結果の転記ではない。
 
 | 実行したコマンド | 終了コード | 確認結果 |
-|---|---:|---|
+| --- | ---: | --- |
 | `npm ci` | 0 | lockfileを用いた新しいCI環境の依存導入が成功。 |
 | `npx playwright install --with-deps chromium` | 0 | CI指定のブラウザと必要な依存を導入。 |
 | `npm run check` | 0 | 整形、lint、型検査、ビルド、ユニット、構造、E2Eを順に完了。 |
@@ -171,7 +171,7 @@ E2Eは実フォームから目的・品数を選んで送信データを確認�
 既存headの履歴を引き継ぎ、各push前にリモートheadを確認してfast-forwardで追加した。force pushや履歴の書換えはしていない。
 
 | SHA | 内容 |
-|---|---|
+| --- | --- |
 | [`59367e87de6ab3b207d60db19a84a3e868a0e25e`](https://github.com/AudioStakes/arimono-de-recipe/commit/59367e87de6ab3b207d60db19a84a3e868a0e25e) | 入力・応答・条件保持・streamの回帰テストを追加 |
 | [`457d973c504de120bbbf927b4e4cf90a9739c3bb`](https://github.com/AudioStakes/arimono-de-recipe/commit/457d973c504de120bbbf927b4e4cf90a9739c3bb) | 回帰fixtureのlint・整形を修正 |
 | [`d0e7d3705318321a7539d78baff18405535bb58a`](https://github.com/AudioStakes/arimono-de-recipe/commit/d0e7d3705318321a7539d78baff18405535bb58a) | 表形式テストの整形を修正 |
@@ -208,7 +208,7 @@ E2Eは実フォームから目的・品数を選んで送信データを確認�
 全6件はbaseにも存在する問題で、PR #29による新しい回帰・マージ後の変更による問題としては分類しない。位置は今回の修正後のファイル位置で、修正前の発生条件を併記する。好みだけの変更は行っていない。
 
 | ID / 分類 | 位置 | 発生条件・影響と根拠 | 対応 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | M1 / 必須修正 / P2 | `src/ai-recipe-schema.ts:722` | NG「にんにく」、材料/手順が正常でも、料理名「にんにく入り豆腐炒め」や理由「にんにくを加えると香りがよくなります。」を受理し表示できた。`title/why` が検査配列にない。新規unit2件で修正前に再現。 | 表示する料理名・推薦理由も検査し、Functionが汎用500を返す回帰とNGなしの正常系を追加。修正済み。 |
 | M2 / 必須修正 / P2 | `src/ai-recipe-schema.ts:602`、`src/recipe-candidate-list.ts:getTasteAdjustmentLabels` | NG「醤油」でも「しょうゆ」を材料/手順で受理する。逆方向、みそ/味噌、こしょう/胡椒、だし/出汁も同様。アプリ内で既に扱う表記がNG側で一致しない。8組のunitが修正前に失敗。 | 4組の既知表記だけを正規化し、候補の全文検査と味の調整で同じNG比較を使う。一般の食材別名/アレルギー辞書は追加しない。修正済み。 |
 | M5 / 必須修正 / P2 | `src/app-events.ts:67`、`bindAppEvents` | モバイルシート中、Tab/Shift+Tabが背後の材料入力や削除ボタンへ移り、覆われた操作を実行できた。pointer用backdropだけではキーボード操作を遮らない。Chromiumで独立再現、追加E2E2件が修正前に失敗。 | 展開中だけ背景siblingsをinertにし、可視の操作のTab境界を循環。全操作を含むbottomActionsにdialog/aria-modalと見出しを設定。Escape・閉じる・幅変更時は解除しフォーカス復帰を確認。修正済み。 |
@@ -223,7 +223,7 @@ E2Eは実フォームから目的・品数を選んで送信データを確認�
 macOS / arm64、Node.js 22.20.0・npm 10.9.3、Playwright 1.60.0の標準Chromium（desktop/mobile emulation）、Wrangler 4.144.0。`ASDF_NODEJS_VERSION=22.20.0` をコマンドごとに指定した。Node24の補助確認は24.18.0。シェルコマンドはrtk経由で実行した。下表の `npm/npx` はこの環境指定とrtk prefixを省略して記載する。
 
 | Command / 対象 | Exit | 主要な結果 |
-|---|---:|---|
+| --- | ---: | --- |
 | `git ai-status` / `git ai-files` / `git ai-status-full` / `git ai-untracked`、`git remote -v`、`git fetch origin --prune` | 0 | 作業場所・変更なし・remote・最新mainを確認。Git管理領域はread-onlyのためfetch/branch/commitは依頼済み操作の昇格経路を使用。 |
 | `gh pr view 29 --repo AudioStakes/arimono-de-recipe --json ...`、限定したdiff/stat/log | 0 | MERGED、base/head/merge、最終差分、全14コミットを確認。 |
 | `npm ci` | 0 | lockfile固定で導入。先行する失敗はasdf未選択のexit1とsandboxのnpm接続制限によるexit1で、Node指定と許可された接続経路で解消。ソース/lockfileは変更していない。 |
@@ -295,7 +295,7 @@ Production/Preview/代替ドメインのBindings・WAF・呼び出し制限・�
 macOS arm64、Node 22.20.0、npm 10.9.3、Playwright 1.60.0の標準Chromium、Wrangler 4.144.0。shellは `rtk`、Node選択は `ASDF_NODEJS_VERSION=22.20.0`、E2EはCIと同じ2workerで実行した。下表の成功結果は上記製品コミットに含まれるコード・テストに対応する。この記録だけを追加する後続コミットのSHAとCIはPR本文・最終報告で区別する。
 
 | コマンド | 終了コード | 主要な結果 |
-|---|---:|---|
+| --- | ---: | --- |
 | `npm run test:unit -- --run tests/unit/ai-prompt-client.test.ts`（実装前） | 1 | 全文送信関数が未実装で追加テストが失敗。既存の経路に全文送信クライアントがないことを確認。 |
 | `npx vitest run tests/unit/ai-prompt-client.test.ts tests/unit/ai-recipe-client.test.ts tests/unit/recipe-function.test.ts` | 0 | 新旧のクライアントとFunction（AIスタブ）が成功。 |
 | `npx vitest run tests/unit/ai-prompt-client.test.ts --reporter=json --outputFile=/private/tmp/arimono-dual-flow-unit-report.json` | 0 | 18/18成功。全文一致、空・文字数・UTF-8とescapeの境界、不正応答、APIエラー、接続・本文待機timeout、中断とtimer解除。 |
@@ -329,7 +329,7 @@ desktopはAIカードの次にコピーカード、mobileは収納中のfooter�
 環境は上記と同じmacOS arm64 / Node22.20.0 / npm10.9.3 / Playwright1.60.0標準Chromium。対象はcadcd33を基準にした今回の文書・テスト変更で、製品コード・Function・配信設定・依存関係は変更していない。
 
 | コマンド | 終了コード | 主要な結果 |
-|---|---:|---|
+| --- | ---: | --- |
 | `CI=true npx playwright test tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts`（追加前） | 0 | 既存のコピー・モバイル展開のbaselineが成功。 |
 | `CI=true npx playwright test tests/e2e/action-choice.spec.ts tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts` | 0 | 新しい3画面幅の選択操作と通常クリックへ補強した既存テストが成功。 |
 | `CI=true npm run check` | 0 | 全品質gate成功。reportの144件すべてexpected、unexpected/flaky/skipped各0。 |
@@ -341,7 +341,7 @@ desktopはAIカードの次にコピーカード、mobileは収納中のfooter�
 
 所有者から全オープンPRのコンフリクト解消とマージを明示的に依頼された。取得時のmainは `df307d826970cb33764d47ef457811913502e9da`、対象は#30〜#37の8件。#36を先にマージし、#37のbaseをmainへ切り替えた。#30〜#32のAction固定SHAは公式タグと一致し、個別CIで更新Actionとartifactを確認した。#34/#35も独立レビューを行い、現行コードにおける必須の互換性問題は確認されなかった。#33統合前のmainは `259f400e58769a26e1b424ac697654a4c44ee390`。
 
-#33の元head `0ba55cd4ce00f47e3554637fb0ce3b6657206b94` のCI run 37162820890はBiomeで失敗し、後続の型検査・build・テストに到達していなかった。作業中にDependabotがheadを `1fdb8408e73a51c47e5eee775cc847a88c608e37` へ更新したが、そのCI run 37182144232も失敗していた。これらの失敗履歴と、以下の統合後の成功を区別する。
+PR #33の元head `0ba55cd4ce00f47e3554637fb0ce3b6657206b94` のCI run 37162820890はBiomeで失敗し、後続の型検査・build・テストに到達していなかった。作業中にDependabotがheadを `1fdb8408e73a51c47e5eee775cc847a88c608e37` へ更新したが、そのCI run 37182144232も失敗していた。これらの失敗履歴と、以下の統合後の成功を区別する。
 
 最新mainを取り込む際にpackage.jsonとlockfileのroot依存一覧で衝突した。Biome2.5.15 / Playwright1.63.0 / Vite8.3.1 / Wrangler4.145.0と、mainのTypeScript7.0.2 / Node型26.6.3をすべて保持して解消した。lockfileの残りはGitが統合し、20種類のTypeScriptネイティブパッケージも保持した。manifest・lockfile・導入済み直接依存の一致を独立レビューと `npm ci` で確認した。
 
@@ -350,7 +350,7 @@ desktopはAIカードの次にコピーカード、mobileは収納中のfooter�
 対象は#33の更新にmain259f400eと上記修正を組み合わせた作業ツリー。最終コミットSHAと対応CIはPR #33に記録する。環境はmacOS arm64 / Node22.20.0 / npm10.9.3 / Playwright1.63.0の標準Chromiumとmobile-chrome。shellはrtk経由、E2EはCI=true・2 workers。
 
 | コマンド | 終了コード | 主要な結果 |
-|---|---:|---|
+| --- | ---: | --- |
 | `npm ci`（全依存の統合後） | 0 | manifest/lockfileからNode22へ導入成功。 |
 | `npx playwright install chromium` | 0 | 更新Playwrightの標準ブラウザを準備。 |
 | `npm run format:check`（修正前→後） | 1→0 | 未定義値アクセス1か所・unit3ファイルの整形を検出し、修正後成功。 |

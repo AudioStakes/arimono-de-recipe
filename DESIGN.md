@@ -135,7 +135,7 @@ description: Claude の暖かい AI プロダクト感、Starbucks の食・日�
 ### Palette Usage
 
 | Token | Role | Usage |
-|---|---|---|
+| --- | --- | --- |
 | `--canvas` | Primary app background | Page background, mobile sheet underlay |
 | `--canvas-soft` | Claude-like warm cream | Header area, broad hero wash |
 | `--surface` | Main card surface | Form groups, output panel, suggestion menus |
@@ -187,7 +187,7 @@ The green radial glow should be secondary and subtle. It should suggest ingredie
 ### Type Scale
 
 | Role | Size | Weight | Line Height | Usage |
-|---|---:|---:|---:|---|
+| --- | ---: | ---: | ---: | --- |
 | Display XL | `clamp(2.4rem, 5vw, 4.4rem)` | 900 | 1.0 | App title |
 | Display MD | `clamp(1.9rem, 4vw, 3rem)` | 800 | 1.12 | Optional hero heading |
 | Section Title | `1.35rem` | 850 | 1.3 | Form/output section headings |
@@ -377,7 +377,7 @@ Chips are important because they summarize the user's input and reduce anxiety b
 ### Chip Categories
 
 | Chip Type | Color | Role |
-|---|---|---|
+| --- | --- | --- |
 | Ingredient | Green | 食材, NG食材, food-related constraints |
 | Cooking condition | Coral | 調理器具, 調理時間, 作りやすさ |
 | Mood / flavor | Peach or lavender | 味や雰囲気 |
@@ -685,7 +685,7 @@ Use vertical rhythm generously. This app should not feel cramped; users are maki
 ### Recommended Durations
 
 | Interaction | Duration | Easing |
-|---|---:|---|
+| --- | ---: | --- |
 | Button hover | 160–200ms | ease |
 | Button press | immediate / 80ms | ease-out |
 | Suggestions open | 120–160ms | ease-out |

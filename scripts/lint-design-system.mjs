@@ -54,40 +54,11 @@ const gradientFunctionNames = [
   "repeating-radial-gradient",
   "repeating-conic-gradient",
 ];
-const cssWideKeywords = new Set([
-  "inherit",
-  "initial",
-  "revert",
-  "revert-layer",
-  "unset",
-]);
+const cssWideKeywords = new Set(["inherit", "initial", "revert", "revert-layer", "unset"]);
 const styleTagPattern = new RegExp("<" + "style[\\s>]", "i");
 const inlineStyleAttributePattern = new RegExp("\\s" + "style\\s*=");
 const domStyleMutationPattern = new RegExp("\\." + "style\\b");
 const styleSetAttributePattern = new RegExp("setAttribute\\s*\\(\\s*[\"']" + "style[\"']", "i");
-const safeDesignKeywords = new Set([
-  "auto",
-  "currentcolor",
-  "transparent",
-  "solid",
-  "dashed",
-  "dotted",
-  "double",
-  "none",
-  "normal",
-  "ease",
-  "ease-in",
-  "ease-out",
-  "ease-in-out",
-  "linear",
-  "forwards",
-  "backwards",
-  "both",
-  "infinite",
-  "alternate",
-  "running",
-  "paused",
-]);
 const cssNamedColors = new Set([
   "aliceblue",
   "antiquewhite",
@@ -240,6 +211,9 @@ const cssNamedColors = new Set([
   "yellowgreen",
 ]);
 
+/**
+ * @returns {Promise<void>}
+ */
 async function main() {
   const [designText, stylesText, projectFiles] = await Promise.all([
     readFile(designPath, "utf8").catch(() => {
@@ -267,10 +241,14 @@ async function main() {
   assertGeneratedPromptIsNotMonospace(stylesText);
 }
 
+/**
+ * @param {string} directory
+ * @returns {Promise<string[]>}
+ */
 async function collectProjectFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
-    entries.flatMap((entry) => {
+    entries.map((entry) => {
       if (ignoredDirectories.has(entry.name)) return [];
 
       const absolutePath = path.join(directory, entry.name);
@@ -284,6 +262,10 @@ async function collectProjectFiles(directory) {
   return files.flat();
 }
 
+/**
+ * @param {string[]} projectFiles
+ * @returns {Promise<void>}
+ */
 async function assertNoInlineStyles(projectFiles) {
   const violations = [];
   const filesToCheck = projectFiles.filter((file) => checkedTextExtensions.has(path.extname(file)));
@@ -309,12 +291,18 @@ async function assertNoInlineStyles(projectFiles) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ */
 function assertSourceComment(stylesText) {
   if (!stylesText.slice(0, 240).includes(sourceComment)) {
     throw new Error(`src/styles.css must start with a ${JSON.stringify(sourceComment)} comment.`);
   }
 }
 
+/**
+ * @param {string} stylesText
+ */
 function assertNoOldTokens(stylesText) {
   const violations = oldTokens.filter((token) =>
     new RegExp(`${escapeRegExp(token)}(?![a-z0-9-])`, "i").test(stylesText),
@@ -324,8 +312,14 @@ function assertNoOldTokens(stylesText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownCustomProperties(stylesText, designText) {
-  const allowed = new Set([...designText.matchAll(/--[a-z0-9-]+(?=\s*:)/gi)].map(([token]) => token));
+  const allowed = new Set(
+    [...designText.matchAll(/--[a-z0-9-]+(?=\s*:)/gi)].map(([token]) => token),
+  );
   const used = new Set([...stylesText.matchAll(/--[a-z0-9-]+/gi)].map(([token]) => token));
   const unknown = [...used].filter((token) => !allowed.has(token));
 
@@ -334,6 +328,10 @@ function assertKnownCustomProperties(stylesText, designText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownCustomPropertyValues(stylesText, designText) {
   const designTokens = extractCustomPropertyDeclarations(designText);
   const styleTokens = extractCustomPropertyDeclarations(stylesText);
@@ -352,15 +350,25 @@ function assertKnownCustomPropertyValues(stylesText, designText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownRawColors(stylesText, designText) {
   const allowed = new Set(extractColors(designText).map(normalizeCompact));
-  const unknown = extractColors(stylesText).filter((color) => !allowed.has(normalizeCompact(color)));
+  const unknown = extractColors(stylesText).filter(
+    (color) => !allowed.has(normalizeCompact(color)),
+  );
 
   if (unknown.length > 0) {
     throw new Error(`Raw colors must come from DESIGN.md:\n${[...new Set(unknown)].join("\n")}`);
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownGradients(stylesText, designText) {
   const allowed = new Set(extractGradientCalls(designText).map(normalizeSnippet));
   const unknown = extractGradientCalls(stylesText).filter(
@@ -372,6 +380,10 @@ function assertKnownGradients(stylesText, designText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownFontFamilies(stylesText, designText) {
   const allowedFonts = new Set(
     [...designText.matchAll(/--font-[a-z-]+:\s*([^;]+);/g)].map((match) =>
@@ -407,6 +419,10 @@ function assertKnownFontFamilies(stylesText, designText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ * @param {string} designText
+ */
 function assertKnownDesignValues(stylesText, designText) {
   const allowed = new Set([...extractScalarValues(designText), "0", "none"]);
   const violations = [];
@@ -429,6 +445,9 @@ function assertKnownDesignValues(stylesText, designText) {
   }
 }
 
+/**
+ * @param {string} stylesText
+ */
 function assertGeneratedPromptIsNotMonospace(stylesText) {
   const violations = [];
   let outputUsesSans = false;
@@ -439,7 +458,11 @@ function assertGeneratedPromptIsNotMonospace(stylesText) {
     if (!targetsPrompt && !targetsPromptAncestor) continue;
     for (const declaration of rule.declarations) {
       if (!["font", "font-family"].includes(declaration.property)) continue;
-      if (/(?:var\(--font-mono\)|monospace|ui-monospace|sfmono|jetbrains mono|cascadia code)/i.test(declaration.value)) {
+      if (
+        /(?:var\(--font-mono\)|monospace|ui-monospace|sfmono|jetbrains mono|cascadia code)/i.test(
+          declaration.value,
+        )
+      ) {
         violations.push(`${rule.selector}: ${declaration.property}`);
       }
       if (
@@ -456,28 +479,43 @@ function assertGeneratedPromptIsNotMonospace(stylesText) {
     throw new Error("Generated prompt output must use the DESIGN.md sans-serif reading surface.");
   }
   if (!outputUsesSans) {
-    throw new Error("Generated prompt output must explicitly declare font-family: var(--font-sans).");
+    throw new Error(
+      "Generated prompt output must explicitly declare font-family: var(--font-sans).",
+    );
   }
 }
 
+/**
+ * @param {string} text
+ */
 function extractColors(text) {
   return [
-    ...text.matchAll(/#(?:[0-9a-fA-F]{3,8})\b/g),
-    ...extractFunctionCalls(text, colorFunctionNames).map((color) => [color]),
-    ...extractNamedColors(text).map((color) => [color]),
-  ].map(([color]) => color);
+    ...[...text.matchAll(/#(?:[0-9a-fA-F]{3,8})\b/g)].map(([color]) => color),
+    ...extractFunctionCalls(text, colorFunctionNames),
+    ...extractNamedColors(text),
+  ];
 }
 
+/**
+ * @param {string} text
+ */
 function extractGradientCalls(text) {
   return extractFunctionCalls(text, gradientFunctionNames);
 }
 
+/**
+ * @param {string} text
+ */
 function extractScalarValues(text) {
-  return [
-    ...text.matchAll(/-?\d*\.?\d+(?:px|rem|em|vw|vh|dvh|dvb|%|ms|s)\b/g),
-  ].map(([value]) => value);
+  return [...text.matchAll(/-?\d*\.?\d+(?:px|rem|em|vw|vh|dvh|dvb|%|ms|s)\b/g)].map(
+    ([value]) => value,
+  );
 }
 
+/**
+ * @param {string} stylesText
+ * @param {{ includeCustomProperties?: boolean }} [options]
+ */
 function extractCssDeclarations(stylesText, options = {}) {
   return extractCssRules(stylesText).flatMap((rule) =>
     rule.declarations.filter(
@@ -486,6 +524,9 @@ function extractCssDeclarations(stylesText, options = {}) {
   );
 }
 
+/**
+ * @param {string} stylesText
+ */
 function extractCssRules(stylesText) {
   const rules = [];
   const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
@@ -507,6 +548,9 @@ function extractCssRules(stylesText) {
   return rules;
 }
 
+/**
+ * @param {string} text
+ */
 function extractCustomPropertyDeclarations(text) {
   const declarations = new Map();
   for (const match of text.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
@@ -515,12 +559,19 @@ function extractCustomPropertyDeclarations(text) {
   return declarations;
 }
 
+/**
+ * @param {string} property
+ */
 function shouldCheckDesignValue(property) {
   return /(?:margin|padding|gap|inset|top|right|bottom|left|width|height|size|radius|shadow|border|outline|font-size|line-height|letter-spacing|transition|animation|translate|transform|block|inline)/.test(
     property,
   );
 }
 
+/**
+ * @param {string} text
+ * @param {readonly string[]} functionNames
+ */
 function extractFunctionCalls(text, functionNames) {
   const calls = [];
   const namePattern = functionNames.map(escapeRegExp).join("|");
@@ -535,6 +586,10 @@ function extractFunctionCalls(text, functionNames) {
   return calls;
 }
 
+/**
+ * @param {string} text
+ * @param {number} start
+ */
 function readBalancedFunctionCall(text, start) {
   let depth = 0;
   for (let index = start; index < text.length; index += 1) {
@@ -548,6 +603,9 @@ function readBalancedFunctionCall(text, start) {
   return "";
 }
 
+/**
+ * @param {string} text
+ */
 function extractNamedColors(text) {
   const colors = [];
   for (const declaration of extractCssDeclarations(text, { includeCustomProperties: true })) {
@@ -559,10 +617,16 @@ function extractNamedColors(text) {
   return colors;
 }
 
+/**
+ * @param {string} value
+ */
 function extractFontFamilyCandidates(value) {
   return splitFontFamilyList(extractFontShorthandFamilyList(value));
 }
 
+/**
+ * @param {string} value
+ */
 function extractFontShorthandFamilyList(value) {
   const shorthand = normalizeSnippet(value);
   const sizePattern =
@@ -571,6 +635,9 @@ function extractFontShorthandFamilyList(value) {
   return match?.[1]?.trim() ?? shorthand;
 }
 
+/**
+ * @param {string} value
+ */
 function splitFontFamilyList(value) {
   const fonts = [];
   let current = "";
@@ -596,12 +663,18 @@ function splitFontFamilyList(value) {
   }
   if (current.trim()) fonts.push(current.trim());
 
-  const generic = [...value.matchAll(/\b(?:system-ui|-apple-system|BlinkMacSystemFont|serif|sans-serif|ui-monospace|monospace)\b/g)].map(
-    ([font]) => font,
-  );
+  const generic = [
+    ...value.matchAll(
+      /\b(?:system-ui|-apple-system|BlinkMacSystemFont|serif|sans-serif|ui-monospace|monospace)\b/g,
+    ),
+  ].map(([font]) => font);
   return [...new Set([...fonts, ...generic])];
 }
 
+/**
+ * @param {string} value
+ * @param {Set<string>} allowedFonts
+ */
 function isAllowedFontToken(value, allowedFonts) {
   return [...allowedFonts].some((fontList) =>
     fontList
@@ -611,16 +684,25 @@ function isAllowedFontToken(value, allowedFonts) {
   );
 }
 
+/**
+ * @param {string} selector
+ */
 function targetsGeneratedPromptSurface(selector) {
   return /(?:^|[\s>+~#,.:])(?:\.output|#output|#mobileOutput|\.prompt-section|\.output-shell|textarea)(?:$|[\s>+~#,.:[])/.test(
     selector,
   );
 }
 
+/**
+ * @param {string} selector
+ */
 function targetsGeneratedPromptAncestor(selector) {
   return /(?:^|[\s>+~#,.:])(?::root|html|body|#app|\*)(?:$|[\s>+~#,.:[])/.test(selector);
 }
 
+/**
+ * @param {string} value
+ */
 function normalizeDeclarationValue(value) {
   return normalizeCompact(
     normalizeSnippet(value)
@@ -630,10 +712,16 @@ function normalizeDeclarationValue(value) {
   );
 }
 
+/**
+ * @param {string} value
+ */
 function normalizeSnippet(value) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * @param {string} value
+ */
 function normalizeCompact(value) {
   return value
     .replace(/\s+/g, "")
@@ -642,6 +730,9 @@ function normalizeCompact(value) {
     .replace(/(\d+)\.0+(?=[,)])/g, "$1");
 }
 
+/**
+ * @param {string} value
+ */
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

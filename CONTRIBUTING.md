@@ -20,7 +20,7 @@ npx playwright install --with-deps chromium
 ## コードの場所
 
 | 場所 | 役割 |
-|---|---|
+| --- | --- |
 | `src/data.ts`、`src/candidate-values/` | 候補値と項目の設定 |
 | `src/prompt.ts` | コピーする依頼文の生成 |
 | `src/ui.ts`、`src/styles.css` | 画面の構成とスタイル |
@@ -44,6 +44,10 @@ npm run check
 ```
 
 `format` はファイルを整形します。`check` は整形確認・lint・型検査・ビルド・ユニット・構造・E2Eを順に実行します。個別に実行する場合は `npm run test:unit`、`npm run test:structure`、`npm run test:e2e` 等を使用してください。
+
+JavaScript・TypeScript・JSON・CSS・HTMLはBiome、MarkdownとYAMLは専用の検査エンジンで整形します。HTMLの意味検査はHTML-validateが担当します。警告や`test.skip`／`test.only`も品質ゲートを止めます。新しい抑制や設定例外には理由を付け、[品質ゲートの担当と限界](docs/quality-gates.md)を確認してください。`format:unsafe`の修正は差分を確認し、未処理Promiseに`void`を付けるだけで済ませないでください。
+
+`npm run audit:dependencies`はnpmの公開監査情報へ接続し、low以上の既知の脆弱性で失敗します。CIでも実行します。ローカルの`check`には含めず、通信不要の検査と区別しています。
 
 E2EはChromiumのデスクトップとPixel 7相当のモバイル表示で実行し、Workers AIの応答をモックします。実モデルの出力品質や実機Safariを保証するテストではありません。失敗時のHTMLレポートは `playwright-report/`、トレース等は `test-results/` に出ます。CIはこれらを7日間保存します。入力を含むテストを追加する際は実ユーザーのデータを使わないでください。
 
