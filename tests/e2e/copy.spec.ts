@@ -29,7 +29,9 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
   await page.reload();
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
-  await page.getByTestId("copy-prompt-sticky").dispatchEvent("click");
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeVisible();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeEnabled();
+  await page.getByTestId("copy-prompt-sticky").click();
   await expect(page.getByTestId("copy-prompt-sticky")).toContainText(
     "コピーしました。普段使っているAIに貼り付けてください。",
   );
