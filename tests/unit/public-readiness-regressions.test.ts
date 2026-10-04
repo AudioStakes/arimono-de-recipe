@@ -42,6 +42,56 @@ function apiRequest(body: unknown): Request {
 
 describe("公開準備の独立レビュー回帰", () => {
   test.each([
+    { title: "にんにく入り豆腐炒め" },
+    { why: "にんにくを加えると香りがよくなります。" },
+  ])("NGを候補名や推薦理由で勧める応答を拒否する: %j", async (fields) => {
+    const output = {
+      items: candidates.items.map((item) => ({ ...item, ...fields })),
+    };
+    const conditions = { ...request, avoid: ["にんにく"] };
+    const parsed = parseAiRecipeCandidatesResponse(output);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) throw new Error(parsed.reason);
+    expect(validateAiRecipeCandidatesForRequest(parsed.value, conditions).ok).toBe(false);
+    const run = vi.fn<Env["AI"]["run"]>().mockResolvedValue({ response: output });
+    const response = await onRequest({ request: apiRequest(conditions), env: { AI: { run } } });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ error: { code: "ai_generation_failed" } });
+  });
+
+  test.each([
+    ["醤油", "しょうゆ"],
+    ["しょうゆ", "醤油"],
+    ["味噌", "みそ"],
+    ["みそ", "味噌"],
+    ["胡椒", "こしょう"],
+    ["こしょう", "胡椒"],
+    ["出汁", "だし"],
+    ["だし", "出汁"],
+  ])("既知の調味料表記 %s のNGを %s でも適用する", (avoid, ingredient) => {
+    for (const fields of [
+      { ing: ["豆腐", `${ingredient} 少々`] },
+      { steps: [`${ingredient}で豆腐の味を調える`] },
+      { title: `${ingredient}入り豆腐煮` },
+      { why: `${ingredient}を加えるとおいしくなります。` },
+    ]) {
+      const output = { items: candidates.items.map((item) => ({ ...item, ...fields })) };
+      const parsed = parseAiRecipeCandidatesResponse(output);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(
+        validateAiRecipeCandidatesForRequest(parsed.value, { ...request, avoid: [avoid] }).ok,
+      ).toBe(false);
+    }
+  });
+
+  test("NGを含まない通常の候補名・理由は保持する", () => {
+    expect(
+      validateAiRecipeCandidatesForRequest(candidates, { ...request, avoid: ["にんにく"] }),
+    ).toEqual({ ok: true, value: candidates });
+  });
+
+  test.each([
     [
       { name: "豆腐", usage: "auto" },
       { name: "豆腐", usage: "required" },

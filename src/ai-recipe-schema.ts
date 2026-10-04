@@ -582,10 +582,27 @@ function appendUniqueMaterial(materials: string[], material: string): void {
   }
 }
 
-function conflictsWithAvoid(value: string, avoid: readonly string[]): boolean {
-  const normalizedValue = normalizeForComparison(value);
+// These spellings are already used by the pantry list and taste suggestions.
+// This is a bounded spelling comparison, not a food/allergen synonym dictionary.
+const seasoningSpellings = [
+  ["醤油", "しょうゆ"],
+  ["味噌", "みそ"],
+  ["胡椒", "こしょう"],
+  ["出汁", "だし"],
+] as const;
+
+function normalizeForAvoidComparison(value: string): string {
+  let normalized = normalizeForComparison(value);
+  for (const [spelling, canonical] of seasoningSpellings) {
+    normalized = normalized.replaceAll(spelling, canonical);
+  }
+  return normalized;
+}
+
+export function conflictsWithAvoid(value: string, avoid: readonly string[]): boolean {
+  const normalizedValue = normalizeForAvoidComparison(value);
   return avoid.some((item) => {
-    const normalizedAvoid = normalizeForComparison(item);
+    const normalizedAvoid = normalizeForAvoidComparison(item);
     return (
       normalizedValue === normalizedAvoid ||
       normalizedValue.includes(normalizedAvoid) ||
@@ -702,7 +719,14 @@ export function validateAiRecipeCandidatesForRequest(
     }
 
     if (request.avoid?.length) {
-      const checkedValues = [...item.use, ...item.miss, ...item.ing, ...item.steps];
+      const checkedValues = [
+        item.title,
+        item.why,
+        ...item.use,
+        ...item.miss,
+        ...item.ing,
+        ...item.steps,
+      ];
       if (checkedValues.some((value) => conflictsWithAvoid(value, request.avoid ?? []))) {
         return invalid("candidate conflicts with avoid list");
       }

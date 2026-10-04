@@ -62,6 +62,42 @@ function materialUseUpError(card: Locator): Locator {
   return card.getByTestId(/^material-use-up-error-/);
 }
 
+for (const width of [1280, 390]) {
+  test(`${width}pxで調理ビューもAI応答の主材料の分量を保持する`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/api/recipe", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: candidateResponse.items.map((item) => ({
+            ...item,
+            use: ["豆腐"],
+            ing: ["豆腐（１丁）", "油 小さじ1"],
+          })),
+          model: "test-model",
+          usage: null,
+        }),
+      });
+    });
+    await page.goto("/");
+    await page.getByTestId("combo-input-materials").fill("豆腐");
+    await page.getByTestId("combo-input-materials").press("Enter");
+    await materialUsageOption(materialCard(page, "豆腐"), "required").check();
+    const prefix = width < 1024 ? "mobile-" : "";
+    await page.getByTestId(width < 1024 ? "generate-recipe-mobile" : "generate-recipe").click();
+    await page.getByTestId(`${prefix}recipe-candidate-select-a`).click();
+    await expect(page.getByTestId(`${prefix}recipe-candidate-detail`)).toContainText(
+      "豆腐（１丁）",
+    );
+    await page.getByTestId(`${prefix}recipe-candidate-cook`).click();
+    const panel = page.getByTestId(`${prefix}recipe-cooking-panel`);
+    await expect(panel).toContainText("豆腐（１丁）");
+    await expect(panel).toContainText("豆腐（必ず使う）");
+    await expect(panel).toContainText("油 小さじ1");
+  });
+}
+
 test("AI生成は短い候補requestを送り、3候補から詳細をローカル表示する", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   let callCount = 0;
