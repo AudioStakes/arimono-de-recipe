@@ -362,3 +362,49 @@ PR #33の元head `0ba55cd4ce00f47e3554637fb0ce3b6657206b94` のCI run 3716282089
 | `git diff --check` | 0 | コンフリクト記号・空白エラーなし。 |
 
 Pages上の成功回答は既存テストのモックで、実Workers AIは呼んでいない。Node22で現行コードを確認したが、Node26の型にはNode22に存在しないAPIもあるため、新しいNode APIを使う際は実行バージョンとの一致を確認する。実モデルの品質・調理安全性、Safari/Firefox実機、本番課金制御、実デプロイは未確認。認証・保存・解析・新しいAI経路・公開設定・権限・secrets・保護設定は変更していない。
+
+## 2026-10-04 品質ゲート厳格化の独立レビュー
+
+所有者から、エージェントのモデルによる品質差を減らすためlint／formatterを厳格化し、検査の不足を補い、ライブラリ間の競合を避けるよう依頼された。開始時にfetchした最新mainは `f809b01be4ea10910758bfb2dc8046cdd4eecefb`。修正実装の対象SHAは `e3a3273f1773216241700b6b05e60c52fabfd407`。この節は検証記録だけを追記する別コミットで、過去の結果は履歴として保持する。最終headのSHAと対応CIは新しいDraft PRに記録する。
+
+ルートが実装を担当し、読み取り専用の `dual_flow_map`、`standards_review`、`spec_review` が対象範囲・規則の効果・HTML／文書／依存互換性を分担した。既存記録を証明に使わず、実ファイル・実CLI・実npm scriptsの反例と正常例で確認した。複数回のレビューで、Node境界の拡張子漏れ、scriptsの型検査範囲、旧HTMLHintの禁止事項の継承、文字参照を含む実行URL、描画前のHTML検査、チャンクを跨ぐID参照、実npm scriptsの診断対象パスを補強した。最終レビューには未対応の必須指摘はない。
+
+### 発見と対応
+
+いずれも基準mainに存在した検査の不足またはHTMLの不備で、過去のPR単位の由来はこの調査だけでは断定しない。「必須」は今回の厳格化の依頼を満たすために必要な修正を意味し、製品の重大障害という意味ではない。
+
+| 分類 | 位置・発生条件 | 影響・根拠 | 対応 |
+| --- | --- | --- | --- |
+| 必須修正 | `package.json`のBiomeコマンド、`biome.json`のwarning指定。推奨警告がある場合 | errorだけを表示する旧コマンドは警告で停止せず、見逃しが起きる。実npmの警告fixtureで検証 | 警告も失敗・表示対象にした。console／非null断言もerror。診断が生成fixtureを指すことを検査 |
+| 必須修正 | `biome.json`、`tsconfig.json`。保守用JS・ネストJSON・HTML fixture等の追加時 | 対象外のファイルや暗黙any、宣言ファイルの誤りがゲートを通る。実JS／TS CLIの反例で確認 | 拡張子で対象を広げ、scripts専用strict／checkJsを追加。宣言・到達不能・型importも検査 |
+| 必須修正 | `.github/`のYAMLとMarkdown文書 | 重複キー、alias異常、壊れた見出し、整形差分に専用の検査がなかった | yaml／markdownlintを追加。inline disableを無効化し、YAMLの値一致・二巡目を検査 |
+| 実用改善 | `biome.json`、`playwright.config.ts`、`vitest.config.ts`。非同期呼出し、Node混入、only／skip追加時 | 旧設定では選択した反例13件が失敗すべき条件を通した。規則名だけの設定確認では不十分 | 選択したPromise規則、browser境界、only／skip禁止を実CLIで検証。正常なPromiseLikeも確認 |
+| 実用改善 | `src/ui.ts`のlabel／fieldset／groupと旧index限定HTML検査 | generic divへのARIA名、legend欠落、重複する名前付けが初期HTMLに存在。ブラウザの構造修復で不正入れ子を見逃す可能性 | role／legend／名前付けだけ修正。HTML-validate、raw初期HTMLと完成DOM、desktop／mobile TabのE2Eを追加 |
+| 実用改善 | 整形とlintの担当、`useLiteralKeys` | HTMLの書式規則を併用すると整形の往復、Recordアクセスのdot化はTypeScriptのindex signature規則と矛盾する | Biome／markdownlint／yamlで対象を分離。競合規則を無効化し、理由と二巡目の検証を記録 |
+
+好みだけのUI再設計やリファクタリングは行っていない。文書の表・空白・HTML静的ファイルは新ゲートに合わせて整形した。Markdownの表／コードの描画内容、YAMLの値保持を確認し、過去の意味や結果は変更していない。旧HTMLHintからの置き換えではinline script・イベント属性・実行URL・style禁止を保持し、entitiesで文字参照を復号する。選定中のmarkdownlint-cli2は依存監査でhighが5件となったため採用せず、core APIと小さなリポジトリ所有CLIを採用した。最終依存の監査は0件。
+
+### 環境と実行結果
+
+macOS26.6.2 arm64、Node22.20.0、npm10.9.3、Biome2.5.15、TypeScript7.0.2、Playwright1.63.0の標準Chromium／mobile-chrome。shellはrtk経由。ローカルHTTP配信を必要とするE2Eは権限のある実行環境で確認した。
+
+| コマンド | 終了コード | 主要な結果 |
+| --- | ---: | --- |
+| `npm run check`（修正前f809b01、制限環境） | 1 | format／lint／typecheck／build／unit／structure通過後、Viteのlisten権限で停止。製品の失敗とは区別 |
+| `npm run test:e2e`（修正前、権限のある環境） | 0 | 既存144件のE2Eが成功 |
+| `QUALITY_BASELINE_CONFIG=... QUALITY_BASELINE_TSC=... npx vitest run tests/structure/quality-gates.test.ts -t 'through the real'`（追加中） | 1 | f809b01の設定を反例に適用した選択テストで13件失敗。新規則の効果を確認。全追加テストのREDを主張しない |
+| `npm ci`（最終lockfile） | 0 | 160 packages導入。manifest／lockfile一致 |
+| `npx vitest run tests/structure/quality-gates.test.ts --reporter=default`（最終） | 0 | 不正／正常入力・実npmコマンド・競合確認38/38成功 |
+| `npm run format`二巡＋154ソースのSHA256比較 | 0 | 両実行成功、変化したファイル0 |
+| `CI=true npm run check`（e3a3273） | 0 | format／lint／型／build／unit／structure／E2E全成功。146 expected、unexpected／flaky／skipped各0 |
+| `npm run audit:dependencies`（e3a3273） | 0 | 0 vulnerabilities。low以上で失敗する設定 |
+| `npm run format:check`／`git diff --check` | 0 | 書式・空白の検査成功 |
+| `git fetch origin --prune`（push前） | 0 | origin/mainはf809b01のまま。履歴の書き換えなし |
+
+新しい品質方針はADR0013と `docs/quality-gates.md` に記録した。ADR0006の一時skip例外は新方針で終了し、元の記録を残した。実行環境はNode22.20で、最低Node22.12は依存engine宣言の互換性まで確認し、そのバージョンでの実行はしていない。
+
+### 限界と残るリスク
+
+Promiseのvoid／unknown、CSS wildcard下のimport存在確認、Actionsのスキーマ・式、全動的HTMLのアクセシビリティを完全には検出できない。TOML・画像等の汎用lintは追加していない。CSSは既存Biomeとdesign checkerで検査し、整形担当を重複させる追加ツールは入れていない。依存監査はnpmへの通信と更新されるadvisoryに依存するため、通常のローカルcheckとは分け、CIで実行する。
+
+新しく必要な所有者判断はない。レシピ依頼文の基準・API経路・提供元・プライバシー・静的構成を維持し、権限・secrets・ブランチ保護は変更していない。Function／配信設定の変更はなく、Pagesローカル配信はこの回には再実行していない。実Workers AI、有料呼出し、Safari／Firefox実機、本番費用制御、デプロイ、マージは未実施。モックとChromiumからこれらを確認済みとはしない。
