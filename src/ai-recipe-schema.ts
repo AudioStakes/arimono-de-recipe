@@ -543,11 +543,10 @@ const ingredientAmountPattern =
 function isIngredientAmount(value: string): boolean {
   const match = value.match(/^(?:([^()]+)|\(([^()]+)\))(?:\(([^()]+)\))?$/);
   return (
-    match !== null &&
     match
-      .slice(1)
+      ?.slice(1)
       .filter((amount): amount is string => amount !== undefined)
-      .every((amount) => ingredientAmountPattern.test(amount))
+      .every((amount) => ingredientAmountPattern.test(amount)) ?? false
   );
 }
 

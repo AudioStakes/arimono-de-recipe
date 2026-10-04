@@ -3,7 +3,7 @@
 Use at most one primary implementation agent. Do not recursively spawn agents. Reviewer agents must not edit files.
 
 | Work | Primary Agent | Reviewer |
-|---|---|---|
+| --- | --- | --- |
 | UX / frontend behavior | `frontend-developer` | `architect-reviewer` |
 | Stable hooks / Playwright / test coverage | `test-automator` | `reviewer` |
 | Static-only / privacy / no external transmission risks | `security-auditor` | `reviewer` |

@@ -34,6 +34,8 @@
 
 ドメイン用語は `CONTEXT.md`、設計判断は `docs/adr/`、Codex の作業ルールは `docs/codex/` に置く。`AGENTS.md` に用語定義や設計判断の背景を重複して増やさない。
 
+lint・formatter・型検査・CIを変更する場合は、`docs/quality-gates.md` の担当範囲・例外・回帰検証を確認する。
+
 ## Non-Negotiable Rules
 
 - このアプリの中核成果物は、AI に渡すレシピ依頼文である。
@@ -142,7 +144,7 @@ If `npm run check` is too broad, run the smallest relevant subset and report why
 - UI、候補値、指定値の表示、プロンプト出力、テスト観点への影響を確認する。
 - 未指定項目が出力されないことを確認する。
 - 変更に見合うテストまたはセルフテストを行い、実行した確認内容を報告する。
-- Playwright の一部テストが不安定で時間を使い過ぎる場合は、理由を `FIXME` コメントに残して一旦 `skip` し、後で再開しやすくする。
+- Playwright が不安定な場合は、trace と発生条件を記録し、原因を修正して再実行する。未解決の失敗は失敗として報告する。
 
 <!-- headroom:rtk-instructions -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
@@ -151,6 +153,7 @@ RTK is optional. If installed, it can reduce command output; if unavailable,
 run the documented Git/npm commands directly. It is not a setup prerequisite.
 
 ## Key Commands
+
 ```bash
 # Git (59-80% savings)
 rtk git status          rtk git diff            rtk git log
@@ -181,6 +184,7 @@ rtk pip list            rtk pnpm install        rtk npm run <script>
 ```
 
 ## Rules
+
 - When using RTK in command chains, prefix each segment: `rtk git add . && rtk git commit -m "msg"`
 - For debugging, use raw command without rtk prefix
 - `rtk proxy <cmd>` runs command without filtering but tracks usage

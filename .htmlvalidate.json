@@ -1,0 +1,25 @@
+{
+  "extends": ["html-validate:recommended"],
+  "plugins": ["./scripts/html-policy.mjs"],
+  "elements": [
+    "html5",
+    {
+      "script": { "attributes": { "src": { "required": true } } }
+    }
+  ],
+  "rules": {
+    "deprecated-rule": "error",
+    "project/no-inline-script": "error",
+    "no-style-tag": ["error", { "allowTemplate": false }],
+    "input-missing-label": "error",
+    "no-missing-references": "error",
+    "doctype-style": "off",
+    "attribute-boolean-style": "off",
+    "attribute-empty-style": "off",
+    "void-style": "off",
+    "no-trailing-whitespace": "off",
+    "prefer-native-element": "off",
+    "wcag/h32": "off",
+    "hidden-focusable": "off"
+  }
+}
