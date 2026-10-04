@@ -64,6 +64,24 @@ function setMobileSheetState(
   }
   elements.bottom.classList.toggle("is-open", open);
   elements.bottom.setAttribute("data-state", open ? "open" : "closed");
+  for (const sibling of elements.bottom.parentElement?.children ?? []) {
+    if (
+      sibling instanceof HTMLElement &&
+      sibling !== elements.bottom &&
+      sibling !== elements.bottomBackdrop
+    ) {
+      sibling.inert = open;
+    }
+  }
+  if (open) {
+    elements.bottom.setAttribute("role", "dialog");
+    elements.bottom.setAttribute("aria-modal", "true");
+    elements.bottom.setAttribute("aria-labelledby", "mobilePromptHeading");
+  } else {
+    elements.bottom.removeAttribute("role");
+    elements.bottom.removeAttribute("aria-modal");
+    elements.bottom.removeAttribute("aria-labelledby");
+  }
   elements.bottomBackdrop.hidden = !open;
   elements.bottomBackdrop.classList.toggle("show", open);
   elements.sheetToggle.setAttribute("aria-expanded", String(open));
@@ -194,15 +212,36 @@ export function bindAppEvents(
     setMobileSheetState(state, elements, true, elements.sheetToggle),
   );
   elements.sheetExpand.addEventListener("click", () =>
-    setMobileSheetState(state, elements, true, elements.sheetExpand),
+    setMobileSheetState(state, elements, !state.mobileSheetOpen, elements.sheetExpand),
   );
   elements.sheetClose.addEventListener("click", () => setMobileSheetState(state, elements, false));
   elements.bottomBackdrop.addEventListener("click", () =>
     setMobileSheetState(state, elements, false),
   );
   window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && state.mobileSheetOpen) {
+    if (!state.mobileSheetOpen) return;
+    if (event.key === "Escape") {
       setMobileSheetState(state, elements, false);
+      return;
+    }
+    if (event.key === "Tab") {
+      const controls = Array.from(
+        elements.bottom.querySelectorAll<HTMLElement>(
+          "button, input, textarea, select, a[href], [tabindex]",
+        ),
+      ).filter(
+        (element) =>
+          element.tabIndex >= 0 &&
+          !element.matches(":disabled") &&
+          element.getClientRects().length > 0,
+      );
+      const first = controls[0];
+      const last = controls.at(-1);
+      const active = document.activeElement;
+      if (first && last && (event.shiftKey ? active === first : active === last)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      }
     }
   });
 

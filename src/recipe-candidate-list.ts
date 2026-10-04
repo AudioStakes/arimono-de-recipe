@@ -1,3 +1,4 @@
+import { conflictsWithAvoid } from "./ai-recipe-schema";
 import type {
   AiRecipeCandidate,
   AiRecipeCookingTab,
@@ -118,7 +119,7 @@ export function getSeasoningLabels(candidate: AiRecipeCandidate): string[] {
 
 export function getTasteAdjustmentLabels(avoid: readonly string[] = []): string[] {
   const isAvoided = (names: readonly string[]) =>
-    avoid.some((value) => names.some((name) => normalizeForComparison(value).includes(name)));
+    names.some((name) => conflictsWithAvoid(name, avoid));
   const seasonings = [
     ...(!isAvoided(["塩"]) ? ["塩"] : []),
     ...(!isAvoided(["しょうゆ", "醤油"]) ? ["しょうゆ"] : []),
@@ -372,8 +373,9 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
 
   if (options.activeTab === "materials") {
     const materialsHeading = renderTextElement("h5", "使う材料", "recipe-candidate-subheading");
+    const seasoningLabels = getSeasoningLabels(options.candidate);
     const materials = renderInlineList(
-      getUsedMaterialLabels(options.candidate, options.materialInputs),
+      options.candidate.ing.filter((ingredient) => !seasoningLabels.includes(ingredient)),
       "recipe-candidate-detail-list",
     );
     const seasoningsHeading = renderTextElement(
@@ -381,11 +383,24 @@ export function renderRecipeCookingView(options: RecipeCookingViewOptions): HTML
       "調味料・その他",
       "recipe-candidate-subheading",
     );
-    const seasonings = renderInlineList(
-      getSeasoningLabels(options.candidate),
-      "recipe-candidate-detail-list",
-    );
-    panel.append(materialsHeading, materials, seasoningsHeading, seasonings);
+    const seasonings = renderInlineList(seasoningLabels, "recipe-candidate-detail-list");
+    panel.append(materialsHeading, materials);
+    if (
+      options.materialInputs.some(
+        (material) =>
+          options.candidate.use.includes(material.name) &&
+          (material.amount || material.usage !== "auto"),
+      )
+    ) {
+      panel.appendChild(
+        renderTextElement(
+          "p",
+          `材料の指定: ${getUsedMaterialLabels(options.candidate, options.materialInputs).join("、")}`,
+          "recipe-candidate-why",
+        ),
+      );
+    }
+    panel.append(seasoningsHeading, seasonings);
   }
 
   if (options.activeTab === "instructions") {
