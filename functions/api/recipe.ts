@@ -1,3 +1,4 @@
+import { maxAiRecipeBodyBytes, maxAiRecipePromptLength } from "../../src/ai-recipe-limits";
 import {
   aiRecipeAssumedPantryIngredients,
   aiRecipeCandidateLimits,
@@ -64,8 +65,8 @@ type WorkersAiTextResult = {
 
 const LEGACY_MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const CANDIDATE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
-const MAX_PROMPT_LENGTH = 12000;
-const MAX_BODY_BYTES = 32000;
+const MAX_PROMPT_LENGTH = maxAiRecipePromptLength;
+const MAX_BODY_BYTES = maxAiRecipeBodyBytes;
 const LEGACY_MAX_TOKENS = 1400;
 const CANDIDATE_MAX_TOKENS = 1000;
 const TEMPERATURE = 0.4;

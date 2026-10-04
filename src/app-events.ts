@@ -1,3 +1,4 @@
+import { sendPromptToAi } from "./ai-prompt-panel";
 import { createAiRecipe } from "./ai-recipe-panel";
 import type { AppElements } from "./app-elements";
 import type { PromptPanelServices } from "./output-panel";
@@ -271,5 +272,13 @@ export function bindAppEvents(
   });
 
   attachBottomSheetDrag(state, elements);
+  elements.sendPrompt.addEventListener(
+    "click",
+    () => void sendPromptToAi(state, elements, services, "desktop"),
+  );
+  elements.sendPromptMobile.addEventListener(
+    "click",
+    () => void sendPromptToAi(state, elements, services, "mobile"),
+  );
   syncStickyFooterState(state, elements, services);
 }
