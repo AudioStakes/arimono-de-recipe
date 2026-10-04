@@ -33,7 +33,7 @@ test("モバイル展開中は背景を操作せずTabをパネル内で循環�
   await expect(opener).toBeFocused();
   await opener.click();
   await page.setViewportSize({ width: 1280, height: 900 });
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { includeHidden: true })).toHaveCount(0);
   await page.getByTestId("combo-input-materials").focus();
   await expect(page.getByTestId("combo-input-materials")).toBeFocused();
 });

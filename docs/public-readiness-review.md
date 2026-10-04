@@ -268,3 +268,7 @@ Production/Preview/代替ドメインのBindings・WAF・呼び出し制限・�
 `npx playwright test tests/e2e/public-readiness-regressions.spec.ts --grep '背景を操作' --project mobile-chrome --repeat-each 12 --workers 2 --reporter=dot` は修正前exit1（5失敗/7成功）で同じ症状を再現した。既存の「dialogが0件」のassertをresize後のfocusより前へ移し、完了状態を観測してから操作する順序にした。assertの削除・skip・固定sleepは追加していない。同じ反復コマンドは修正後exit0（12成功）。元の全シナリオを維持した。
 
 同期修正後に `CI=true npm run check` をNode22で再実行し、exit0で全品質ゲートが成功した。CIと同じ2worker設定を使用。最終headのCI URLと結果はDraft PR本文・最終報告へ記録する。この追加コミットはテスト順序とこの履歴の記録だけで、Pagesで確認した製品実装は変更していない。
+
+さらに独立レビュー担当が、desktop向けCSSだけでもdialogが非表示となり、通常の `getByRole("dialog")` ではhandler実行前にcount0となる可能性を指摘した。12回成功という実行結果は維持しつつ、「完了状態」の待機条件を厳密にするため、resize後のassertだけを `getByRole("dialog", { includeHidden: true })` に補強した。非表示でもroleが残る要素を数え、handlerによるrole削除まで待つ。同じ12回・2workerの反復はこの補強後もexit0（12成功）。製品変更や期待値の緩和はない。
+
+補強後も `CI=true npm run check` はexit0で全品質ゲートが成功した。補強前の `940cd1957338c69a4d165b2c38b5c7974bad8ce2` に対応する[CI run 37165299705](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37165299705)もsuccessだったが、最終補強を含むSHAのCI結果とは区別し、後者をDraft PR本文と最終報告で確認する。
