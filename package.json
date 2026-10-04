@@ -46,7 +46,7 @@
     "@playwright/test": "1.63.0",
     "@types/node": "26.6.3",
     "entities": "8.1.0",
-    "html-validate": "10.9.0",
+    "html-validate": "11.16.1",
     "markdownlint": "0.41.1",
     "typescript": "7.0.2",
     "vite": "8.3.1",
