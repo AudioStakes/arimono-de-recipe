@@ -79,6 +79,7 @@ async function copyText(text: string): Promise<void> {
   fallback.setAttribute("readonly", "");
   fallback.className = "clipboard-fallback";
   document.body.appendChild(fallback);
+  const previousFocus = document.activeElement;
   let copied = false;
   try {
     fallback.focus();
@@ -86,6 +87,9 @@ async function copyText(text: string): Promise<void> {
     copied = document.execCommand("copy");
   } finally {
     fallback.remove();
+    if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+      previousFocus.focus({ preventScroll: true });
+    }
   }
 
   if (!copied) {

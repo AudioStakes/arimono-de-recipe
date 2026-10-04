@@ -1,5 +1,62 @@
 import { expect, test } from "@playwright/test";
 
+test("モバイル展開中は背景を操作せずTabをパネル内で循環できる", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await page.getByTestId("combo-input-materials").press("Enter");
+  const opener = page.getByRole("button", { name: "レシピ依頼文全文を表示" });
+  await opener.click();
+  const close = page.getByRole("button", { name: "閉じる", exact: true });
+  const first = page.getByRole("button", { name: "レシピ依頼文全文を閉じる" });
+  const output = page.getByTestId("mobile-prompt-output");
+  await expect(close).toBeFocused();
+  await output.focus();
+  await output.press("Tab");
+  await expect(first).toBeFocused();
+  await first.press("Shift+Tab");
+  await expect(output).toBeFocused();
+  await page.getByTestId("combo-input-materials").evaluate((element) => {
+    (element as HTMLElement).focus();
+  });
+  await expect(output).toBeFocused();
+  const dialog = page.getByRole("dialog", { name: "AIに渡す依頼文" });
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  await output.press("Escape");
+  await expect(opener).toBeFocused();
+  await page.getByTestId("combo-input-materials").focus();
+  await expect(page.getByTestId("combo-input-materials")).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await opener.click();
+  await first.press("Enter");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByTestId("combo-input-materials").focus();
+  await expect(page.getByTestId("combo-input-materials")).toBeFocused();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+for (const width of [1280, 390]) {
+  test(`${width}pxでネイティブ代替コピー後もキーボードのフォーカスを保持する`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    });
+    await page.goto("/");
+    await page.getByTestId("combo-input-materials").fill("豆腐");
+    await page.getByTestId("combo-input-materials").press("Enter");
+    const textareaCount = await page.locator("textarea").count();
+    const button = page.getByTestId(width < 1024 ? "copy-prompt-sticky" : "copy-prompt");
+    await button.focus();
+    await button.press("Enter");
+    await expect(button).toContainText("コピーしました");
+    await expect(button).toBeFocused();
+    await expect(page.locator("textarea")).toHaveCount(textareaCount);
+  });
+}
+
 for (const [width, clipboardAvailable] of [
   [1280, true],
   [390, true],
