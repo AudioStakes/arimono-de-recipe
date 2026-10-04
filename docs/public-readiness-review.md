@@ -258,3 +258,13 @@ E2Eの成功時reporterは既存どおり静かだが、HTMLレポートのstats
 Production/Preview/代替ドメインのBindings・WAF・呼び出し制限・費用/停止設定は未確認で、所有者の運用判断を要する。Origin検証は認証/回数制限の代わりではない。実モデルの品質、分量/使い切りの遵守、アレルギー・加熱安全性、Safari/Firefox実機、実機IME/支援技術、本番配信・課金制御は検証していない。local Pagesの成功を本番設定の成功とは扱わない。有料AI、本番負荷試験、デプロイ、マージ、新しい認証・保存・解析・送信先・アーキテクチャは実施していない。
 
 参考: [WAI modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)、[MDN inert](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/inert)、[MDN focus](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus)、[Pages headers](https://developers.cloudflare.com/pages/configuration/headers/)、[Function routing](https://developers.cloudflare.com/pages/functions/routing/)。
+
+### 新Draft PRのCIで確認したテスト同期修正
+
+専用ブランチをpushし、[Draft PR #36](https://github.com/AudioStakes/arimono-de-recipe/pull/36)を作成した。最初のhead `b6e3137f815115b3d633dd7532f33209feab4647` の[CI run 37164857563](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37164857563)はfailureで、`npm run check` の終了コードは1。format/lint/typecheck/build/unit/structureは成功し、追加したmobileのresize後focus確認1件がE2Eで失敗した。この後に確認した最終CIとは区別する。
+
+ダウンロードしたtraceでは `setViewportSize` の完了直後、背景入力へのfocus呼び出し時点でまだinertが残り、その後のresizeイベント処理でdialogがclosedになっていた。focusは一度だけ実行されるため、expectが待機しても再実行されない。製品の解除失敗ではなく、今回作成したテストのイベント同期不足だった。
+
+`npx playwright test tests/e2e/public-readiness-regressions.spec.ts --grep '背景を操作' --project mobile-chrome --repeat-each 12 --workers 2 --reporter=dot` は修正前exit1（5失敗/7成功）で同じ症状を再現した。既存の「dialogが0件」のassertをresize後のfocusより前へ移し、完了状態を観測してから操作する順序にした。assertの削除・skip・固定sleepは追加していない。同じ反復コマンドは修正後exit0（12成功）。元の全シナリオを維持した。
+
+同期修正後に `CI=true npm run check` をNode22で再実行し、exit0で全品質ゲートが成功した。CIと同じ2worker設定を使用。最終headのCI URLと結果はDraft PR本文・最終報告へ記録する。この追加コミットはテスト順序とこの履歴の記録だけで、Pagesで確認した製品実装は変更していない。
