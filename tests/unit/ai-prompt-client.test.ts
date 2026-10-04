@@ -36,18 +36,17 @@ describe("generateRecipeFromPrompt", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  test.each([
-    "a".repeat(12000),
-    "あ".repeat(10662),
-    '"'.repeat(12000),
-  ])("文字数とJSON全体のバイト数の上限内は省略せず送る", async (prompt) => {
-    const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
-      expect(JSON.parse(String(init?.body))).toEqual({ prompt });
-      return jsonResponse(success);
-    });
-    expect((await generateRecipeFromPrompt(prompt, fetcher)).ok).toBe(true);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
+  test.each(["a".repeat(12000), "あ".repeat(10662), '"'.repeat(12000)])(
+    "文字数とJSON全体のバイト数の上限内は省略せず送る",
+    async (prompt) => {
+      const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+        expect(JSON.parse(String(init?.body))).toEqual({ prompt });
+        return jsonResponse(success);
+      });
+      expect((await generateRecipeFromPrompt(prompt, fetcher)).ok).toBe(true);
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
 
   test.each([
     { ...success, recipe: " \n" },
@@ -77,37 +76,37 @@ describe("generateRecipeFromPrompt", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  test.each([
-    false,
-    true,
-  ])("接続・本文読み取りの待機を30秒で中断する: 本文=%s", async (bodyRead) => {
-    vi.useFakeTimers();
-    const fetcher: typeof fetch = async (_input, init) => {
-      const signal = init?.signal;
-      if (!signal) throw new Error("AbortSignal is required");
-      if (bodyRead) {
-        return new Response(
-          new ReadableStream({
-            start(controller) {
-              signal.addEventListener("abort", () =>
-                controller.error(new DOMException("Aborted", "AbortError")),
-              );
-            },
-          }),
-        );
-      }
-      return new Promise<Response>((_resolve, reject) => {
-        signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+  test.each([false, true])(
+    "接続・本文読み取りの待機を30秒で中断する: 本文=%s",
+    async (bodyRead) => {
+      vi.useFakeTimers();
+      const fetcher: typeof fetch = async (_input, init) => {
+        const signal = init?.signal;
+        if (!signal) throw new Error("AbortSignal is required");
+        if (bodyRead) {
+          return new Response(
+            new ReadableStream({
+              start(controller) {
+                signal.addEventListener("abort", () =>
+                  controller.error(new DOMException("Aborted", "AbortError")),
+                );
+              },
+            }),
+          );
+        }
+        return new Promise<Response>((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        });
+      };
+      const pending = generateRecipeFromPrompt("依頼", fetcher);
+      await vi.advanceTimersByTimeAsync(aiRecipeRequestTimeoutMs);
+      await expect(pending).resolves.toMatchObject({
+        ok: false,
+        error: { code: "request_timed_out" },
       });
-    };
-    const pending = generateRecipeFromPrompt("依頼", fetcher);
-    await vi.advanceTimersByTimeAsync(aiRecipeRequestTimeoutMs);
-    await expect(pending).resolves.toMatchObject({
-      ok: false,
-      error: { code: "request_timed_out" },
-    });
-    expect(vi.getTimerCount()).toBe(0);
-  });
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
 
   test("入力変更による中断で通信とタイマーを解放する", async () => {
     vi.useFakeTimers();

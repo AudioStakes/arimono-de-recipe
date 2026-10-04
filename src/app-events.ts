@@ -178,7 +178,7 @@ export function bindAppEvents(
     const servingButton = target.closest<HTMLButtonElement>(".serving-adjust");
     if (servingButton) {
       const stepper = servingButton.closest<HTMLElement>(".serving-stepper");
-      const id = (stepper?.dataset as DOMStringMap & { servingId?: ServingGroupId }).servingId;
+      const id = (stepper?.dataset as DOMStringMap & { servingId?: ServingGroupId })?.servingId;
       const delta = servingButton.classList.contains("serving-plus") ? 1 : -1;
       if (id) {
         adjustServingValue(id, delta);

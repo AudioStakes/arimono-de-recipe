@@ -41,23 +41,23 @@ function apiRequest(body: unknown): Request {
 }
 
 describe("公開準備の独立レビュー回帰", () => {
-  test.each([
-    { title: "にんにく入り豆腐炒め" },
-    { why: "にんにくを加えると香りがよくなります。" },
-  ])("NGを候補名や推薦理由で勧める応答を拒否する: %j", async (fields) => {
-    const output = {
-      items: candidates.items.map((item) => ({ ...item, ...fields })),
-    };
-    const conditions = { ...request, avoid: ["にんにく"] };
-    const parsed = parseAiRecipeCandidatesResponse(output);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) throw new Error(parsed.reason);
-    expect(validateAiRecipeCandidatesForRequest(parsed.value, conditions).ok).toBe(false);
-    const run = vi.fn<Env["AI"]["run"]>().mockResolvedValue({ response: output });
-    const response = await onRequest({ request: apiRequest(conditions), env: { AI: { run } } });
-    expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ error: { code: "ai_generation_failed" } });
-  });
+  test.each([{ title: "にんにく入り豆腐炒め" }, { why: "にんにくを加えると香りがよくなります。" }])(
+    "NGを候補名や推薦理由で勧める応答を拒否する: %j",
+    async (fields) => {
+      const output = {
+        items: candidates.items.map((item) => ({ ...item, ...fields })),
+      };
+      const conditions = { ...request, avoid: ["にんにく"] };
+      const parsed = parseAiRecipeCandidatesResponse(output);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(validateAiRecipeCandidatesForRequest(parsed.value, conditions).ok).toBe(false);
+      const run = vi.fn<Env["AI"]["run"]>().mockResolvedValue({ response: output });
+      const response = await onRequest({ request: apiRequest(conditions), env: { AI: { run } } });
+      expect(response.status).toBe(500);
+      expect(await response.json()).toMatchObject({ error: { code: "ai_generation_failed" } });
+    },
+  );
 
   test.each([
     ["醤油", "しょうゆ"],
@@ -189,40 +189,35 @@ describe("公開準備の独立レビュー回帰", () => {
     ).toBe(false);
   });
 
-  test.each([
-    "豆腐（半丁）",
-    "豆腐1丁（300g）",
-    "豆腐２００ｇ",
-    "豆腐（150g）",
-  ])("材料名の後の通常の分量表記を拒否しない: %s", (ingredient) => {
-    const output = {
-      items: candidates.items.map((item) => ({ ...item, ing: [ingredient, "水"] })),
-    };
-    const parsed = parseAiRecipeCandidatesResponse(output);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) throw new Error(parsed.reason);
-    expect(
-      validateAiRecipeCandidatesForRequest(parsed.value, {
-        ...request,
-        materials: [{ name: "豆腐", usage: "required" }],
-      }).ok,
-    ).toBe(true);
-  });
+  test.each(["豆腐（半丁）", "豆腐1丁（300g）", "豆腐２００ｇ", "豆腐（150g）"])(
+    "材料名の後の通常の分量表記を拒否しない: %s",
+    (ingredient) => {
+      const output = {
+        items: candidates.items.map((item) => ({ ...item, ing: [ingredient, "水"] })),
+      };
+      const parsed = parseAiRecipeCandidatesResponse(output);
+      expect(parsed.ok).toBe(true);
+      if (!parsed.ok) throw new Error(parsed.reason);
+      expect(
+        validateAiRecipeCandidatesForRequest(parsed.value, {
+          ...request,
+          materials: [{ name: "豆腐", usage: "required" }],
+        }).ok,
+      ).toBe(true);
+    },
+  );
 
-  test.each([
-    "豆腐ハンバーグ",
-    "豆腐（豚肉）",
-    "豆腐1丁（卵）",
-    "塩漬け豚肉",
-    "油揚げ",
-  ])("別の材料は分量として許可しない: %s", (ingredient) => {
-    expect(
-      validateAiRecipeCandidatesForRequest(
-        { items: candidates.items.map((item) => ({ ...item, ing: [ingredient] })) },
-        request,
-      ).ok,
-    ).toBe(false);
-  });
+  test.each(["豆腐ハンバーグ", "豆腐（豚肉）", "豆腐1丁（卵）", "塩漬け豚肉", "油揚げ"])(
+    "別の材料は分量として許可しない: %s",
+    (ingredient) => {
+      expect(
+        validateAiRecipeCandidatesForRequest(
+          { items: candidates.items.map((item) => ({ ...item, ing: [ingredient] })) },
+          request,
+        ).ok,
+      ).toBe(false);
+    },
+  );
 
   test("おまかせ材料もuseの申告だけでなく実際の材料一覧に少なくとも1件必要", () => {
     expect(

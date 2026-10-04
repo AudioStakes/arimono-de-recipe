@@ -336,3 +336,29 @@ desktopはAIカードの次にコピーカード、mobileは収納中のfooter�
 | `git diff --check` | 0 | 差分の空白エラーなし。 |
 
 新しいAI提供元・送信経路・保存・解析・設定画面は追加していない。実AI・有料呼出し・デプロイ・マージは行っていない。今回は文書・テストだけの変更なのでFunctionコンパイルやPages配信は再実行せず、上記f7852529の既存実装に対する証拠と区別する。最終コミットSHAとCIの結果はDraft PR #37と最終報告で確認する。
+
+## 2026-10-04 全オープンPRの統合検証
+
+所有者から全オープンPRのコンフリクト解消とマージを明示的に依頼された。取得時のmainは `df307d826970cb33764d47ef457811913502e9da`、対象は#30〜#37の8件。#36を先にマージし、#37のbaseをmainへ切り替えた。#30〜#32のAction固定SHAは公式タグと一致し、個別CIで更新Actionとartifactを確認した。#34/#35も独立レビューを行い、現行コードにおける必須の互換性問題は確認されなかった。#33統合前のmainは `259f400e58769a26e1b424ac697654a4c44ee390`。
+
+#33の元head `0ba55cd4ce00f47e3554637fb0ce3b6657206b94` のCI run 37162820890はBiomeで失敗し、後続の型検査・build・テストに到達していなかった。作業中にDependabotがheadを `1fdb8408e73a51c47e5eee775cc847a88c608e37` へ更新したが、そのCI run 37182144232も失敗していた。これらの失敗履歴と、以下の統合後の成功を区別する。
+
+最新mainを取り込む際にpackage.jsonとlockfileのroot依存一覧で衝突した。Biome2.5.15 / Playwright1.63.0 / Vite8.3.1 / Wrangler4.145.0と、mainのTypeScript7.0.2 / Node型26.6.3をすべて保持して解消した。lockfileの残りはGitが統合し、20種類のTypeScriptネイティブパッケージも保持した。manifest・lockfile・導入済み直接依存の一致を独立レビューと `npm ci` で確認した。
+
+統合状態での修正前 `format:check` はexit1となり、人数ボタンの祖先がない場合の未定義値アクセスと、unit3ファイルの整形差分を検出した。`src/app-events.ts` の `?.servingId` で例外を避け、新Biomeが指摘した3ファイルだけを整形し、schema URLを2.5.15へ合わせた。読み取りレビューで3ファイルのTypeScript ASTが変更前と一致することを確認した。assertion・テスト数・品質gateの削除や弱体化はない。
+
+対象は#33の更新にmain259f400eと上記修正を組み合わせた作業ツリー。最終コミットSHAと対応CIはPR #33に記録する。環境はmacOS arm64 / Node22.20.0 / npm10.9.3 / Playwright1.63.0の標準Chromiumとmobile-chrome。shellはrtk経由、E2EはCI=true・2 workers。
+
+| コマンド | 終了コード | 主要な結果 |
+|---|---:|---|
+| `npm ci`（全依存の統合後） | 0 | manifest/lockfileからNode22へ導入成功。 |
+| `npx playwright install chromium` | 0 | 更新Playwrightの標準ブラウザを準備。 |
+| `npm run format:check`（修正前→後） | 1→0 | 未定義値アクセス1か所・unit3ファイルの整形を検出し、修正後成功。 |
+| `CI=true npm run check` | 0 | 全gate成功。HTML reportは144 expected、unexpected/flaky/skipped各0。 |
+| `npx wrangler pages functions build functions --outdir /private/tmp/arimono-merge-all-function-build` | 0 | 更新WranglerでCompiled Worker successfully。 |
+| `wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-26` | 0（停止時） | AI bindingなし。確認後に停止。 |
+| local Pagesへのcurl | 0 | APIの500/ai_binding_unavailable/application-json/no-store/nosniffと、静的200/CSP/frame拒否を確認。 |
+| `CI=true npx playwright test copy.spec.ts action-choice.spec.ts ai-prompt.spec.ts --config=/private/tmp/arimono-merge-pages.config.ts` | 0 | 既存project設定を使いbaseURLだけPagesへ変更。36 expected、unexpected/flaky/skipped各0。全文コピー、1280/390/320pxの両選択、明示送信、モック回答、失敗・中断・再試行を確認。 |
+| `git diff --check` | 0 | コンフリクト記号・空白エラーなし。 |
+
+Pages上の成功回答は既存テストのモックで、実Workers AIは呼んでいない。Node22で現行コードを確認したが、Node26の型にはNode22に存在しないAPIもあるため、新しいNode APIを使う際は実行バージョンとの一致を確認する。実モデルの品質・調理安全性、Safari/Firefox実機、本番課金制御、実デプロイは未確認。認証・保存・解析・新しいAI経路・公開設定・権限・secrets・保護設定は変更していない。

@@ -464,22 +464,20 @@ describe("ai recipe schema", () => {
     expect(parsed.value.items[0]?.use).toEqual(["豆腐", "キャベツ"]);
   });
 
-  test.each([
-    "塩漬け豚肉",
-    "砂糖漬け果物",
-    "油揚げ",
-    "豆腐ハンバーグ",
-  ])("部分一致だけで入力にない主材料「%s」を許可しない", (ingredient) => {
-    const response = {
-      items: validCandidates.items.map((item) => ({ ...item, ing: ["豆腐", ingredient] })),
-    };
-    expect(
-      validateAiRecipeCandidatesForRequest(response, {
-        mode: "candidates",
-        materials: materials("豆腐", "キャベツ"),
-      }).ok,
-    ).toBe(false);
-  });
+  test.each(["塩漬け豚肉", "砂糖漬け果物", "油揚げ", "豆腐ハンバーグ"])(
+    "部分一致だけで入力にない主材料「%s」を許可しない",
+    (ingredient) => {
+      const response = {
+        items: validCandidates.items.map((item) => ({ ...item, ing: ["豆腐", ingredient] })),
+      };
+      expect(
+        validateAiRecipeCandidatesForRequest(response, {
+          mode: "candidates",
+          materials: materials("豆腐", "キャベツ"),
+        }).ok,
+      ).toBe(false);
+    },
+  );
 
   test("必ず使う材料はuseの自己申告だけでなく材料一覧にも必要", () => {
     const response = {
