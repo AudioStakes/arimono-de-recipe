@@ -190,3 +190,149 @@ E2Eは実フォームから目的・品数を選んで送信データを確認�
 初回レビューの項目24〜35は今回の修正だけでは完了しない。所有者はライセンス、画像・公開履歴、非公開脆弱性報告先、ブランチ保護、公開先とサポート範囲を決める。AIを公開運用する場合はProduction/Preview/代替ドメインの呼出し制限、使用量監視と停止手順を設定・確認する。Origin検証を認証や費用制限として扱わない。今回の独立確認でもmainのbranch APIはprotected=falseだった。
 
 文字列検証は原料・別名・交差接触や加熱の安全性を判定しない。目的・品数を送信できることはモデルが遵守する証明ではなく、使い切り量・器具・時間・複数品の出力品質は未確認。クライアントの30秒中断は推論停止や課金取消を保証しない。新しい認証・保存・解析・外部送信・AI提供元は追加していない。
+
+## 2026-10-04 マージ後の独立レビュー
+
+### 対象と進め方
+
+開始時にリモートを取得し、最新 `origin/main` は `df307d826970cb33764d47ef457811913502e9da` だった。PR #29のマージコミットで、親はbase `b0f6d9c6836505d617e051a730a5be07d15bf568` と最終head `18262efc1bb1e8f0ed0d27ab7f29a04f851463f7`。後続のmain変更はなかった。GitHub CLIでPR本文・ファイル一覧・全14コミットを取得し、baseから最終headまでの38ファイルの変更と追加修正を確認した。以前のレビュー記録は調査の入口と履歴として扱い、修正済みのR1〜R9等を未解決として重複指摘していない。
+
+作業場所は `/Users/satoudaisuke/src/github.com/AudioStakes/arimono-de-recipe`、remoteは `https://github.com/AudioStakes/arimono-de-recipe`。開始ブランチは `issue-17-recipe-decision-docs` で、tracked/untrackedとも未コミット変更はなかった。reset・clean・stashを使わず、最新mainから `codex/post-merge-readiness-review` を作成した。閉じたPRブランチとmainには追記しない。
+
+適用AGENTS、README、CONTEXT、関連ADR（特に0011/0012）、UX guardrails、UI境界、test matrix、Codex文書、PR本文、設定とテストを確認した。規約・セキュリティと仕様を別の読み取り専用レビュアーで確認し、実装担当はブラウザ操作・状態管理を追った。実装の追加修正も別レビュアーが確認した。
+
+確認範囲は入力→request/parser→Function→応答検証→候補/調理表示、`buildPrompt(data)` によるコピー、timeout・stale response・再試行、clipboard失敗、キーボード・モバイル、Content-Type・本文/stream上限・reader解放・エラー/キャッシュ、CSP・Function routing、依存/lockfile・CI、導入/公開/貢献文書。未指定項目、入力上限時の全文コピー、必須/使い切り6件制限などは既存の実テストと現実装で確認した。モデルの指定遵守や安全性まで確認したとは扱わない。
+
+### 発見した問題と対応
+
+全6件はbaseにも存在する問題で、PR #29による新しい回帰・マージ後の変更による問題としては分類しない。位置は今回の修正後のファイル位置で、修正前の発生条件を併記する。好みだけの変更は行っていない。
+
+| ID / 分類 | 位置 | 発生条件・影響と根拠 | 対応 |
+|---|---|---|---|
+| M1 / 必須修正 / P2 | `src/ai-recipe-schema.ts:722` | NG「にんにく」、材料/手順が正常でも、料理名「にんにく入り豆腐炒め」や理由「にんにくを加えると香りがよくなります。」を受理し表示できた。`title/why` が検査配列にない。新規unit2件で修正前に再現。 | 表示する料理名・推薦理由も検査し、Functionが汎用500を返す回帰とNGなしの正常系を追加。修正済み。 |
+| M2 / 必須修正 / P2 | `src/ai-recipe-schema.ts:602`、`src/recipe-candidate-list.ts:getTasteAdjustmentLabels` | NG「醤油」でも「しょうゆ」を材料/手順で受理する。逆方向、みそ/味噌、こしょう/胡椒、だし/出汁も同様。アプリ内で既に扱う表記がNG側で一致しない。8組のunitが修正前に失敗。 | 4組の既知表記だけを正規化し、候補の全文検査と味の調整で同じNG比較を使う。一般の食材別名/アレルギー辞書は追加しない。修正済み。 |
+| M5 / 必須修正 / P2 | `src/app-events.ts:67`、`bindAppEvents` | モバイルシート中、Tab/Shift+Tabが背後の材料入力や削除ボタンへ移り、覆われた操作を実行できた。pointer用backdropだけではキーボード操作を遮らない。Chromiumで独立再現、追加E2E2件が修正前に失敗。 | 展開中だけ背景siblingsをinertにし、可視の操作のTab境界を循環。全操作を含むbottomActionsにdialog/aria-modalと見出しを設定。Escape・閉じる・幅変更時は解除しフォーカス復帰を確認。修正済み。 |
+| M3 / 実用上の効果がある改善 / P2 | `src/recipe-candidate-list.ts:376` | 受理した `ing=["豆腐（１丁）","油 小さじ1"]` の「１丁」が詳細には出ても調理の材料tabから落ちる。主材料欄は入力の名前だけ、その他欄は主材料を除外するため。desktop/mobileの4 E2Eで再現。 | `ing` の全項目を主材料/その他に分けて保持し、入力の量・必須/使い切り指定は別に表示。生成が分量を提供する保証は追加しない。修正済み。 |
+| M4 / 実用上の効果がある改善 / P2 | `src/output-panel.ts:82` | Clipboard API未対応時、代替textareaへfocusして除去するとコピー成功後もbodyにfocusが落ちる。keyboard利用者が元の位置を失う。execCommandをモックしないネイティブコピーで4 E2Eが失敗。 | 一時要素除去後に接続中の元要素へpreventScroll付きでfocusを復帰。成功/失敗の既存処理と要素解放を維持。修正済み。 |
+| M6 / 実用上の効果がある改善 / P2 | `src/app-events.ts:214` | 展開ボタンは開くと「レシピ依頼文全文を閉じる」と案内するが、handlerが常にopen=trueを設定し閉じない。独立Chromium操作と追加E2E2件で確認。 | 現在の開閉状態を反転する。Enterで閉じ、起点へのfocus復帰も確認。修正済み。 |
+
+否定表現を意味解析する変更は行っていない。NG文字を含む「にんにく不使用」等も保守的に拒否する既存の制約は、今回 `title/why` にも適用する。READMEにこの制約と4組の表記対応を明記した。数量範囲や食材の説明括弧の過剰拒否も調べたが、モデル契約は数量なしの完全材料名であり、自由な説明文を解釈する仕様へ拡張しなかった。
+
+### 実行環境と検証
+
+macOS / arm64、Node.js 22.20.0・npm 10.9.3、Playwright 1.60.0の標準Chromium（desktop/mobile emulation）、Wrangler 4.144.0。`ASDF_NODEJS_VERSION=22.20.0` をコマンドごとに指定した。Node24の補助確認は24.18.0。シェルコマンドはrtk経由で実行した。下表の `npm/npx` はこの環境指定とrtk prefixを省略して記載する。
+
+| Command / 対象 | Exit | 主要な結果 |
+|---|---:|---|
+| `git ai-status` / `git ai-files` / `git ai-status-full` / `git ai-untracked`、`git remote -v`、`git fetch origin --prune` | 0 | 作業場所・変更なし・remote・最新mainを確認。Git管理領域はread-onlyのためfetch/branch/commitは依頼済み操作の昇格経路を使用。 |
+| `gh pr view 29 --repo AudioStakes/arimono-de-recipe --json ...`、限定したdiff/stat/log | 0 | MERGED、base/head/merge、最終差分、全14コミットを確認。 |
+| `npm ci` | 0 | lockfile固定で導入。先行する失敗はasdf未選択のexit1とsandboxのnpm接続制限によるexit1で、Node指定と許可された接続経路で解消。ソース/lockfileは変更していない。 |
+| `npx playwright install chromium`、修正前mainでの `npm run check` | 0 | 標準ブラウザ準備と全品質ゲートが成功。既存失敗として扱うソース上の問題はなかった。 |
+| `npx vitest run tests/unit/public-readiness-regressions.test.ts --reporter=default`（製品修正前） | 1 | 追加unit10件が失敗、42件成功。通常候補を保持する新規正常系も成功。 |
+| `npx playwright test tests/e2e/public-readiness-regressions.spec.ts --grep 'ネイティブ代替' --reporter=list`（修正前） | 1 | コピー成功文言は出るが、focus保持の4件が失敗。 |
+| `npx playwright test tests/e2e/ai-recipe.spec.ts --grep '主材料の分量' --reporter=list`（修正前） | 1 | 「豆腐（１丁）」の表示保持で4件失敗。 |
+| `npx playwright test tests/e2e/public-readiness-regressions.spec.ts --grep '背景を操作'`（境界修正前 / toggle修正前） | 各1 | 背景へのfocus逸脱2件、別実行で案内されたcloseが閉じない2件を再現。 |
+| 関連unit4ファイル `--reporter=dot` | 0 | schema・Function・candidate labels・回帰の106件成功。 |
+| 関連E2E3ファイル `--reporter=list` | 0 | candidate・コピー・回帰54件成功（modal追加前）。 |
+| `npx playwright test tests/e2e/public-readiness-regressions.spec.ts --reporter=dot`（最終修正後） | 0 | native copy・失敗案内・modal・toggle・Escape/resize等14件成功。 |
+| `npm run check`（全6件の最終実装、`afddb8099f5e085b0f44226d323c8a6fc46892f8` と同じ実装ツリー） | 0 | format/lint/typecheck/build/unit/structure/E2Eがすべて成功。HTMLレポートの実行statsは118 E2E成功、failure/flaky/skip各0。 |
+| Node24.18.0で `npm run typecheck` / `npm run build` / `npm run test:unit -- --reporter=dot` | 各0 | unit191件成功。Node22で導入した同じ依存を使用。Node24での新規npm ci・E2Eは未実行。 |
+| `npm audit --json` | 0 | info/low/moderate/high/criticalすべて0件。監査時点のregistry結果で将来を保証しない。 |
+| `npx wrangler pages functions build functions --outdir /private/tmp/arimono-postmerge-function-build` | 0 | `Compiled Worker successfully`。実AI呼び出しなし。 |
+| `npx wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-26` + `node /private/tmp/arimono-pages-smoke.mjs` | probe 0 | AI bindingなし。GET405、media type415、別Origin403、AI未設定500がno-store/nosniff付き。静的200にCSP/frame拒否/nosniff、API対象外のpathは静的配信。1280/390pxで入力/コピー送信0回、明示候補操作のみ1回、失敗後コピー可、CSP violation/pageerror 0。mobileのTab循環・inert・案内されたclose・focus復帰も成功。サーバーは確認後Ctrl-Cで停止（終了コード130は意図した停止）。 |
+| ローカルMarkdownリンク検査、`git diff --check` | 0 | 主要7文書のローカルリンク16件に欠落0、余分な空白差分なし。外部リンク全体の巡回確認ではない。 |
+| `gh run list --commit df307d826970cb33764d47ef457811913502e9da --workflow CI ...` | 0 | 対象mainの[CI run 37162715389](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37162715389)はsuccess。新Draft PRの最終SHAに対応するCIはPR本文に追記する。 |
+
+modalテストの初期作成時に最初のTab対象を閉じるボタンと誤認し、関連E2E実行で56成功/2失敗になった。実際は可視の展開ボタンが先頭なので、その境界へ修正して14件を再実行し成功した。このテスト作成上の失敗を製品不具合の再現に数えていない。既存テストの削除・弱体化・skip、品質ゲートの緩和は行っていない。
+
+E2Eの成功時reporterは既存どおり静かだが、HTMLレポートのstatsを別に確認した。UI証拠はローカルの `playwright-report/index.html` と、Pages配信の `/private/tmp/arimono-pages-smoke-1280.png`・`/private/tmp/arimono-pages-smoke-390.png`。一時probeはその場の確認用で、リポジトリの恒久テスト契約にはしていない。再利用する回帰は既存のunit/E2Eに追加した。
+
+### 修正コミットと残る判断
+
+- `7c2a51f3d31789305092e35b8f7b00de61783482`: NGの全文/既知表記検証、味の調整の共有、調理分量保持と回帰、README/test matrix。
+- `afddb8099f5e085b0f44226d323c8a6fc46892f8`: native copyのfocus復帰、mobileの背景inert・Tab循環・実際の開閉と回帰。
+- この記録の文書コミット、push、Draft PR URL、最終headのCIは新Draft PR本文と最終報告に記録する。force push・履歴書換え・PR #29への変更は行わない。
+
+取得時のGitHub APIではvisibilityはPRIVATE、licenseInfoはnull、main branch APIはprotected=false。設定は変更しない。ライセンス/公開化、画像と履歴の権利・情報、非公開脆弱性報告先、branch保護、公開URL/サポート範囲は所有者の判断が必要。Rulesets全体の現在設定は今回取得していないのでbranch APIだけで保護全体を断定しない。
+
+Production/Preview/代替ドメインのBindings・WAF・呼び出し制限・費用/停止設定は未確認で、所有者の運用判断を要する。Origin検証は認証/回数制限の代わりではない。実モデルの品質、分量/使い切りの遵守、アレルギー・加熱安全性、Safari/Firefox実機、実機IME/支援技術、本番配信・課金制御は検証していない。local Pagesの成功を本番設定の成功とは扱わない。有料AI、本番負荷試験、デプロイ、マージ、新しい認証・保存・解析・送信先・アーキテクチャは実施していない。
+
+参考: [WAI modal dialog](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)、[MDN inert](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/inert)、[MDN focus](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus)、[Pages headers](https://developers.cloudflare.com/pages/configuration/headers/)、[Function routing](https://developers.cloudflare.com/pages/functions/routing/)。
+
+### 新Draft PRのCIで確認したテスト同期修正
+
+専用ブランチをpushし、[Draft PR #36](https://github.com/AudioStakes/arimono-de-recipe/pull/36)を作成した。最初のhead `b6e3137f815115b3d633dd7532f33209feab4647` の[CI run 37164857563](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37164857563)はfailureで、`npm run check` の終了コードは1。format/lint/typecheck/build/unit/structureは成功し、追加したmobileのresize後focus確認1件がE2Eで失敗した。この後に確認した最終CIとは区別する。
+
+ダウンロードしたtraceでは `setViewportSize` の完了直後、背景入力へのfocus呼び出し時点でまだinertが残り、その後のresizeイベント処理でdialogがclosedになっていた。focusは一度だけ実行されるため、expectが待機しても再実行されない。製品の解除失敗ではなく、今回作成したテストのイベント同期不足だった。
+
+`npx playwright test tests/e2e/public-readiness-regressions.spec.ts --grep '背景を操作' --project mobile-chrome --repeat-each 12 --workers 2 --reporter=dot` は修正前exit1（5失敗/7成功）で同じ症状を再現した。既存の「dialogが0件」のassertをresize後のfocusより前へ移し、完了状態を観測してから操作する順序にした。assertの削除・skip・固定sleepは追加していない。同じ反復コマンドは修正後exit0（12成功）。元の全シナリオを維持した。
+
+同期修正後に `CI=true npm run check` をNode22で再実行し、exit0で全品質ゲートが成功した。CIと同じ2worker設定を使用。最終headのCI URLと結果はDraft PR本文・最終報告へ記録する。この追加コミットはテスト順序とこの履歴の記録だけで、Pagesで確認した製品実装は変更していない。
+
+さらに独立レビュー担当が、desktop向けCSSだけでもdialogが非表示となり、通常の `getByRole("dialog")` ではhandler実行前にcount0となる可能性を指摘した。12回成功という実行結果は維持しつつ、「完了状態」の待機条件を厳密にするため、resize後のassertだけを `getByRole("dialog", { includeHidden: true })` に補強した。非表示でもroleが残る要素を数え、handlerによるrole削除まで待つ。同じ12回・2workerの反復はこの補強後もexit0（12成功）。製品変更や期待値の緩和はない。
+
+補強後も `CI=true npm run check` はexit0で全品質ゲートが成功した。補強前の `940cd1957338c69a4d165b2c38b5c7974bad8ce2` に対応する[CI run 37165299705](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/37165299705)もsuccessだったが、最終補強を含むSHAのCI結果とは区別し、後者をDraft PR本文と最終報告で確認する。
+
+## 2026-10-04 依頼文コピーと全文AI送信の追加レビュー
+
+### 対象と変更の理由
+
+所有者から、依頼文の作成・コピーと、その依頼文をAIへ送って返答を確認する操作の両方を使えるようにする追加依頼を受けた。開始時のアプリはコピーと短い構造化条件による候補生成に対応していたが、画面で確認する依頼文全文を送る操作はなかった。これはPR #29の回帰として扱わず、追加要望への機能改善とした。既存FunctionにはADR 0011の `{prompt}` 経路があり、これを利用した。
+
+作業前のheadは `bbcc043cbf76b97f95cc7e0730369cf8155e943f`。製品・テスト・利用文書の追加コミットは `f7852529e1e90a7681464ab18000ca84be892be2`。push前に再取得した `origin/main` は引き続き `df307d826970cb33764d47ef457811913502e9da` で、先行修正PR #36のheadは `0721ef347ef4b3d919595d6b912018072954a065` だった。[Draft PR #37](https://github.com/AudioStakes/arimono-de-recipe/pull/37)はPR #36の専用ブランチをbaseにしている。mainや閉じたPR #29へpushしていない。
+
+コピーの本文は引き続き `buildPrompt(data)` だけで生成する。desktopの依頼文previewとmobileの展開パネルに「この依頼文をAIへ送信」と自由文の回答欄を追加した。未確定入力を確定してから同じ全文を送信し、候補用の件数制限は流用しない。既存の12,000文字・JSON全体32,000 UTF-8バイトの上限をFunctionと共有し、超過時もコピー本文を切り捨てない。候補生成は別の状態・検証・調理タブを維持した。
+
+### 独立したレビュー・修正ループ
+
+- `dual_flow_map` がコピー／候補／既存legacy APIと入力確定・失効・mobile modalの接続点を読み取り調査した。
+- `spec_review` が設計、実装、最終文書を3段階で確認した。独立したメモリ内probeでも、必須・使い切り材料7件と13材料では候補上限と全文送信を分けられ、分量・NG・人数・目的・品数・補足が残ることを確認した。7材料のケースを永続E2Eへ追加した。
+- `standards_review` が送信の入口、サイズ境界、共有transport、timer/listener解除、abort、古い回答の破棄、文字列表示、コピーとの独立を読み取り確認した。具体的な必須修正は見つからなかった。
+- 最終文書レビューではdeploymentの「候補要求の場合だけ通信」という古い説明と、UX matrixのNG照合対象が自由文にも見える点を指摘された。両送信の成功結果とAI候補に限定した検証範囲へ修正した。好みのためのUI再設計は行っていない。
+
+### 検証環境と結果
+
+macOS arm64、Node 22.20.0、npm 10.9.3、Playwright 1.60.0の標準Chromium、Wrangler 4.144.0。shellは `rtk`、Node選択は `ASDF_NODEJS_VERSION=22.20.0`、E2EはCIと同じ2workerで実行した。下表の成功結果は上記製品コミットに含まれるコード・テストに対応する。この記録だけを追加する後続コミットのSHAとCIはPR本文・最終報告で区別する。
+
+| コマンド | 終了コード | 主要な結果 |
+|---|---:|---|
+| `npm run test:unit -- --run tests/unit/ai-prompt-client.test.ts`（実装前） | 1 | 全文送信関数が未実装で追加テストが失敗。既存の経路に全文送信クライアントがないことを確認。 |
+| `npx vitest run tests/unit/ai-prompt-client.test.ts tests/unit/ai-recipe-client.test.ts tests/unit/recipe-function.test.ts` | 0 | 新旧のクライアントとFunction（AIスタブ）が成功。 |
+| `npx vitest run tests/unit/ai-prompt-client.test.ts --reporter=json --outputFile=/private/tmp/arimono-dual-flow-unit-report.json` | 0 | 18/18成功。全文一致、空・文字数・UTF-8とescapeの境界、不正応答、APIエラー、接続・本文待機timeout、中断とtimer解除。 |
+| `npx playwright test tests/e2e/ai-prompt.spec.ts`（最初の9シナリオ） | 0 | 1280/390pxの明示送信・native copy・失敗/再試行・上限時の全文保持・安全な回答表示・閉じたpreviewのfocus・古い応答破棄。 |
+| `CI=true npm run check`（追加中） | 1 | 初回はimport順。次は既存modal testが「出力欄が最後」と仮定したTab期待値2件で失敗。新ボタンを含むoutput→send→firstと逆方向へ更新し、背景inert/Escape/resizeのassertは維持した。品質gateは緩和していない。 |
+| focused E2E（7材料ケースの最初の追加） | 1 | 新テストの存在しないhook `material-use-card` が原因。既存 `material-card` hookへ修正。製品の失敗と区別した。 |
+| `npx playwright test tests/e2e/ai-prompt.spec.ts --grep '候補上限\|コピー本文全文'` | 0 | 7材料の制約保持と、送信前・回答後のmobile Tab循環も成功。 |
+| `CI=true npm run check`（最終） | 0 | format/lint/typecheck/build/unit/structure/E2Eすべて成功。HTML reportは138 expected、unexpected/flaky/skipped各0。 |
+| `npx wrangler pages functions build functions --outdir /private/tmp/arimono-dual-flow-function-build` | 0 | 共有上限定数を含むFunctionをコンパイル。 |
+| `npx wrangler pages dev dist --port 8788 --ip 127.0.0.1 --compatibility-date=2026-09-26` + `node /private/tmp/arimono-dual-flow-pages-smoke.mjs` | probe 0 | **AI bindingなし**。実Functionの全文POSTは500 `ai_binding_unavailable` + no-store/nosniff。静的200のCSP/frame拒否/nosniffを確認。1280/390pxのpreview/copyは送信0回、明示送信は表示本文と完全一致、失敗後もcopy可能。成功回答はbrowser mockで文字列表示・copy・mobile Tab/inert/Escapeを確認。CSP違反/pageerror各0。確認後にserver停止、終了0。 |
+| `git diff --check` / `git fetch origin --prune` | 0 | 余分な差分エラーなし。mainとbaseの更新なし。他者の履歴を保持。 |
+
+Pages smokeの最初の試行では、AI未設定のまま本文超過が413になると想定してexit1になった。既存Functionは本文解析より先にAI設定の有無を確認するため500になる。製品を変更せず、実行可能な未設定エラーの検証へ修正した。本文上限はAIスタブを用いるFunction単体テストで確認しており、このPages smokeから本文解析を確認済みとはしていない。
+
+### 判断待ちと未確認の範囲
+
+表示の優先順は既存の候補先行を維持した。依頼文コピーを先に案内するか、アプリ内AIを先に案内するかは所有者の選択待ちで、どちらの場合も自動送信は行わない。全文送信の自由文回答には候補用の材料・NG自動照合を適用せず、画面とREADMEへ明記した。既存の応答トークン上限による途中終了もあり得る。
+
+実Workers AI、実モデルの品質・入力条件の遵守・アレルギーや加熱の安全性、Safari/Firefox実機、本番・Previewの課金/呼出し制御は未確認。推論・課金・公開運用に関する以前の所有者判断は残る。client abortがサーバーの推論停止や課金取消を保証するとはしていない。新しい提供元・認証・保存・解析・API経路は追加していない。デプロイ・マージ・本番負荷試験は行っていない。
+
+## 2026-10-04 デフォルトの案内順の確定
+
+所有者が「アプリ内AI優先。ただしコピーも同じ画面から選べる」と回答した。以前の「選択待ち」は上記時点の履歴として保持し、この回答で解消した。`cadcd33b7dfe651a13073cfb86b892497895b219` の画面を読み取りサブエージェント `dual_flow_map` と `spec_review` で独立に確認したところ、既存のAI先行と同時選択の構成が要望に合っていたため、追加のモード切替やUI再設計は行わなかった。
+
+desktopはAIカードの次にコピーカード、mobileは収納中のfooterにもAI・依頼文確認・コピーを表示する。展開中はパネル内のコピーを使える。READMEの説明をAI→コピーの順へ揃え、ADR 0012に確定した優先順と同じ画面からコピーを選べる方針を記録した。優先順は自動送信を意味しない。
+
+実際に選べる証拠を補強するため、`tests/e2e/action-choice.spec.ts` を追加した。1280/390/320pxで初期表示のAIと文字付きコピーの可視性・有効状態・表示順、通常クリックとEnterによるネイティブClipboardへの全文コピー、入力・確認・コピー時のAPI送信0回、明示AI要求の未設定エラー後もコピーできることを確認する。旧 `copy.spec.ts` のmobile合成クリックは、可視性・有効状態を検査する通常クリックへ変更した。既存assertの削除・弱体化・skipはない。
+
+最終レビューで、Enter前から同じ本文がClipboardにあるとキーボードコピーが動かなくてもassertが成功する点を指摘された。各コピーの直前に異なる文字列を書き込み、実クリック・Enterによって本文へ更新されることを検査する形へ補強した。アプリのコピー処理をモックしていない。
+
+環境は上記と同じmacOS arm64 / Node22.20.0 / npm10.9.3 / Playwright1.60.0標準Chromium。対象はcadcd33を基準にした今回の文書・テスト変更で、製品コード・Function・配信設定・依存関係は変更していない。
+
+| コマンド | 終了コード | 主要な結果 |
+|---|---:|---|
+| `CI=true npx playwright test tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts`（追加前） | 0 | 既存のコピー・モバイル展開のbaselineが成功。 |
+| `CI=true npx playwright test tests/e2e/action-choice.spec.ts tests/e2e/copy.spec.ts tests/e2e/sticky-footer.spec.ts` | 0 | 新しい3画面幅の選択操作と通常クリックへ補強した既存テストが成功。 |
+| `CI=true npm run check` | 0 | 全品質gate成功。reportの144件すべてexpected、unexpected/flaky/skipped各0。 |
+| `git diff --check` | 0 | 差分の空白エラーなし。 |
+
+新しいAI提供元・送信経路・保存・解析・設定画面は追加していない。実AI・有料呼出し・デプロイ・マージは行っていない。今回は文書・テストだけの変更なのでFunctionコンパイルやPages配信は再実行せず、上記f7852529の既存実装に対する証拠と区別する。最終コミットSHAとCIの結果はDraft PR #37と最終報告で確認する。

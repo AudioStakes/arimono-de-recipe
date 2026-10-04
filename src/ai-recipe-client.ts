@@ -1,3 +1,4 @@
+import { maxAiRecipeBodyBytes, maxAiRecipePromptLength } from "./ai-recipe-limits";
 import { parseAiRecipeCandidatesResponse } from "./ai-recipe-schema";
 import type { AiRecipeCandidateRequest, AiRecipeCandidatesResponse } from "./types";
 
@@ -17,6 +18,10 @@ export type GenerateRecipeFailure = {
 };
 
 export type GenerateRecipeResult = GenerateRecipeSuccess | GenerateRecipeFailure;
+
+export type GeneratePromptRecipeResult =
+  | { ok: true; recipe: string; model: string; usage: unknown | null }
+  | GenerateRecipeFailure;
 
 const maxAiRecipeRequestBodyLength = 2400;
 export const aiRecipeRequestTimeoutMs = 30_000;
@@ -72,12 +77,56 @@ export async function generateRecipe(
     };
   }
 
-  let response: Response;
+  return postRecipe(body, readRecipeResponse, fetcher);
+}
+
+export async function generateRecipeFromPrompt(
+  prompt: string,
+  fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
+): Promise<GeneratePromptRecipeResult> {
+  const body = JSON.stringify({ prompt });
+  if (!prompt.trim()) {
+    return {
+      ok: false,
+      error: { code: "invalid_prompt", message: "送信する依頼文がありません。" },
+    };
+  }
+  if (
+    prompt.length > maxAiRecipePromptLength ||
+    new TextEncoder().encode(body).byteLength > maxAiRecipeBodyBytes
+  ) {
+    return {
+      ok: false,
+      error: {
+        code: "prompt_too_long",
+        message:
+          "依頼文が送信上限を超えています。条件を短くするか、全文をコピーして普段使っているAIへ貼り付けてください。",
+      },
+    };
+  }
+  return postRecipe(body, readPromptRecipeResponse, fetcher, signal);
+}
+
+async function postRecipe<T extends GenerateRecipeResult | GeneratePromptRecipeResult>(
+  body: string,
+  readResponse: (response: Response) => Promise<T>,
+  fetcher: typeof fetch,
+  signal?: AbortSignal,
+): Promise<T | GenerateRecipeFailure> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), aiRecipeRequestTimeoutMs);
+  let timedOut = false;
+  const abort = (): void => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  if (signal?.aborted) controller.abort();
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, aiRecipeRequestTimeoutMs);
 
   try {
-    response = await fetcher("/api/recipe", {
+    if (controller.signal.aborted) return canceledRequest();
+    const response = await fetcher("/api/recipe", {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -85,13 +134,48 @@ export async function generateRecipe(
       body,
       signal: controller.signal,
     });
-    const result = await readRecipeResponse(response);
-    return controller.signal.aborted ? connectionFailure(true) : result;
+    const result = await readResponse(response);
+    return controller.signal.aborted
+      ? timedOut
+        ? connectionFailure(true)
+        : canceledRequest()
+      : result;
   } catch {
-    return connectionFailure(controller.signal.aborted);
+    return signal?.aborted && !timedOut ? canceledRequest() : connectionFailure(timedOut);
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
   }
+}
+
+function canceledRequest(): GenerateRecipeFailure {
+  return {
+    ok: false,
+    error: { code: "request_canceled", message: "依頼文の送信を中断しました。" },
+  };
+}
+
+async function readPromptRecipeResponse(response: Response): Promise<GeneratePromptRecipeResult> {
+  const payload = await readJson(response);
+  if (!response.ok) {
+    return isApiErrorResponse(payload)
+      ? { ok: false, error: payload.error }
+      : { ok: false, error: { code: "api_error", message: "AIへの依頼に失敗しました。" } };
+  }
+  if (
+    !isRecord(payload) ||
+    typeof payload["recipe"] !== "string" ||
+    !payload["recipe"].trim() ||
+    typeof payload["model"] !== "string" ||
+    !("usage" in payload) ||
+    payload["usage"] === undefined
+  ) {
+    return {
+      ok: false,
+      error: { code: "invalid_response", message: "AIからの応答形式を確認できませんでした。" },
+    };
+  }
+  return { ok: true, recipe: payload["recipe"], model: payload["model"], usage: payload["usage"] };
 }
 
 function connectionFailure(timedOut: boolean): GenerateRecipeFailure {

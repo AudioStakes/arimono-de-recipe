@@ -16,7 +16,7 @@ Guardrails:
 - No-shopping is the default policy. Candidates should use 家にある食材・材料 plus assumed pantry seasonings.
 - Shopping is allowed only by explicit opt-in in a scoped future change.
 - Do not show 買い足しなし as a badge. It is the baseline policy, not a special achievement.
-- Prompt copy remains a secondary fallback path and must not be removed.
+- Prompt copy remains an alternative users can choose directly on the same screen, alongside the primary in-app AI flow.
 - Keep `AI向けレシピ依頼文をコピー` available before, during, and after the in-app AI candidate flow.
 - Do not add persistence, history, favorites, family settings, login, analytics, or telemetry in the current scope.
 - The cooking view is not a step-by-step player. It must not require progress tracking or saved cooking state.
@@ -44,4 +44,6 @@ Implementation order for the recipe-decision redesign:
 
 This ADR extends ADR 0011. ADR 0011 remains the approved boundary for `/api/recipe`, Cloudflare Workers AI, and the prompt-copy fallback.
 
-Implementation note: the current button is `今日の候補を見る`. It sends compact structured candidate conditions to `/api/recipe`, rather than the full copied request text described in ADR 0011. `buildPrompt(data)` remains the source of truth for the independent prompt-copy path. See `src/ai-recipe-request.ts` and `src/ai-recipe-schema.ts` for the candidate payload and limits.
+Implementation note: `今日の候補を見る` sends compact structured candidate conditions to `/api/recipe`. The request preview also offers `この依頼文をAIへ送信`, which sends the same full `buildPrompt(data)` text as the copy path through the existing ADR 0011 `{prompt}` contract. Its free-text answer is separate from validated candidates and the cooking tabs. Neither preview nor copy sends a request. `buildPrompt(data)` remains the source of truth for full request text. See `src/ai-recipe-request.ts` and `src/ai-recipe-schema.ts` for the candidate payload and limits, and `src/ai-recipe-limits.ts` for the full prompt and request-body size limits.
+
+Owner confirmation (2026-10-04): keep in-app AI first in the visual order while keeping prompt copy selectable on the same screen, including the collapsed mobile footer. This priority does not trigger automatic transmission.

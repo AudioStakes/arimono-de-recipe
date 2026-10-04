@@ -24,7 +24,9 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.locator(".brand-fridge")).toBeVisible();
   await expect(page.locator(".brand-title-text")).toHaveText("ありもの de レシピ");
   await expect(
-    page.getByText("冷蔵庫にある食材を入れて、今日作る料理候補をすぐ見つけます。"),
+    page.getByText(
+      "家にある食材から、このアプリでAIの料理候補を見るか、レシピ依頼文を作って普段使っているAIに渡せます。",
+    ),
   ).toBeVisible();
 
   const basicFields = page.getByTestId("basic-fields");

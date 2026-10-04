@@ -16,4 +16,8 @@ export type AppElements = {
   copyPromptMobile: HTMLButtonElement;
   aiRecipePanel: HTMLElement;
   aiRecipePanelMobile: HTMLElement;
+  sendPrompt: HTMLButtonElement;
+  sendPromptMobile: HTMLButtonElement;
+  aiPromptPanel: HTMLElement;
+  aiPromptPanelMobile: HTMLElement;
 };
