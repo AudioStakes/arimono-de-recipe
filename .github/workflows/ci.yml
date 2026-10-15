@@ -12,7 +12,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     permissions:
       contents: read
@@ -27,7 +27,7 @@ jobs:
 
       - run: npm ci
       - run: npm run audit:dependencies
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run check
 
       - name: Show formatting and lint diagnostics on failure

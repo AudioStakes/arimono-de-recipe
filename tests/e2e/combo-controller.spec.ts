@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+// This isolated TypeScript harness is intentionally excluded from the production build.
+test.use({ baseURL: "http://127.0.0.1:4174" });
+
 test.describe("combo controller harness", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/tests/fixtures/combo-harness.html");

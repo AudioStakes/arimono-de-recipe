@@ -1,5 +1,11 @@
 # UX Test Matrix
 
+## Browser Coverage
+
+ChromiumとPixel 7相当では全E2Eを実行する。Firefox、WebKit、iPhone 13相当、iPad Pro 11相当では`app`、`input`、`assets`、`browser-compatibility`、`browser-interaction-regressions`を実行する。入力、材料名・分量の保持、キーボード、コピーと失敗時の回復、AIの2経路、候補選択と調理タブをカバーする。
+
+端末名はPlaywrightのエミュレーション設定で、実機OS・ソフトウェアキーボード・Safariアプリの動作保証ではない。モバイルWebKitの背景スクロールはCSSロックと開閉・Escape・resizeの解除を検証し、実際のwheel抑止はdesktopの3エンジンとmobile Chromiumで確認する。
+
 Structure tests are mechanical guardrails. They are not proof of runtime behavior; runtime behavior belongs in unit and E2E tests.
 
 | Behavior | Unit | E2E | Structure |

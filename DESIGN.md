@@ -214,11 +214,9 @@ The green radial glow should be secondary and subtle. It should suggest ingredie
 ### Structure
 
 - Center-aligned on mobile and desktop.
-- Contains:
-  - Fridge mark / kitchen symbol.
-  - App title: `ありもの de レシピ`.
-  - Lead: `「ありもので何作ろう？」を、AIへそのまま渡せるレシピ依頼文に。`
-  - Horizontal step pills.
+- The `h1` contains the supplied logo, with `alt="ありもの de レシピ"` to preserve the heading's accessible name.
+- Use the horizontal logo at every screen width, up to `720px` wide. Its shallow frame preserves room for material input on mobile.
+- Keep the existing lead and AI transmission notice below the logo.
 
 ### Header Style
 
@@ -231,23 +229,32 @@ header {
   text-align: center;
 }
 
-.brand-title-text {
-  color: var(--primary-deep);
-  font-family: var(--font-sans);
-  font-size: clamp(2.1rem, 5vw, 4.4rem);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  filter: drop-shadow(0 18px 26px rgba(78, 44, 22, 0.12));
+:root {
+  --brand-logo-horizontal-width: 720px;
 }
+
+.site-title {
+  inline-size: min(100%, var(--brand-logo-horizontal-width));
+  margin: 0;
+}
+
+.brand-logo {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 4.5 / 1;
+  object-fit: cover;
+}
+
 ```
 
-### Fridge Mark
+### Logo Assets
 
-- Keep the current fridge icon concept.
-- Use `--primary-deep` as the default stroke.
-- Optional hover/active: small internal items can tint toward `--ingredient`.
-- Do not use brand logos from Claude, Starbucks, or Notion.
+- Use the supplied artwork in `public/brand/`; preserve its colors, lettering, and transparency. The two title images use lossless WebP encoding.
+- Display frames hide only the artwork's outer transparent margins. Keep the fridge, lettering, and white outlines fully visible.
+- The compact logo is the OGP / social preview image, with an app-name alternative description. Use the Twitter `summary` card so its tall artwork fits the square preview.
+- Use the supplied mark alone for the `48x48` PNG favicon and `180x180` PNG Apple touch icon.
+- Reserve image dimensions in HTML and CSS; load the selected header logo eagerly with high fetch priority.
 
 ---
 

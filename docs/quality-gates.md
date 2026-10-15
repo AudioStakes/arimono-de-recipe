@@ -28,7 +28,7 @@ Biomeの対象は拡張子で選び、ネストした設定JSON、保守用JavaS
 - HTMLのdoctype・boolean／empty属性・voidタグ・行末空白の書式規則はBiomeへ任せる。既存のARIA comboboxをnative selectへ変える規則と、入力条件用formにsubmitを要求する規則は、このアプリの用途に合わないため使わない。
 - `hidden-focusable`は別ファイルのCSSによる非表示を考慮できないため、HTML文字列検査では使わない。E2Eで閉じたモバイルパネルの非表示とTab移動を確認する。初期HTMLはブラウザが不正構造を修復する前の文字列を捕捉し、完成DOMの重複ID・参照先も確認する。
 - MarkdownのMD013は日本語の論理行とURLを任意の桁で折り返さないため、MD024／MD025はレビュー履歴の反復見出しと複数の指示文書を保持するため無効にする。表はcompact形式で統一する。コードブロックの内容は整形しない。
-- HTML-validateはNode 22.12互換の10.9.0を固定する。後続版は最低Nodeを上げているため、更新時はengine条件も確認する。
+- HTML-validateの更新では最低Nodeを確認し、`package.json`のengine条件とCIのNodeで互換性を検証する。
 
 ## 実行と維持
 
@@ -46,3 +46,11 @@ npm run audit:dependencies
 非同期ルールは`void`や`unknown`のPromiseを完全には検出できない。CSS wildcard宣言があるため、TypeScriptのside-effect import検査だけではCSSファイルの存在を保証しない。YAML検査はActionsのスキーマ・式の評価を保証しない。HTML E2Eの追加検査は初期描画が対象で、全ての動的状態やアクセシビリティ全体を保証するものではない。
 
 監査はnpmの公開情報への通信を必要とし、新しいアドバイザリーやサービス障害で結果が変わる。通常のローカル`check`とは分ける。モックとChromiumから実AIの品質、実機Safari／Firefox、本番費用の安全性は結論づけない。
+
+## 依存監査の例外
+
+`micromark-extension-math` 3.1.0はKaTeXを`^0.16.0`に制限しているため、[既知の脆弱性](https://github.com/advisories/GHSA-238p-pmpm-9mq7)を修正する0.18.2を、その依存配下だけnpm overrideで固定する。Markdown全件lint、構造テスト、inline／display数式の描画・解析で互換性を確認した。upstreamが修正版を許容する際にoverrideを削除する。
+
+Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 13相当・iPad Pro 11相当では入力、候補選択、調理表示、コピー・エラー回復、今回修正した操作の回帰テストを実行する。実機OS、実機のソフトウェアキーボード、実際のSafariアプリを再現するものではない。
+
+アプリのE2Eは本番ビルドをVite previewで配信して実行する。`combo-controller.spec.ts`だけは本番へ含めないTypeScript harnessを別ポートのViteで検証する。どちらも既存サーバーを再利用しない。
