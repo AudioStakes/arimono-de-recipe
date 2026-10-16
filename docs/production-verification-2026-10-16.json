@@ -201,5 +201,216 @@
       "fullClipboardBodyCompared": false,
       "aiButtonsActivated": false
     }
-  ]
+  ],
+  "stage": "initial-release",
+  "postContrastRelease": {
+    "checkedAt": "2026-10-16",
+    "sourceCommit": "c42bfadab99dd6b527ed73c54713c15aa622dd92",
+    "deploymentId": "0ac0e675-7cd0-4e8b-8b38-2d402b2a0573",
+    "buildExitCode": 0,
+    "deployExitCode": 0,
+    "localCheck": {
+      "command": "CI=1 npm run check",
+      "exitCode": 0,
+      "e2ePassed": 366,
+      "e2eFailed": 0,
+      "e2eSkipped": 0,
+      "e2eFlaky": 0
+    },
+    "ci": {
+      "url": "https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38832089084",
+      "conclusion": "success"
+    },
+    "browserProfiles": [
+      {
+        "name": "chromium",
+        "device": "Desktop Chrome",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": true
+        },
+        "aiCalls": 2,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "firefox",
+        "device": "Desktop Firefox",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": false
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "webkit",
+        "device": "Desktop Safari",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": false
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "pixel-7",
+        "device": "Pixel 7",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": true
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "iphone-13",
+        "device": "iPhone 13",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": false
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "ipad-pro-11",
+        "device": "iPad Pro 11",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": false
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      },
+      {
+        "name": "google-chrome",
+        "device": "Desktop Chrome",
+        "browserVersion": "155.0.8059.80",
+        "status": "passed",
+        "copy": {
+          "reportedCopySuccess": true,
+          "clipboardBodyVerified": true
+        },
+        "aiCalls": 0,
+        "errors": [],
+        "failures": []
+      }
+    ],
+    "browserScriptExitCodes": [0, 0],
+    "realAI": {
+      "calls": 2,
+      "candidates": {
+        "status": 200,
+        "count": 3,
+        "cacheControl": "no-store",
+        "request": {
+          "mode": "candidates",
+          "materials": [
+            {
+              "name": "豆腐",
+              "usage": "auto",
+              "amount": "150g"
+            },
+            {
+              "name": "キャベツ",
+              "usage": "auto"
+            }
+          ]
+        }
+      },
+      "prompt": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "exactCopiedBodyVerified": true,
+        "sha256": "e49c1c5720067318235c26920af010a0b17d4381adb85c7de869caade0e77fbd",
+        "answerCharacters": 495
+      }
+    },
+    "boundaryViewports": [
+      {
+        "name": "chromium-320x568",
+        "exitCode": 0,
+        "qa": "passed",
+        "recording": "passed",
+        "cleanup": "passed",
+        "apiRequests": 0,
+        "pageErrors": 0,
+        "noHorizontalOverflow": true,
+        "ctaStates": 9,
+        "ctaContrastPassed": true,
+        "minimumActualTextRowRatio": 5.297,
+        "minimumWholeGradientRatio": 5.057,
+        "videoFrameDecoded": true
+      },
+      {
+        "name": "chromium-844x390",
+        "exitCode": 0,
+        "qa": "passed",
+        "recording": "passed",
+        "cleanup": "passed",
+        "apiRequests": 0,
+        "pageErrors": 0,
+        "noHorizontalOverflow": true,
+        "ctaStates": 9,
+        "ctaContrastPassed": true,
+        "minimumActualTextRowRatio": 5.297,
+        "minimumWholeGradientRatio": 5.057,
+        "videoFrameDecoded": true
+      },
+      {
+        "name": "webkit-320x568",
+        "exitCode": 0,
+        "qa": "passed",
+        "recording": "passed",
+        "cleanup": "passed",
+        "apiRequests": 0,
+        "pageErrors": 0,
+        "noHorizontalOverflow": true,
+        "ctaStates": 9,
+        "ctaContrastPassed": true,
+        "minimumActualTextRowRatio": 5.329,
+        "minimumWholeGradientRatio": 5.057,
+        "videoFrameDecoded": true
+      },
+      {
+        "name": "webkit-844x390",
+        "exitCode": 0,
+        "qa": "passed",
+        "recording": "passed",
+        "cleanup": "passed",
+        "apiRequests": 0,
+        "pageErrors": 0,
+        "noHorizontalOverflow": true,
+        "ctaStates": 9,
+        "ctaContrastPassed": true,
+        "minimumActualTextRowRatio": 5.368,
+        "minimumWholeGradientRatio": 5.057,
+        "videoFrameDecoded": true
+      }
+    ],
+    "contrast": {
+      "statesChecked": 36,
+      "minimumRequiredRatio": 4.5,
+      "minimumActualTextRowRatio": 5.297,
+      "minimumWholeGradientRatio": 5.057,
+      "allPassed": true
+    },
+    "nativeUIRecheck": {
+      "repeated": false,
+      "baselineSourceCommit": "aa14135952de41fdac27237a58606e281faedb51",
+      "reason": "Only two CTA background declarations in CSS changed; JavaScript, Function and deployment configuration are unchanged. Native Chrome and Safari input/copy results above belong to the initial release."
+    }
+  }
 }
