@@ -51,6 +51,6 @@ npm run audit:dependencies
 
 `micromark-extension-math` 3.1.0はKaTeXを`^0.16.0`に制限しているため、[既知の脆弱性](https://github.com/advisories/GHSA-238p-pmpm-9mq7)を修正する0.18.2を、その依存配下だけnpm overrideで固定する。Markdown全件lint、構造テスト、inline／display数式の描画・解析で互換性を確認した。upstreamが修正版を許容する際にoverrideを削除する。
 
-Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 13相当・iPad Pro 11相当では入力、候補選択、調理表示、コピー・エラー回復、今回修正した操作の回帰テストを実行する。実機OS、実機のソフトウェアキーボード、実際のSafariアプリを再現するものではない。
+Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 13相当・iPad Pro 11相当では入力、依頼文全文の送信、Markdown回答、コピー・エラー回復、今回修正した操作の回帰テストを実行する。実機OS、実機のソフトウェアキーボード、実際のSafariアプリを再現するものではない。
 
 アプリのE2Eは本番ビルドをVite previewで配信して実行する。`combo-controller.spec.ts`だけは本番へ含めないTypeScript harnessを別ポートのViteで検証する。どちらも既存サーバーを再利用しない。

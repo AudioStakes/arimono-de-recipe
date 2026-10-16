@@ -40,6 +40,8 @@ ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Functio
 
 ## Recipe-Decision UX Extension
 
+The candidate-specific extension below is superseded by [ADR 0014](../adr/0014-center-full-prompt-ai-response.md) and the [full-prompt AI flow](direct-ai-recipe-flow.md). The copy, explicit-transmission and no-persistence guardrails remain.
+
 ADR 0012 centers the visible product flow on deciding 今日作る料理 from 家にある食材・材料.
 
 The guardrail intent now includes:

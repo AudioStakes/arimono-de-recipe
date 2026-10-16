@@ -1,5 +1,4 @@
 import { buildConditionChipSpecs } from "./chips";
-import { requestIntentOptions } from "./data";
 import { buildPrompt } from "./prompt";
 import { getStickyFooterView } from "./sticky-footer";
 import type { ChipItem, ComboId, PromptData } from "./types";
@@ -9,7 +8,6 @@ type PromptPanelElements = {
   mobileOutput: HTMLTextAreaElement;
   bottom: HTMLElement;
   chips: Element;
-  stickyChips: Element;
   copyPromptSticky: HTMLElement;
   copyPromptMobile: HTMLElement;
 };
@@ -43,7 +41,7 @@ export type PromptPanelServices = {
   onChange: () => void;
 };
 
-const renderChips = (container: Element, items: ChipItem[], readOnly = false): void => {
+const renderChips = (container: Element, items: ChipItem[]): void => {
   container.innerHTML = "";
   container.classList.toggle("show", items.length > 0);
 
@@ -52,7 +50,7 @@ const renderChips = (container: Element, items: ChipItem[], readOnly = false): v
     chip.className = "chip";
     chip.setAttribute("data-kind", item.tone ?? "condition");
     chip.appendChild(document.createTextNode(item.label));
-    if (item.removable && !readOnly && item.action) {
+    if (item.removable && item.action) {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "chip-remove";
@@ -159,35 +157,6 @@ function getChipTone(spec: ReturnType<typeof buildConditionChipSpecs>[number]): 
   return "condition";
 }
 
-function buildMobileSummaryChips(data: PromptData): ChipItem[] {
-  const intentLabel = requestIntentOptions.find(
-    (option) => option.value === data.requestIntent,
-  )?.label;
-  const summaries = [
-    intentLabel ?? "",
-    data.materials.length ? data.materials.slice(0, 3).join("・") : "",
-    data.servings,
-    data.targetDish[0] ?? "",
-    data.recipeCount === "multiple" ? "複数品" : "",
-    data.recipeRoles[0] ?? "",
-    data.cookingTools[0] ?? "",
-    data.pairingTargets[0] ?? "",
-    data.cookTime || "",
-    data.recipeDirections[0] ?? "",
-    data.ngFoodsAndSeasonings[0] ? `使えない: ${data.ngFoodsAndSeasonings[0]}` : "",
-    data.supplementalNotes ? "その他の要望あり" : "",
-  ].filter(Boolean);
-
-  const visible = summaries.slice(0, 5).map((label) => ({ label }));
-  const remaining = summaries.length - visible.length;
-
-  if (remaining > 0) {
-    visible.push({ label: `+${remaining}項目` });
-  }
-
-  return visible;
-}
-
 export function refreshPromptPanel(
   state: PromptPanelState,
   elements: PromptPanelElements,
@@ -200,7 +169,6 @@ export function refreshPromptPanel(
 
   const chips = buildChips(data, services);
   renderChips(elements.chips, chips);
-  renderChips(elements.stickyChips, buildMobileSummaryChips(data), true);
 
   syncStickyFooter(state, elements, {
     scrollY: window.scrollY,
@@ -254,6 +222,7 @@ export async function copyPrompt(
   const button = event.currentTarget as HTMLElement | null;
   let feedbackButton = button;
   services.flushPendingInputs();
+  services.onChange();
   refreshPromptPanel(state, elements, services);
   let copied = false;
   try {

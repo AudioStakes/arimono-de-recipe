@@ -54,12 +54,20 @@ describe("generateRecipeFromPrompt", () => {
     { ...success, recipe: 123 },
     { recipe: "回答", model: "test-model" },
     { items: [], model: "test-model", usage: null },
-  ])("候補用の応答や不正な自由文回答を受理しない", async (payload) => {
+  ])("不正な自由文回答を受理しない", async (payload) => {
     const fetcher: typeof fetch = async () => jsonResponse(payload);
     await expect(generateRecipeFromPrompt("依頼", fetcher)).resolves.toMatchObject({
       ok: false,
       error: { code: "invalid_response" },
     });
+  });
+
+  test.each([20000, 20001])("AI回答の長さ境界を検証する: %s文字", async (length) => {
+    const recipe = "あ".repeat(length);
+    const fetcher: typeof fetch = async () => jsonResponse({ ...success, recipe });
+    const result = await generateRecipeFromPrompt("依頼", fetcher);
+    if (length === 20000) expect(result).toEqual({ ok: true, ...success, recipe });
+    else expect(result).toMatchObject({ ok: false, error: { code: "response_too_long" } });
   });
 
   test("APIのエラーを扱い、成功・失敗でタイマーを残さない", async () => {
@@ -72,6 +80,18 @@ describe("generateRecipeFromPrompt", () => {
     await expect(generateRecipeFromPrompt("依頼", failedFetcher)).resolves.toEqual({
       ok: false,
       error,
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  test("通常のネットワークエラーを扱い、タイマーを残さない", async () => {
+    vi.useFakeTimers();
+    const fetcher: typeof fetch = async () => {
+      throw new TypeError("Failed to fetch");
+    };
+    await expect(generateRecipeFromPrompt("依頼", fetcher)).resolves.toEqual({
+      ok: false,
+      error: { code: "network_error", message: "AIへの接続に失敗しました。" },
     });
     expect(vi.getTimerCount()).toBe(0);
   });

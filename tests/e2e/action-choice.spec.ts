@@ -19,26 +19,49 @@ for (const width of [1280, 390, 320]) {
       .context()
       .grantPermissions(["clipboard-read", "clipboard-write"], { origin: page.url() });
     const mobile = width < 1024;
-    const ai = page.getByTestId(mobile ? "generate-recipe-mobile" : "generate-recipe");
+    const ai = page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send");
     const copy = page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt");
     await expect(ai).toBeVisible();
     await expect(ai).toBeEnabled();
     await expect(copy).toBeVisible();
     await expect(copy).toBeEnabled();
-    await expect(copy.getByText("AI向けレシピ依頼文をコピー", { exact: true })).toBeVisible();
-    const aiPosition = await (mobile
-      ? ai
-      : page.getByRole("heading", { name: "このアプリでAIに聞く", exact: true })
-    ).boundingBox();
-    const copyPosition = await (mobile
-      ? copy
-      : page.getByRole("heading", { name: "依頼文を作ってコピー", exact: true })
-    ).boundingBox();
+    await expect(copy.getByText("依頼文をコピー", { exact: true })).toBeVisible();
+    await expect(ai).toHaveAccessibleName("この依頼文をAIへ送信");
+    await expect(ai).toHaveAccessibleDescription(
+      "「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。入力やコピーだけでは送信しません。",
+    );
+    await expect(
+      page.getByTestId(mobile ? "mobile-ai-transmission-notice" : "ai-transmission-notice"),
+    ).toHaveText("Cloudflare AIへ送信");
+    await expect(copy).toHaveAccessibleName("AI向けレシピ依頼文をコピー");
+    const { aiPosition, copyPosition } = await ai.evaluate(
+      (element, copyId) => {
+        const secondary = document.querySelector(`[data-testid="${copyId}"]`);
+        return {
+          aiPosition: element.getBoundingClientRect().toJSON(),
+          copyPosition: secondary?.getBoundingClientRect().toJSON(),
+        };
+      },
+      mobile ? "copy-prompt-sticky" : "copy-prompt",
+    );
     if (!aiPosition || !copyPosition) throw new Error("Both choices must be rendered");
     expect(
       aiPosition.y < copyPosition.y ||
         (aiPosition.y === copyPosition.y && aiPosition.x < copyPosition.x),
     ).toBe(true);
+    if (mobile) {
+      const label = copy.getByText("依頼文をコピー", { exact: true });
+      expect(
+        await label.evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getClientRects().length;
+        }),
+      ).toBe(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+    }
     expect(apiCalls).toBe(0);
 
     await page.getByTestId("combo-input-materials").fill("豆腐");
@@ -50,22 +73,20 @@ for (const width of [1280, 390, 320]) {
     expect(prompt).toContain("豆腐");
     expect(apiCalls).toBe(0);
     if (mobile) {
-      await page.getByRole("button", { name: "レシピ依頼文全文を表示", exact: true }).click();
+      await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
       await expect(page.getByTestId("copy-prompt-mobile-panel")).toBeVisible();
       await page.evaluate(() => navigator.clipboard.writeText("before-preview-copy"));
       await page.getByTestId("copy-prompt-mobile-panel").click();
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
       await page.getByRole("button", { name: "閉じる", exact: true }).click();
     } else {
-      await page.getByText("コピーする依頼文を確認する", { exact: true }).click();
+      await page.getByTestId("prompt-preview-toggle").click();
     }
     expect(apiCalls).toBe(0);
     await ai.click();
-    await expect(
-      page.getByTestId(mobile ? "mobile-ai-recipe-error" : "ai-recipe-error"),
-    ).toBeVisible();
+    await expect(page.getByTestId("ai-prompt-status")).toBeVisible();
     expect(apiCalls).toBe(1);
-    const errorCopy = mobile ? page.getByTestId("copy-prompt-mobile-panel") : copy;
+    const errorCopy = copy;
     await expect(errorCopy).toBeVisible();
     await expect(errorCopy).toBeEnabled();
     await page.evaluate(() => navigator.clipboard.writeText("before-keyboard-copy"));

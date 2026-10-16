@@ -1,5 +1,3 @@
-import type { RecipeDecisionState } from "./recipe-decision/types";
-
 export type ComboId =
   | "materials"
   | "targetDish"
@@ -52,6 +50,9 @@ export type IconName =
   | "link"
   | "clock"
   | "zap"
+  | "send"
+  | "info"
+  | "trash"
   | "heart"
   | "salt"
   | "globe"
@@ -102,68 +103,7 @@ export type ChipItem = {
   action?: () => void;
 };
 
-export type AiRecipeStatus = "idle" | "loading" | "success" | "error";
-export type AiRecipeSurface = "desktop" | "mobile";
-export type AiRecipeCookingTab = "materials" | "instructions" | "taste";
-
-export type AiRecipeMaterialUsage = "auto" | "required" | "use_up";
-
-export type AiRecipeMaterialInput = {
-  name: string;
-  usage: AiRecipeMaterialUsage;
-  amount?: string;
-};
-
-export type AiRecipeCandidateRequest = {
-  mode: "candidates";
-  materials: AiRecipeMaterialInput[];
-  allowShopping?: boolean;
-  servings?: string;
-  time?: string;
-  directions?: string[];
-  tools?: string[];
-  avoid?: string[];
-  notes?: string;
-};
-
-export type AiRecipeCandidateBadge =
-  | "no_shop"
-  | "miss_optional"
-  | "quick"
-  | "easy"
-  | "uses_up"
-  | "few_dishes"
-  | "kids";
-
-export type AiRecipeCandidate = {
-  id: string;
-  title: string;
-  time: number;
-  badges: AiRecipeCandidateBadge[];
-  use: string[];
-  miss: string[];
-  why: string;
-  ing: string[];
-  steps: string[];
-};
-
-export type AiRecipeCandidatesResponse = {
-  items: AiRecipeCandidate[];
-};
-
-export type AiRecipeState = {
-  status: AiRecipeStatus;
-  activeSurface: AiRecipeSurface;
-  request: AiRecipeCandidateRequest | null;
-  candidates: AiRecipeCandidatesResponse | null;
-  selectedCandidateId: string;
-  cookingCandidateId: string;
-  cookingTab: AiRecipeCookingTab;
-  model: string;
-  usage: unknown | null;
-  errorMessage: string;
-  requestId: number;
-};
+export type AiPromptStatus = "idle" | "loading" | "success" | "error";
 
 export type AppState = {
   hasUserInput: boolean;
@@ -172,14 +112,12 @@ export type AppState = {
   ticking: boolean;
   mobileSheetOpen: boolean;
   materialRequests: MaterialRequest[];
-  recipeDecision: RecipeDecisionState;
-  aiRecipe: AiRecipeState;
   aiPrompt: {
-    status: AiRecipeStatus;
-    activeSurface: AiRecipeSurface;
+    status: AiPromptStatus;
     submittedPrompt: string;
     recipe: string;
     errorMessage: string;
+    errorSource: "input" | "request" | null;
     requestId: number;
     controller: AbortController | null;
   };

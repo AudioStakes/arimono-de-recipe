@@ -1,5 +1,7 @@
 # Center Recipe Decision UX
 
+Superseded on 2026-10-16 by [ADR 0014](0014-center-full-prompt-ai-response.md) for candidate generation, selection and cooking views. The following records the previous decision.
+
 The app UI now centers on helping the user decide what to cook today from 家にある食材・材料.
 
 The original copy/paste prompt path remains available, but it is no longer the first visual goal of the home screen. The primary flow is:

@@ -44,7 +44,7 @@ description: Claude の暖かい AI プロダクト感、Starbucks の食・日�
 1. **Cream hero**: アプリ名、冷蔵庫アイコン、短い説明、3ステップ導線。
 2. **White/cream form surface**: 食材や条件を入力する整理された領域。
 3. **AI request card**: 生成された依頼文を読みやすく表示する出力領域。
-4. **Mobile bottom sheet**: スマホではコピー行動を常に近くに置く。
+4. **Mobile bottom sheet**: スマホでは送信とコピーの操作を常に近くに置く。
 
 ---
 
@@ -201,7 +201,7 @@ The green radial glow should be secondary and subtle. It should suggest ingredie
 ### Japanese Copy Tone
 
 - Use clear, domestic, non-technical wording.
-- Keep CTA verbs concrete: `依頼文をコピー`, `レシピ依頼文を確認する`, `条件を入力`.
+- Keep CTA verbs concrete: `AIへ送信`, `依頼文をコピー`, `依頼文を見る`, `条件を入力`.
 - Avoid AI jargon such as `プロンプトエンジニアリング`, `LLM`, `トークン`, unless used in developer-facing docs.
 - Prefer short helper sentences.
 
@@ -216,7 +216,7 @@ The green radial glow should be secondary and subtle. It should suggest ingredie
 - Center-aligned on mobile and desktop.
 - The `h1` contains the supplied logo, with `alt="ありもの de レシピ"` to preserve the heading's accessible name.
 - Use the horizontal logo at every screen width, up to `720px` wide. Its shallow frame preserves room for material input on mobile.
-- Keep the existing lead and AI transmission notice below the logo.
+- Keep the short lead below the logo. Place the smaller info icon and `Cloudflare AIへ送信` beside the actions; the full transmission notice remains the buttons' accessible description.
 
 ### Header Style
 
@@ -452,17 +452,20 @@ The cook-time slider should feel practical and low-friction.
 
 ---
 
-## 4.8 Prompt Output Section
+## 4.8 AI Answer and Prompt Preview
 
-This is the product's conversion surface. It should feel like a clean AI request card.
+This is the primary action and reading surface. Keep the warm paper card styling.
 
 ### Structure
 
-- Heading: `AIへ渡すレシピ依頼文`.
-- Helper text: `この文章をコピーして、ChatGPTなどのAIへ渡してください。`
-- Condition chips above or near output.
-- Primary copy button close to the output.
-- Textarea/output area with high readability.
+- Heading: `ありもので、何を作る？`.
+- Primary action: send icon and `AIへ送信`; secondary action: copy icon and `依頼文をコピー`.
+- One `AIの回答` article outside the collapsible prompt preview, shared across screen sizes.
+- Desktop: inputs on the left and actions / answer on the right. The answer scrolls with the page. Mobile: inputs followed by actions / answer.
+- Markdown paragraphs, headings, lists, and tables use the existing ink, spacing, and warm surface tokens. Answer headings start at h4 beneath the article h3; 1rem bold headings, 0.95rem body, 1.75 line-height.
+- Table cells keep a minimum inline size of 96px (`--space-6` × 3); wider tables scroll within the answer region. Long words and code wrap without widening the page.
+- Keep a short materials / quantities / excluded foods / heating reminder near successful answers.
+- `依頼文を見る` reveals the selectable, read-only prompt preview.
 
 ### Output Card Style
 
@@ -491,13 +494,14 @@ This is the product's conversion surface. It should feel like a clean AI request
 
 - Empty state should show a helpful placeholder or generated default, not a blank cold panel.
 - The generated text should be selectable, but direct editing is not required unless product scope changes.
-- The copy button should remain the strongest action on the screen.
+- Sending is the strongest action. Copy remains available while waiting and after errors.
+- Focus the shared answer heading at mobile send start only; completion announces a status without moving focus.
 
 ---
 
 ## 4.9 Buttons
 
-### Primary Copy Button
+### Primary Send Button
 
 Primary CTA is Claude-coral, with a food-warm tone.
 Use the darker coral gradient below for white CTA text: its stops provide at least 5.05:1 contrast in the normal and focus states, and 5.34:1 on hover. Active keeps the same background while scaling the button. The lighter `--primary` accent remains available for non-text accents.
@@ -545,7 +549,7 @@ When copy succeeds, use ingredient green.
 
 ```css
 .button-secondary,
-.sheet-toggle-button {
+.sheet-preview-button {
   color: var(--primary-deep);
   background: rgba(255, 249, 242, 0.92);
   border: 1px solid rgba(204, 120, 92, 0.18);
@@ -572,7 +576,9 @@ The mobile bottom sheet is a critical interaction pattern.
 - Frosted warm surface.
 - 28px top radius.
 - Safe-area padding.
-- Sticky chips horizontally scroll.
+- The existing footer helper row shows the info icon, `Cloudflare AIへ送信`, and the prompt preview control.
+- The fixed footer places send and copy side by side, with a smaller `依頼文を見る` control.
+- The sheet contains only the prompt preview and its copy action; answers stay in the normal page.
 - Copy CTA always visible when appropriate.
 
 ```css
@@ -817,7 +823,7 @@ Examples:
 Use concrete next-step language.
 
 - Default: `依頼文をコピー`
-- Success: `コピーしました。AIへ渡してください`
+- Success: `コピーしました` (the live status retains the longer next-step guidance)
 - Sticky success: `コピーしました`
 
 ### Error / Failure

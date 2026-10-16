@@ -39,8 +39,8 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
   expect(clipboardText2).toContain("### 家にある食材・材料");
 
   await page.waitForTimeout(1900);
-  await expect(page.getByTestId("copy-prompt")).toContainText("AI向けレシピ依頼文をコピー");
-  await expect(page.getByTestId("copy-prompt-sticky")).toContainText("AI向けレシピ依頼文をコピー");
+  await expect(page.getByTestId("copy-prompt")).toContainText("依頼文をコピー");
+  await expect(page.getByTestId("copy-prompt-sticky")).toContainText("依頼文をコピー");
   await expect(page.locator("#notice")).toHaveCount(0);
 });
 
@@ -102,7 +102,7 @@ test("モバイル展開パネル内のコピー操作でも最新の依頼文�
 
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
-  await page.getByRole("button", { name: "レシピ依頼文全文を表示" }).click();
+  await page.getByRole("button", { name: "依頼文を見る" }).click();
 
   await page.getByTestId("copy-prompt-mobile-panel").click();
   await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText(
@@ -113,9 +113,7 @@ test("モバイル展開パネル内のコピー操作でも最新の依頼文�
     .toContain("### 家にある食材・材料");
 
   await page.waitForTimeout(2700);
-  await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText(
-    "AI向けレシピ依頼文をコピー",
-  );
+  await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText("依頼文をコピー");
 });
 
 test("モバイル固定コピーのフォールバックは展開パネルを開いてパネル側へ結果を表示する", async ({
@@ -144,7 +142,7 @@ test("モバイル固定コピーのフォールバックは展開パネルを�
   await page.getByTestId("copy-prompt-sticky").click();
 
   await expect(page.getByTestId("mobile-prompt-panel")).toHaveAttribute("data-state", "open");
-  await expect(page.getByTestId("copy-prompt-sticky")).toBeHidden();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeVisible();
   await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText(
     "コピーしました。普段使っているAIに貼り付けてください。",
   );

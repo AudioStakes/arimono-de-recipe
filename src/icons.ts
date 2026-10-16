@@ -9,6 +9,10 @@ export const icons: Record<IconName, string> = {
   link: '<svg class="icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.1 0l2.1-2.1a5 5 0 0 0-7.1-7.1L11 4.9"></path><path d="M14 11a5 5 0 0 0-7.1 0l-2.1 2.1a5 5 0 0 0 7.1 7.1L13 19.1"></path></svg>',
   clock:
     '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>',
+  send: '<svg class="icon" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9L2 9 22 2z"></path><path d="M22 2 11 13"></path></svg>',
+  info: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 11v6"></path><path d="M12 7h.01"></path></svg>',
+  trash:
+    '<svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18"></path><path d="M9 6V3h6v3"></path><path d="m5 6 1 15h12l1-15"></path><path d="M10 10v7M14 10v7"></path></svg>',
   zap: '<svg class="icon" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>',
   heart:
     '<svg class="icon" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></svg>',

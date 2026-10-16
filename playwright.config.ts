@@ -4,7 +4,7 @@ const compatibilityTests = [
   "**/app.spec.ts",
   "**/input.spec.ts",
   "**/assets.spec.ts",
-  "**/browser-compatibility.spec.ts",
+  "**/direct-ai-flow.spec.ts",
   "**/browser-interaction-regressions.spec.ts",
 ];
 

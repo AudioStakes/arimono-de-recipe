@@ -10,9 +10,9 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
 
   const output = page.getByTestId("prompt-output");
   await expect(
-    page.getByRole("heading", { name: "料理候補とレシピ依頼文", exact: true }),
+    page.getByRole("heading", { name: "ありもので、何を作る？", exact: true }),
   ).toBeVisible();
-  await page.getByText("コピーする依頼文を確認する", { exact: true }).click();
+  await page.getByTestId("prompt-preview-toggle").click();
   await expect(output).toHaveAccessibleName("コピーするレシピ依頼文");
   await expect(output).toHaveAttribute("readonly");
   await expect(output).toHaveValue(/## 役割/);
