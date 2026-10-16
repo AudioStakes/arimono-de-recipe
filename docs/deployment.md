@@ -69,6 +69,14 @@ PagesはWorkersのRate Limiting bindingに対応していません。有料運�
 
 静的ファイルのセキュリティヘッダーは `public/_headers` に定義しています。Pages Functionの応答には `_headers` が適用されないため、API側で `Cache-Control: no-store` と `X-Content-Type-Options: nosniff` を返します。
 
+### Cloudflare Web Analytics
+
+`arimono-de-recipe.pages.dev` 専用のWeb Analyticsサイトを登録済みです。`src/web-analytics.ts` は公開サイト識別子を使い、正確な本番originでページ読込後に一度だけ標準beaconを挿入します。APIトークンやアカウントIDはブラウザへ渡しません。ローカル・Previewは集計しません。
+
+**Pagesの自動Web Analytics挿入は有効にしないでください。** 手動beaconとの二重計測を防ぐためです。独自のドメイン・アカウントへ移す場合は、自分の解析サイトを登録してoriginと公開サイト識別子を更新します。
+
+CSPではスクリプトを `https://static.cloudflareinsights.com/beacon.min.js`、解析の送信を `https://cloudflareinsights.com/cdn-cgi/rum` に限定します。実デプロイ後、スクリプト読込とbeaconの応答が成功し、Dashboardへ反映されることを確認します。ブロッカーや反映の遅延で数値が一致しない場合があります。[公式のCSP説明](https://developers.cloudflare.com/web-analytics/faq/#what-do-i-need-to-add-to-my-content-security-policy-csp)
+
 公開URLで以下を確認してください。
 
 - 材料の入力・依頼文の確認・コピーだけでは `/api/recipe` が呼ばれない。

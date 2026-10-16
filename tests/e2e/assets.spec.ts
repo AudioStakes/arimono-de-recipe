@@ -1,4 +1,87 @@
-import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
+import { expect, type Page, test } from "@playwright/test";
+
+async function serveBuiltAppAt(
+  page: Page,
+  origin: string,
+  baseURL: string | undefined,
+): Promise<void> {
+  if (!baseURL) throw new Error("Test baseURL is required");
+  const headersText = await readFile("public/_headers", "utf8");
+  const csp = headersText.match(/Content-Security-Policy: (.+)/)?.[1];
+  if (!csp) throw new Error("Production CSP is required");
+  await page.route(`${origin}/**`, async (route) => {
+    const url = new URL(route.request().url());
+    const response = await page.request.get(new URL(url.pathname + url.search, baseURL).href);
+    await route.fulfill({
+      response,
+      headers: { ...response.headers(), "content-security-policy": csp },
+    });
+  });
+}
+
+for (const blocked of [false, true]) {
+  test(`本番だけで解析を一度読み込み、解析の読込失敗=${blocked}でも操作できる`, async ({
+    page,
+    baseURL,
+  }) => {
+    let beaconRequests = 0;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route("https://static.cloudflareinsights.com/beacon.min.js", async (route) => {
+      beaconRequests += 1;
+      if (blocked) {
+        await route.abort();
+      } else {
+        await route.fulfill({
+          contentType: "text/javascript",
+          headers: { "access-control-allow-origin": "*" },
+          body: 'document.documentElement.setAttribute("data-test-beacon-loaded", "true");',
+        });
+      }
+    });
+    const origin = "https://arimono-de-recipe.pages.dev";
+    await serveBuiltAppAt(page, origin, baseURL);
+    await page.goto(origin);
+    const beacon = page.locator(
+      'script[src="https://static.cloudflareinsights.com/beacon.min.js"]',
+    );
+    await expect(beacon).toHaveCount(1);
+    await expect.poll(() => beaconRequests).toBe(1);
+    if (!blocked) {
+      await expect(page.locator("html")).toHaveAttribute("data-test-beacon-loaded", "true");
+    }
+    await page.getByTestId("combo-input-materials").fill("豆腐");
+    await page.getByTestId("combo-input-materials").press("Enter");
+    await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐/);
+    const config = await beacon.getAttribute("data-cf-beacon");
+    expect(JSON.parse(config ?? "null")).toEqual({ token: "cbfdc0af97dc410f89024a9de8ecc87b" });
+    await page.evaluate(() => window.dispatchEvent(new Event("load")));
+    await expect(beacon).toHaveCount(1);
+    expect(beaconRequests).toBe(1);
+    await page.getByTestId("privacy-open").click();
+    await expect(page.getByRole("dialog", { name: "プライバシー", exact: true })).toBeVisible();
+    await page.getByTestId("privacy-close").click();
+    expect(errors).toEqual([]);
+  });
+}
+
+test("ローカルとPreviewではアクセス解析を読み込まない", async ({ page, baseURL }) => {
+  let beaconRequests = 0;
+  await page.route("https://static.cloudflareinsights.com/**", async (route) => {
+    beaconRequests += 1;
+    await route.abort();
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("privacy-open")).toBeAttached();
+  await expect(page.locator("script[data-cf-beacon]")).toHaveCount(0);
+  const preview = "https://preview.arimono-de-recipe.pages.dev";
+  await serveBuiltAppAt(page, preview, baseURL);
+  await page.goto(preview);
+  await expect(page.getByTestId("privacy-open")).toBeAttached();
+  await expect(page.locator("script[data-cf-beacon]")).toHaveCount(0);
+  expect(beaconRequests).toBe(0);
+});
 
 test("ブランド見出しとビルド済みアセットが参照できる", async ({ page }) => {
   await page.goto("/");

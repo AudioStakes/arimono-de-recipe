@@ -600,6 +600,16 @@ The mobile bottom sheet is a critical interaction pattern.
 
 ---
 
+## 4.11 Site Footer and Privacy Dialog
+
+- Keep the creator link and privacy control centered in normal document flow, without a surrounding card or border.
+- Use muted 0.75rem text and 44px-high interactive targets; preserve visible keyboard focus and an underline on hover/focus.
+- Keep the site footer above the fixed mobile action bar using the existing page bottom spacing.
+- Use a native modal dialog with the solid surface, large radius, floating shadow, and a maximum width of 36rem. Its backdrop uses the ink color at 45% opacity.
+- Use 1.1rem for the dialog heading and 1.5rem for its close symbol.
+- Keep the heading and close control visible while privacy text scrolls. Close by button, Escape, or tapping outside; restore focus to the privacy opener.
+- Lock background scrolling while open, retain the page position, and reserve scrollbar space to avoid a horizontal layout shift.
+
 ## 5. Layout Principles
 
 ### Mobile First

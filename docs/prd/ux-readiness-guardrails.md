@@ -52,4 +52,4 @@ The guardrail intent now includes:
 - Candidate cards, candidate detail, and cooking tabs as behavior-critical E2E surfaces.
 - Empty/loading/error/retry states for the in-app AI candidate path.
 
-The guardrail intent still excludes login, persistence, history, favorites, family settings, analytics, telemetry, and broad architecture changes.
+The guardrail intent still excludes login, persistence, history, favorites, family settings, and broad architecture changes. Analytics and telemetry are limited to the explicitly approved Cloudflare Web Analytics exception in [ADR 0015](../adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md).

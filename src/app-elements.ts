@@ -14,4 +14,7 @@ export type AppElements = {
   sendPromptMobile: HTMLButtonElement;
   aiPromptPanel: HTMLElement;
   aiPromptHeading: HTMLElement;
+  privacyOpen: HTMLButtonElement;
+  privacyDialog: HTMLDialogElement;
+  privacyClose: HTMLButtonElement;
 };

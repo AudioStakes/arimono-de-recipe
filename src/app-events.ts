@@ -17,6 +17,23 @@ const $ = <T extends Element>(selector: string, root: ParentNode = document): T 
 
 let mobileSheetOpener: HTMLElement | null = null;
 
+function wrapFocusAtBoundary(event: KeyboardEvent, root: HTMLElement): void {
+  if (event.key !== "Tab") return;
+  const controls = Array.from(
+    root.querySelectorAll<HTMLElement>("button, input, textarea, select, a[href], [tabindex]"),
+  ).filter(
+    (element) =>
+      element.tabIndex >= 0 && !element.matches(":disabled") && element.getClientRects().length > 0,
+  );
+  const first = controls[0];
+  const last = controls.at(-1);
+  const active = document.activeElement;
+  if (first && last && (event.shiftKey ? active === first : active === last)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  }
+}
+
 function syncStickyFooterState(
   state: AppState,
   elements: AppElements,
@@ -149,6 +166,38 @@ export function bindAppEvents(
   elements: AppElements,
   services: PromptPanelServices,
 ): void {
+  elements.privacyOpen.addEventListener("click", () => {
+    elements.privacyDialog.showModal();
+    elements.privacyClose.focus();
+  });
+  elements.privacyClose.addEventListener("click", () => elements.privacyDialog.close());
+  elements.privacyDialog.addEventListener("keydown", (event) => {
+    wrapFocusAtBoundary(event, elements.privacyDialog);
+  });
+  elements.privacyDialog.addEventListener("close", () => {
+    elements.privacyOpen.focus({ preventScroll: true });
+  });
+  const isPrivacyBackdrop = (event: MouseEvent): boolean => {
+    if (event.target !== elements.privacyDialog) return false;
+    const bounds = elements.privacyDialog.getBoundingClientRect();
+    return (
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom
+    );
+  };
+  let pressedPrivacyBackdrop = false;
+  elements.privacyDialog.addEventListener("pointerdown", (event) => {
+    pressedPrivacyBackdrop = isPrivacyBackdrop(event);
+  });
+  elements.privacyDialog.addEventListener("click", (event) => {
+    if (pressedPrivacyBackdrop && isPrivacyBackdrop(event)) {
+      elements.privacyDialog.close();
+    }
+    pressedPrivacyBackdrop = false;
+  });
+
   services.openMobilePromptForCopy = (opener) => {
     setMobileSheetState(state, elements, true, opener);
   };
@@ -230,25 +279,7 @@ export function bindAppEvents(
       setMobileSheetState(state, elements, false);
       return;
     }
-    if (event.key === "Tab") {
-      const controls = Array.from(
-        elements.bottom.querySelectorAll<HTMLElement>(
-          "button, input, textarea, select, a[href], [tabindex]",
-        ),
-      ).filter(
-        (element) =>
-          element.tabIndex >= 0 &&
-          !element.matches(":disabled") &&
-          element.getClientRects().length > 0,
-      );
-      const first = controls[0];
-      const last = controls.at(-1);
-      const active = document.activeElement;
-      if (first && last && (event.shiftKey ? active === first : active === last)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      }
-    }
+    wrapFocusAtBoundary(event, elements.bottom);
   });
 
   $("#copyPrompt").addEventListener(
