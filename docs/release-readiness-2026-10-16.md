@@ -48,14 +48,35 @@ CIのmobile Safari相当では、自由入力7項目を連結した1テストが
 ## 公開設定と運用
 
 - リポジトリをpublicに変更し、descriptionと技術タグを設定した。
+- 動作確認後の公開URLをリポジトリのWebsite欄に設定した。
 - mainはPR経由と最新mainに対する`check`成功、会話解決を必須にし、管理者にも適用した。force pushとブランチ削除は禁止する。個人開発のため必須承認数は0件。
 - GitHubのPrivate vulnerability reportingを有効化した。
 - ソース・到達可能なGit履歴のテキスト・Issue/PR本文の秘密情報パターン検査は検出0件。画像の再利用許諾や第三者の権利を自動検査で保証するものではない。再利用ライセンスは未設定のまま維持した。
 - Cloudflare Workers FreeをDashboardで確認した。有料プランへの変更、AI Gateway、保存・解析・ログインの追加は行っていない。
 - 無料枠はアカウント共有で、濫用によるAI可用性低下は残る。公開先・上限・停止手順は[公開手順](deployment.md)に記録した。
 
-今回は所有者がPRのマージ・リポジトリ公開・main保護・デプロイを明示的に依頼した。通常のリポジトリ方針を恒常的に変更せず、この依頼の範囲で実施している。本番デプロイ・公開URL上のブラウザー検証・実AIの確認は、この公開設定PRの統合後に実施する。
+今回は所有者がPRのマージ・リポジトリ公開・main保護・デプロイを明示的に依頼した。通常のリポジトリ方針を恒常的に変更せず、この依頼の範囲で実施している。
+
+## 本番デプロイ後の検証
+
+[公開アプリ](https://arimono-de-recipe.pages.dev/)は、PR #44・#45を統合したmain `aa14135` からビルド・デプロイした。`npm run build` と `npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main` はexit 0。Production deployment `35dc53c4` のSourceが `aa14135` であることと、公開URLのHTTP 200を確認した。
+
+| 公開URLの確認 | 結果 |
+| --- | --- |
+| Desktop Chromium・Firefox・WebKit | 材料入力・150gの保持・依頼文・コピー経路・横幅を確認、3構成成功 |
+| Pixel 7・iPhone 13・iPad Pro 11相当 | 同じ操作とモバイル本文パネルを確認、3構成成功 |
+| インストール済みGoogle Chrome | version 155.0.8059.80のヘッドレス操作も成功。ユーザープロファイルは使用せず |
+| 自動送信 | 入力・コピー・本文確認では各構成0回 |
+| クリップボード本文 | Chromiumのdesktop・Pixel相当とGoogle Chromeで依頼文全文との一致を確認。他の構成は成功表示まで確認 |
+| 実AI・候補 | desktop Chromiumで明示送信1回、HTTP 200、3候補の選択と作り方の表示に成功 |
+| 実AI・依頼文全文 | 明示送信1回、HTTP 200、コピー本文との完全一致と506文字の回答を確認 |
+| APIキャッシュ | 両送信と不正リクエストの応答で `Cache-Control: no-store` |
+| API拒否 | GET 405、異なるOrigin 403、不正本文400、非JSON 415。いずれも想定するエラーcode |
+| 配信ヘッダー | CSP・nosniff・frame拒否・no-referrerを確認 |
+| ブラウザーエラー | 6構成とGoogle Chromeですべてpageerror・requestfailed 0 |
+
+公開URLの操作スクリプトはexit 0。実AIの入力には「豆腐150g・キャベツ」だけを使い、個人情報は送っていない。結果の要約と照合値は[本番検証JSON](production-verification-2026-10-16.json)に保存した。
 
 ## 検証の限界
 
-実機のiPhone／Android、実機IME・ソフトウェアキーボード、スクリーンリーダー、低速回線でのフィールド性能をこのエミュレーションで保証しない。モバイルWebKitの背景スクロールはCSSロックと解除を確認し、wheelによる実スクロール抑止はdesktop 3エンジンとmobile Chromiumで検証した。AIの全回答やアレルギー対応は保証しない。
+実機のiPhone／Android、実機IME・ソフトウェアキーボード、スクリーンリーダー、低速回線でのフィールド性能をこのエミュレーションで保証しない。Macの画面ロックにより、実際のChrome／SafariのUI操作は実施できなかった。モバイルWebKitの背景スクロールはCSSロックと解除を確認し、wheelによる実スクロール抑止はdesktop 3エンジンとmobile Chromiumで検証した。AIの全回答やアレルギー対応は保証しない。
