@@ -1104,7 +1104,7 @@ input[type="range"] {
   text-align: center;
   overflow-wrap: anywhere;
   inline-size: 100%;
-  background: linear-gradient(180deg, #d4896d, var(--primary));
+  background: linear-gradient(180deg, var(--primary-active), #9c4e37);
   border: 1px solid rgba(169, 88, 62, 0.22);
   border-radius: var(--radius-pill);
   box-shadow:
@@ -1119,7 +1119,7 @@ input[type="range"] {
 .copy-button:hover,
 .copy-request-button:hover,
 .button-primary:hover {
-  background: linear-gradient(180deg, #cf7d60, var(--primary-hover));
+  background: linear-gradient(180deg, #a6533d, #91482f);
   box-shadow:
     0 18px 34px rgba(204, 120, 92, 0.22),
     var(--inner-highlight);

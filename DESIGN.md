@@ -500,13 +500,14 @@ This is the product's conversion surface. It should feel like a clean AI request
 ### Primary Copy Button
 
 Primary CTA is Claude-coral, with a food-warm tone.
+Use the darker coral gradient below for white CTA text: its stops provide at least 5.05:1 contrast in the normal and focus states, and 5.34:1 on hover. Active keeps the same background while scaling the button. The lighter `--primary` accent remains available for non-text accents.
 
 ```css
 .copy-button,
 .copy-request-button,
 .button-primary {
   color: var(--on-primary);
-  background: linear-gradient(180deg, #d4896d, var(--primary));
+  background: linear-gradient(180deg, var(--primary-active), #9c4e37);
   border: 1px solid rgba(169, 88, 62, 0.22);
   border-radius: var(--radius-pill);
   box-shadow: 0 14px 28px rgba(204, 120, 92, 0.18), var(--inner-highlight);
@@ -516,7 +517,7 @@ Primary CTA is Claude-coral, with a food-warm tone.
 .copy-button:hover,
 .copy-request-button:hover,
 .button-primary:hover {
-  background: linear-gradient(180deg, #cf7d60, var(--primary-hover));
+  background: linear-gradient(180deg, #a6533d, #91482f);
   box-shadow: 0 18px 34px rgba(204, 120, 92, 0.22), var(--inner-highlight);
 }
 

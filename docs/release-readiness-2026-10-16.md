@@ -20,8 +20,11 @@ UX・正しさ・セキュリティ・配信性能の読み取り専用レビュ
 | 長い材料名で320px画面が横にはみ出す | fieldsetの最小幅と長い文字列の折り返しを制御 |
 | 調理時間スライダーが数値indexとして読み上げられる | 現在の時間をaria-valuetextへ反映 |
 | 狭い出力パネルのボタンが不自然に改行し、コピー成功時に高さが変わる | 実幅に応じたカード配置と短い表示。読み上げ案内は維持 |
+| 主要CTAの白文字が背景に対して約3.02:1で読みにくい | 暖色の背景を濃くし、通常・focusを約5.06:1、hover・activeを約5.35:1へ改善 |
 
 提供済みのロゴを見出し・favicon・Apple touch icon・OGPへ統合し、不要になった旧画像を削除した。公開URLとOGP画像URLを絶対URLで指定した。
+
+主要CTAは白文字15.2pxで、通常文字の必要比4.5:1を適用した。通常・hoverの共通gradientだけを変更し、`DESIGN.md`と同期した。7操作部品の通常・hover・focus・activeと、コピー成功・失敗を含む32状態をcomputed styleと実画像の背景ピクセルで検証した。通常・focusの最小computed比5.057、hover・active 5.349、成功5.764、失敗4.841で、すべて4.5以上。本文・項目ラベル・placeholderは4.75以上、確認したtap領域はすべて24px以上で、他の色やレイアウトは変更していない。
 
 ## 検証範囲
 
@@ -35,7 +38,7 @@ Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 
 | `npx wrangler pages functions build functions --outfile /private/tmp/arimono-pages-function.js` | exit 0、Compiled Worker successfully |
 | 追加UXの独立ブラウザ操作 | Chromium・Firefox・WebKitでexit 0、pageerrorなし |
 | 入力・コピー・スマホ表示の録画 | QA・録画・cleanupすべてpassed、AI送信0回 |
-| 動画のffprobeとフレーム確認 | H.264、1280×900、10.28秒。デスクトップとスマホ画面を目視確認 |
+| 動画のffprobeとフレーム確認 | H.264、1280×900、9.52秒。配色修正後のデスクトップ操作を目視確認し、スマホ画像も更新 |
 
 ローカル実行はNode.js 24.18.0、CIはNode.js 22。PlaywrightのJSON・HTMLレポートと失敗時traceを保存する。初回のFirefox検証ではIME完了直後のEnter待機条件を修正し、編集途中のHMR再読み込みによる失敗を分離して再実行した。現在は既存サーバーを再利用せず、アプリは`dist/`を配信する。独立したTypeScript combo harnessだけは別ポートのViteで検証し、本番ビルドへ含めない。
 
