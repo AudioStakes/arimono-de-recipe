@@ -759,17 +759,20 @@ function createOutputPanelServices(
   elements: ReturnType<typeof getAppElements>,
   comboRegistry: ComboRegistry,
 ): PromptPanelServices {
+  let materialControlsStructure = "";
   const syncDynamicFormState = (edit?: ComboValueEdit): void => {
-    const activeElement = document.activeElement;
-    const amountInputActive = Boolean(
-      activeElement instanceof HTMLElement && activeElement.matches("[data-material-amount-for]"),
-    );
     readMaterialRequestControls(state);
     syncMaterialRequests(state, comboRegistry.getValues("materials"), edit);
     if (state.materialRequests.length) setMaterialInputError(elements.form, false);
     syncMaterialRequestValidationState(state);
-    if (!amountInputActive) {
+    const nextMaterialControlsStructure = JSON.stringify(
+      state.materialRequests.map(({ id, name, usage }) => [id, name, usage]),
+    );
+    // Amount values and validation update in place; replacing unchanged controls on
+    // their blur/change event would discard the next native keyboard focus target.
+    if (nextMaterialControlsStructure !== materialControlsStructure) {
       renderMaterialUsePanel(state);
+      materialControlsStructure = nextMaterialControlsStructure;
     }
     syncIntentSections();
     syncServingModeVisibility();

@@ -227,15 +227,25 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
   });
   await page.goto("/");
   const names = ["豆腐", "キャベツ", "人参", "大根", "玉ねぎ", "じゃがいも", "ほうれん草"];
-  for (const [index, name] of names.entries()) {
+  for (const name of names) {
     await page.getByTestId("combo-input-materials").fill(name);
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    const card = page.getByTestId(/^material-card-/).filter({ hasText: name });
-    await card
-      .getByTestId(new RegExp(`^material-usage-option-.+-${index === 0 ? "use-up" : "required"}$`))
-      .check();
-    if (index === 0) await card.getByTestId(/^material-amount-/).fill("１丁");
   }
+  for (const [index, name] of names.entries()) {
+    const card = page.getByTestId(/^material-card-/).filter({ hasText: name });
+    const usage = card.getByTestId(
+      new RegExp(`^material-usage-option-.+-${index === 0 ? "use-up" : "required"}$`),
+    );
+    // Exercise native keyboard selection without repeating pointer frame-stability waits
+    // for every setup radio; pointer and arrow-key behavior have separate UI regressions.
+    await usage.press("Space");
+    await expect(usage).toBeChecked();
+  }
+  await page
+    .getByTestId(/^material-card-/)
+    .filter({ hasText: "豆腐" })
+    .getByTestId(/^material-amount-/)
+    .fill("１丁");
   await page.getByRole("radio", { name: "一緒に出す料理に合わせたい", exact: true }).check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
   await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
@@ -583,3 +593,76 @@ for (const width of [1280, 390]) {
     expect(requests).toBe(1);
   });
 }
+
+test("分量変更は検証表示を更新し、旧通信を中断して新しい分量で再送信できる", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let aborts = 0;
+  await page.exposeFunction("recordAmountRequestAbort", () => {
+    aborts += 1;
+  });
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      init?.signal?.addEventListener(
+        "abort",
+        () => {
+          const browserWindow = window as typeof window & {
+            recordAmountRequestAbort: () => Promise<void>;
+          };
+          void browserWindow.recordAmountRequestAbort();
+        },
+        { once: true },
+      );
+      return originalFetch(input, init);
+    };
+  });
+  let finishOld = () => {};
+  let oldCompleted = () => {};
+  const ready = new Promise<void>((resolve) => {
+    finishOld = resolve;
+  });
+  const completed = new Promise<void>((resolve) => {
+    oldCompleted = resolve;
+  });
+  const posted: { prompt: string }[] = [];
+  await page.route("**/api/recipe", async (route) => {
+    posted.push(route.request().postDataJSON() as { prompt: string });
+    const first = posted.length === 1;
+    if (first) await ready;
+    await route.fulfill({
+      contentType: "application/json",
+      body: response(first ? "古い分量の回答" : "新しい分量の回答"),
+    });
+    if (first) oldCompleted();
+  });
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
+  const card = page.getByTestId(/^material-card-/);
+  await card.getByRole("radio", { name: "使い切る", exact: true }).check();
+  const amount = card.getByTestId(/^material-amount-/);
+  const error = card.getByTestId(/^material-use-up-error-/);
+  await amount.fill("1丁");
+  await page.getByTestId("ai-prompt-send").click();
+  await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "loading");
+  await expect.poll(() => posted.length).toBe(1);
+  await amount.fill("");
+  await expect(amount).toHaveAttribute("required", "");
+  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  await expect(error).toBeVisible();
+  await expect(page.getByTestId("copy-prompt")).toBeEnabled();
+  await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
+  await expect.poll(() => aborts).toBe(1);
+  await amount.fill("2丁");
+  await expect(amount).not.toHaveAttribute("aria-invalid", "true");
+  await expect(error).toBeHidden();
+  const prompt = await page.getByTestId("prompt-output").inputValue();
+  expect(prompt).toContain("豆腐（使い切りたい量: 2丁）");
+  finishOld();
+  await completed;
+  await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
+  await expect(page.getByTestId("ai-prompt-send")).toBeEnabled();
+  await page.getByTestId("ai-prompt-send").click();
+  await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい分量の回答");
+  expect(posted[1]).toEqual({ prompt });
+});

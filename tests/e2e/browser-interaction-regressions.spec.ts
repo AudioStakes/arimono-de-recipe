@@ -377,3 +377,39 @@ for (const viewport of [
     expect(requests).toBe(0);
   });
 }
+
+test("分量入力後のTabは次の材料へ進み、入力を続けられる", async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await addMaterial(page, "豆腐");
+  await addMaterial(page, "キャベツ");
+  const tofu = page.getByTestId(/^material-card-/).filter({ hasText: "豆腐" });
+  const cabbage = page.getByTestId(/^material-card-/).filter({ hasText: "キャベツ" });
+  await tofu.getByRole("radio", { name: "使い切る", exact: true }).check();
+  const amount = tofu.getByTestId(/^material-amount-/);
+  await amount.fill("1丁");
+  await page.keyboard.press("Tab");
+  if (browserName === "webkit") {
+    // Safari's default Tab order visits text controls before buttons and radios.
+    const nextAmount = cabbage.getByTestId(/^material-amount-/);
+    await expect(nextAmount).toBeFocused();
+    await page.keyboard.type("1/2玉");
+    await expect(nextAmount).toHaveValue("1/2玉");
+    await expect(nextAmount).toBeFocused();
+    await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（量: 1\/2玉）/);
+  } else {
+    await expect(
+      cabbage.getByRole("button", { name: "キャベツを材料から削除", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(cabbage.getByRole("radio", { name: "おまかせ", exact: true })).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(cabbage.getByRole("radio", { name: "必ず使う", exact: true })).toBeChecked();
+    await expect(page.getByTestId("prompt-output")).toHaveValue(
+      /### 必ず使う食材・材料\n\n- キャベツ/,
+    );
+  }
+  await expect(amount).not.toHaveAttribute("aria-invalid", "true");
+  await expect(tofu.getByTestId(/^material-use-up-error-/)).toBeHidden();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（使い切りたい量: 1丁）/);
+});
