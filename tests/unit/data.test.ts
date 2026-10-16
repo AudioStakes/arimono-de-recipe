@@ -15,6 +15,7 @@ import {
   servingsModeOptions,
   useUpAmountModeOptions,
 } from "../../src/data";
+import { filterAvailableComboOptions } from "../../src/suggestions";
 
 describe("data", () => {
   test("今回やりたいことは3択だけで並ぶ", () => {
@@ -154,11 +155,29 @@ describe("data", () => {
     expect(combos.find((combo) => combo.id === "targetDish")?.single).toBe(true);
   });
 
-  test("材料候補は表示用に五十音順で並ぶ", () => {
+  test("材料検索は一致する初期候補を先頭にし、他の一致候補を五十音順で続ける", () => {
     const values = getComboOptionValues("materials");
-    const sorted = [...values].sort((a, b) => a.localeCompare(b, "ja"));
 
-    expect(values).toEqual(sorted);
+    expect(filterAvailableComboOptions(values, "豆")).toEqual([
+      "豆腐",
+      "絹ごし豆腐",
+      "高野豆腐",
+      "枝豆",
+      "大豆",
+      "豆乳",
+      "豆苗",
+      "納豆",
+      "木綿豆腐",
+    ]);
+  });
+
+  test("材料候補を重複・欠落なく返し、元の設定順を変更しない", () => {
+    const original = [...comboOptionSets.materials];
+    const values = getComboOptionValues("materials");
+
+    expect(values).toHaveLength(original.length);
+    expect(new Set(values)).toEqual(new Set(original));
+    expect(comboOptionSets.materials).toEqual(original);
   });
 
   test("食材以外の候補は設定配列の順番を維持する", () => {
