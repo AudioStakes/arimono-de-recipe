@@ -1,0 +1,150 @@
+{
+  "checkedAt": "2026-10-16",
+  "baseURL": "https://arimono-de-recipe.pages.dev",
+  "sourceCommit": "aa14135952de41fdac27237a58606e281faedb51",
+  "deploymentId": "35dc53c4-8b6c-463e-9df4-5cb64b889d54",
+  "browserProfiles": [
+    {
+      "name": "chromium",
+      "device": "Desktop Chrome",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": true
+      },
+      "aiCalls": 2,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "firefox",
+      "device": "Desktop Firefox",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": false
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "webkit",
+      "device": "Desktop Safari",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": false
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "pixel-7",
+      "device": "Pixel 7",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": true
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "iphone-13",
+      "device": "iPhone 13",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": false
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "ipad-pro-11",
+      "device": "iPad Pro 11",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": false
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "name": "google-chrome",
+      "device": "Desktop Chrome",
+      "browserVersion": "155.0.8059.80",
+      "status": "passed",
+      "copy": {
+        "reportedCopySuccess": true,
+        "clipboardBodyVerified": true
+      },
+      "aiCalls": 0,
+      "errors": [],
+      "failures": []
+    }
+  ],
+  "realAI": {
+    "calls": 2,
+    "candidates": {
+      "status": 200,
+      "count": 3,
+      "cacheControl": "no-store",
+      "request": {
+        "mode": "candidates",
+        "materials": [
+          {
+            "name": "豆腐",
+            "usage": "auto",
+            "amount": "150g"
+          },
+          {
+            "name": "キャベツ",
+            "usage": "auto"
+          }
+        ]
+      }
+    },
+    "prompt": {
+      "status": 200,
+      "cacheControl": "no-store",
+      "exactCopiedBodyVerified": true,
+      "sha256": "e49c1c5720067318235c26920af010a0b17d4381adb85c7de869caade0e77fbd",
+      "answerCharacters": 506
+    }
+  },
+  "rejections": [
+    {
+      "case": "GET",
+      "status": 405,
+      "code": "method_not_allowed"
+    },
+    {
+      "case": "foreign-origin",
+      "status": 403,
+      "code": "forbidden_origin"
+    },
+    {
+      "case": "invalid-prompt",
+      "status": 400,
+      "code": "invalid_prompt"
+    },
+    {
+      "case": "unsupported-content-type",
+      "status": 415,
+      "code": "unsupported_media_type"
+    }
+  ],
+  "limitations": [
+    "Mobile profiles are emulated; physical phones, software keyboards and screen readers are not tested.",
+    "Native Chrome/Safari UI inspection is blocked by the locked Mac.",
+    "Clipboard body readback is verified only in Chromium profiles.",
+    "AI output correctness is not guaranteed."
+  ]
+}
