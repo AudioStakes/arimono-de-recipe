@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "arimono-de-recipe",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-15",
+  "ai": {
+    "binding": "AI"
+  }
+}

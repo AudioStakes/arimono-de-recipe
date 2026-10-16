@@ -2,17 +2,26 @@
 
 依頼文コピーだけなら `npm run dev` または `dist/` の静的配信で動きます。アプリ内の「今日の候補を見る」と「この依頼文をAIへ送信」には、Cloudflare Pages FunctionsとWorkers AIの設定が必要です。どちらも既存の `/api/recipe` と `AI` バインディングを使います。ブラウザへAPIキーを渡す必要はありません。
 
-## Cloudflare Pages
+## 公開先と設定
 
-1. 自分のCloudflareアカウントでPagesプロジェクトを作成し、このリポジトリを接続する。Forkを利用する場合は、先にコードのライセンスを確認する。
-2. フレームワークをVite、ビルドコマンドを `npm run build`、出力ディレクトリを `dist`、ルートディレクトリをリポジトリのルートに設定する。
-3. ビルドにNode.js 22を使用する（環境変数 `NODE_VERSION=22` 等で指定）。
-4. PagesプロジェクトのSettings → BindingsでWorkers AIバインディングを追加し、名前を **`AI`** にする。
-5. ProductionとPreviewの両環境の設定を確認し、再デプロイする。公開されたURLで、コピーとAI候補をそれぞれ確認する。
+公開先は **<https://arimono-de-recipe.pages.dev/>** です。Cloudflare Pagesプロジェクト名は `arimono-de-recipe`、本番ブランチは `main` です。
 
-`functions/api/recipe.ts` はルートの `functions/` からPages Functionとしてビルドされます。`dist/` だけを静的アップロードした場合はFunctionも `AI` バインディングも追加されません。
+`wrangler.jsonc` に出力先 `dist/`、互換日、Workers AIの `AI` バインディングを定義しています。アカウントIDやAPIキーはリポジトリへ保存しません。本番設定を変える場合は、このファイルをPRで変更してからデプロイします。
+
+```bash
+npm ci
+npx playwright install --with-deps chromium firefox webkit
+npm run check
+npm run audit:dependencies
+npx wrangler login --scopes account:read user:read workers:write pages:write ai:write
+npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main
+```
+
+本番へのデプロイは、CIを通してマージした最新 `main` で行います。`check` が `dist/` を生成し、Wranglerがルートの `functions/` もビルドします。現在はWranglerによるDirect Uploadで、GitHubへのpushだけでは自動デプロイしません。
 
 `public/_routes.json` はビルド時に `dist/_routes.json` へコピーし、Functionの実行対象を `/api/recipe` に限定します。通常の画面・静的ファイルへのアクセスでFunctionを起動する必要はありません。
+
+独自のアカウントで公開する場合は、コード・画像の利用条件を確認し、Pagesプロジェクト名を変更してください。Git連携ビルドを選ぶ場合はNode.js 22、ビルド `npm run build`、配信ディレクトリ `dist` を使用します。
 
 ## ローカルでFunctionも動かす
 
@@ -24,14 +33,14 @@ npm run dev:pages
 
 `dev:pages` はビルド後に `wrangler pages dev dist --ai=AI` を起動します。表示されたローカルURLを開いてください。**Workers AIの推論はローカルで起動した場合もCloudflareアカウントを利用し、利用量・料金の対象になります。** ログインやAI利用は実行者のアカウントで行ってください。
 
-AIを呼ばず、配信やエラー応答だけを確認する場合は以下を使えます。
+AIを呼ばずに画面と依頼文コピーを確認する場合は、Functionを起動しない静的プレビューを使います。
 
 ```bash
 npm run build
-npx wrangler pages dev dist
+npm run preview
 ```
 
-この場合、AIバインディングなしの呼び出しはエラーになり、画面では依頼文コピーへ戻れます。通常の自動テストはモックを使い、Cloudflareアカウントや課金を必要としません。
+このモードはFunctionを配信しません。新しい `wrangler.jsonc` は `AI` バインディングを含むため、`wrangler pages dev` を使うとローカルでも実AIを呼べます。通常の自動テストはモックを使い、Cloudflareアカウントや課金を必要としません。AI未設定時のFunctionの応答もユニットテストで確認します。
 
 ## 公開APIの濫用・費用対策
 
@@ -45,6 +54,16 @@ npx wrangler pages dev dist
 - 本番テストにはダミーの材料を使う。負荷試験を行う場合は、課金や運用への影響を事前に確認する。
 
 本文32,000バイト、候補の入力サイズ、出力トークン数の上限は1回の処理を抑えるためのもので、継続的な呼び出しの費用を制限しません。具体的な料金や利用枠は[Workers AIの料金](https://developers.cloudflare.com/workers-ai/platform/pricing/)で確認してください。
+
+### 現在の無料枠と停止手順
+
+2026-10-16にDashboardでWorkers **Free** を確認しました。このアプリは `AI.run` を直接利用し、AI Gatewayや前払課金を使いません。有料プランへの変更は行っていません。
+
+FreeではWorkers AIはアカウント全体で10,000 Neurons／日、Pages FunctionsはWorkersと共有で100,000 requests／日が上限です。上限到達後はAI応答が失敗し、日次枠は09:00 JSTにリセットします。他アプリと枠を共有するため、第三者の反復呼び出しによる可用性低下は残ります。これは利用者別のレート制限ではありません。[Workers AI料金](https://developers.cloudflare.com/workers-ai/platform/pricing/)・[Pages料金](https://developers.cloudflare.com/pages/functions/pricing/)
+
+PagesはWorkersのRate Limiting bindingに対応していません。有料運用へ変更する前には、管理下の独自ドメインのWAF等で全入口の制限を設計してください。`pages.dev`、過去のdeployment URL、Previewからの迂回も確認します。[公式の対応表](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/#compatibility-matrix)
+
+緊急停止する場合は `wrangler.jsonc` の `ai` を削除して再デプロイします。旧deployment URLでAIが使える場合は、Cloudflare Dashboardから不要な旧deploymentも削除します。入力・依頼文コピーが動くことと、AIボタンで失敗を案内することを確認してください。プラン変更時にはこの無料枠前提を再確認します。
 
 ## 配信とプライバシーの確認
 
