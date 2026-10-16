@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { pressCommittedEnter } from "./helpers/combo";
 
 function materialCard(page: Page, name: string): Locator {
   return page.getByTestId(/^material-card-/).filter({ hasText: name });
@@ -21,8 +22,10 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
 
   await expect(page).toHaveTitle("ありもの de レシピ");
   await expect(page.getByTestId("app-shell")).toBeVisible();
-  await expect(page.locator(".brand-fridge")).toBeVisible();
-  await expect(page.locator(".brand-title-text")).toHaveText("ありもの de レシピ");
+  await expect(
+    page.getByRole("heading", { name: "ありもの de レシピ", level: 1, exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("img", { name: "ありもの de レシピ", exact: true })).toBeVisible();
   await expect(
     page.getByText(
       "家にある食材から、このアプリでAIの料理候補を見るか、レシピ依頼文を作って普段使っているAIに渡せます。",
@@ -86,11 +89,11 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   );
 
   await page.getByTestId("combo-input-targetDish").fill("カレー");
-  await page.getByTestId("combo-input-targetDish").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-targetDish"));
   await expect(page.getByTestId("combo-input-targetDish")).toBeHidden();
   await page.getByTestId("combo-pill-label-targetDish").click();
   await page.getByTestId("combo-pill-edit-targetDish").fill("オムライス");
-  await page.getByTestId("combo-pill-edit-targetDish").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-pill-edit-targetDish"));
   await expect(page.getByTestId("combo-pill-label-targetDish")).toHaveText("オムライス");
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- オムライス/);
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/- カレー/);
@@ -132,12 +135,12 @@ test("intent 往復で対象外の値が依頼文とチップに残らない", a
 
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await page.getByTestId("combo-input-pairingTargets").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 一緒に出す料理/);
 
   await page.getByLabel("作りたい料理がある").check();
   await page.getByTestId("combo-input-targetDish").fill("カレー");
-  await page.getByTestId("combo-input-targetDish").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-targetDish"));
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- カレー/);
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 一緒に出す料理/);
   await expect(page.getByTestId("condition-chips")).not.toContainText("餃子");
@@ -155,7 +158,7 @@ test("おまかせでもこだわり条件から品数と役割を指定でき�
   await expect(page.getByTestId("recipe-item-recipeRoles")).toBeVisible();
 
   await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
-  await page.getByTestId("combo-input-recipeRoles").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n複数品を指定/);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 料理の役割・量感\n\n- 副菜・一品/,
@@ -167,7 +170,7 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
 
   const materialInput = page.getByTestId("combo-input-materials");
   await materialInput.fill("豆腐");
-  await materialInput.press("Enter");
+  await pressCommittedEnter(materialInput);
 
   await expect(page.getByTestId("material-use-panel")).toBeVisible();
   await expect(page.getByTestId("material-use-panel")).toContainText("豆腐");
@@ -184,7 +187,7 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
   await page.getByTestId("combo-pill-label-materials").click();
   const editInput = page.getByTestId("combo-pill-edit-materials");
   await editInput.fill("豆腐150g");
-  await editInput.press("Enter");
+  await pressCommittedEnter(editInput);
   await expect(page.getByTestId("material-use-panel")).toContainText("豆腐150g");
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
@@ -205,14 +208,14 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/豆腐150g/);
 });
 
-test("複数材料の使い方は編集後も別材料へ移らない", async ({ page }) => {
+test("複数材料の使い方と分量は材料名を編集しても元の材料ごとに保持する", async ({ page }) => {
   await page.goto("/");
 
   const materialInput = page.getByTestId("combo-input-materials");
   await materialInput.fill("豆腐");
-  await materialInput.press("Enter");
+  await pressCommittedEnter(materialInput);
   await materialInput.fill("キャベツ");
-  await materialInput.press("Enter");
+  await pressCommittedEnter(materialInput);
 
   const tofuRow = materialCard(page, "豆腐");
   const cabbageRow = materialCard(page, "キャベツ");
@@ -230,20 +233,24 @@ test("複数材料の使い方は編集後も別材料へ移らない", async ({
   await page.getByTestId("combo-pill-label-materials").filter({ hasText: "豆腐" }).click();
   const tofuEditInput = page.getByTestId("combo-pill-edit-materials");
   await tofuEditInput.fill("豆腐150g");
-  await tofuEditInput.press("Enter");
+  await pressCommittedEnter(tofuEditInput);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
   );
 
   await page.getByTestId("combo-pill-label-materials").filter({ hasText: "キャベツ" }).click();
   const cabbageEditInput = page.getByTestId("combo-pill-edit-materials");
-  await cabbageEditInput.fill("もやし");
-  await cabbageEditInput.press("Enter");
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 使い切りたい食材・材料/);
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/1\/4玉/);
+  await cabbageEditInput.fill("春キャベツ");
+  await pressCommittedEnter(cabbageEditInput);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 家にある食材・材料\n\n- 豆腐150g\n- もやし/,
+    /### 使い切りたい食材・材料\n\n- 春キャベツ（使い切りたい量: 1\/4玉）/,
   );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(
+    /### 家にある食材・材料\n\n- 豆腐150g\n- 春キャベツ/,
+  );
+  const editedCabbageRow = materialCard(page, "春キャベツ");
+  await expect(materialUsageOption(editedCabbageRow, "use-up")).toBeChecked();
+  await expect(materialAmountInput(editedCabbageRow)).toHaveValue("1/4玉");
 
   const editedTofuRow = materialCard(page, "豆腐150g");
   await materialUsageOption(editedTofuRow, "auto").check();
@@ -255,22 +262,22 @@ test("一緒に出す料理と複数品指定はブラウザ上で反映され�
 
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await page.getByTestId("combo-input-pairingTargets").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
   await page.getByTestId("combo-input-pairingTargets").fill("焼き魚");
-  await page.getByTestId("combo-input-pairingTargets").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
   await expect(page.getByTestId("prompt-output")).toHaveValue(
     /### 一緒に出す料理\n\n- 餃子\n- 焼き魚/,
   );
 
   await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
-  await page.getByTestId("combo-input-recipeRoles").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
   await expect(page.getByTestId("combo-input-recipeRoles")).toBeHidden();
   await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText("副菜・一品");
 
   await page.getByLabel("複数品を指定").check();
   await expect(page.getByTestId("combo-input-recipeRoles")).toBeVisible();
   await page.getByTestId("combo-input-recipeRoles").fill("汁物");
-  await page.getByTestId("combo-input-recipeRoles").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
   await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText(["副菜・一品", "汁物"]);
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n複数品を指定/);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
@@ -290,7 +297,7 @@ test("折りたたみ項目は開いた中で入力できる", async ({ page }) 
   });
   await page.getByTestId("recipe-item-toggle-recipeDirections").click();
   await page.getByTestId("combo-input-recipeDirections").fill("あっさり");
-  await page.getByTestId("combo-input-recipeDirections").press("Enter");
+  await pressCommittedEnter(page.getByTestId("combo-input-recipeDirections"));
 
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("子ども用に辛くしない。");

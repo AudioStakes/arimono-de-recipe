@@ -189,7 +189,13 @@ function getPresentInputSections(data: PromptData): PresentInputSection[] {
   const useUpMaterials = getUseUpMaterialRequests(data);
 
   for (const { key, title } of COMBO_SECTION_DEFINITIONS) {
-    const items = data[key];
+    const items = data[key].map((item) => {
+      if (key !== "materials") return item;
+      const request = data.materialRequests.find(({ name }) => name === item);
+      if (request?.usage !== "auto" || request.useUpAmountMode !== "custom") return item;
+      const amount = request.useUpAmount.trim();
+      return amount ? `${item}（量: ${amount}）` : item;
+    });
     if (!items.length) continue;
     sections.push({
       title,

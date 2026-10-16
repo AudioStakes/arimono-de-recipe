@@ -60,6 +60,7 @@ function setMobileSheetState(
 ): void {
   const wasOpen = state.mobileSheetOpen;
   state.mobileSheetOpen = open;
+  document.body.classList.toggle("has-open-mobile-sheet", open);
   if (open && opener) {
     mobileSheetOpener = opener;
   }
@@ -98,7 +99,7 @@ function setMobileSheetState(
   if (open && !wasOpen) {
     elements.sheetClose.focus();
   } else if (!open && wasOpen) {
-    mobileSheetOpener?.focus();
+    mobileSheetOpener?.focus({ preventScroll: true });
     mobileSheetOpener = null;
   }
 }
@@ -110,6 +111,15 @@ function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
   let dragging = false;
 
   dragTarget.addEventListener("pointerdown", (event) => {
+    dragging = false;
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      target.closest("input, textarea, button, select, a[href], [contenteditable]") ||
+      !target.closest("#mobilePromptHeading, #stickyChips")
+    ) {
+      return;
+    }
     startY = event.clientY;
     deltaY = 0;
     dragging = true;
@@ -133,7 +143,10 @@ function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
   };
 
   dragTarget.addEventListener("pointerup", finishDrag);
-  dragTarget.addEventListener("pointercancel", finishDrag);
+  dragTarget.addEventListener("pointercancel", () => {
+    dragging = false;
+    deltaY = 0;
+  });
 }
 
 export function bindAppEvents(

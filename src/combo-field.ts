@@ -14,8 +14,10 @@ export function getCookTimeValue(): string {
 
 export function updateCookTimeDisplay(): void {
   const label = safe$<HTMLElement>("#cookTimeLabel");
+  const range = safe$<HTMLInputElement>("#cookTimeRange");
+  const value = range ? (cookTimeOptions[Number(range.value)] ?? "指定なし") : "指定なし";
+  range?.setAttribute("aria-valuetext", value);
   if (label) {
-    const range = safe$<HTMLInputElement>("#cookTimeRange");
-    label.textContent = range ? (cookTimeOptions[Number(range.value)] ?? "指定なし") : "指定なし";
+    label.textContent = value;
   }
 }

@@ -13,8 +13,10 @@ type PendingDeleteDataset = DOMStringMap & {
   armedDelete?: string;
 };
 
+export type ComboValueEdit = { group: ComboId; oldValue: string; newValue: string };
+
 type ComboRegistryOptions = {
-  onChange?: () => void;
+  onChange?: (edit?: ComboValueEdit) => void;
 };
 
 type ComboController = ReturnType<typeof createComboController>;
@@ -90,7 +92,7 @@ function getInitialComboOptionValues(group: ComboId): string[] {
 function createComboController(
   root: HTMLElement,
   group: ComboId,
-  notifyChange: () => void,
+  notifyChange: (edit?: ComboValueEdit) => void,
   closeOthers: (except: HTMLElement | null) => void,
 ) {
   let values: string[] = [];
@@ -181,6 +183,13 @@ function createComboController(
       comboInput.setAttribute("aria-activedescendant", id);
     }
     option.focus({ preventScroll: true });
+    const panelBounds = suggestionPanel.getBoundingClientRect();
+    const optionBounds = option.getBoundingClientRect();
+    if (optionBounds.top < panelBounds.top) {
+      suggestionPanel.scrollTop -= panelBounds.top - optionBounds.top;
+    } else if (optionBounds.bottom > panelBounds.bottom) {
+      suggestionPanel.scrollTop += optionBounds.bottom - panelBounds.bottom;
+    }
   }
 
   function renderSuggestions(): HTMLButtonElement[] {
@@ -277,14 +286,13 @@ function createComboController(
     const changed = nextValues !== values;
     values = nextValues;
     editingValue = null;
+    if (changed) {
+      notifyChange({ group, oldValue, newValue: nextValue });
+    }
     renderPills();
 
     if (options.focusAfterSave) {
       focusComboValue(nextValues.includes(nextValue) ? nextValue : oldValue);
-    }
-
-    if (changed) {
-      notifyChange();
     }
   }
 
@@ -379,6 +387,9 @@ function createComboController(
 
     pill.addEventListener("keydown", (event) => {
       const keyboardEvent = event as KeyboardEvent;
+      if (event.target instanceof HTMLInputElement) {
+        return;
+      }
       if (keyboardEvent.key === "Enter" && !isEditing(value) && event.target === pill) {
         keyboardEvent.preventDefault();
         startEditing(value);
@@ -591,7 +602,10 @@ function createComboController(
     },
     handleCompositionUpdate(): void {
       window.requestAnimationFrame(() => {
-        renderSuggestions();
+        const dataset = comboInput.dataset as ImeDataset;
+        if (dataset.composing === "true" && document.activeElement === comboInput) {
+          renderSuggestions();
+        }
       });
     },
     handleFocusOut(relatedTarget: Node | null): void {
@@ -647,7 +661,7 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
     }
     controllers.set(
       id,
-      createComboController(element, id, () => notifyChange(), closeSuggestions),
+      createComboController(element, id, (edit) => notifyChange(edit), closeSuggestions),
     );
   }
 
@@ -768,7 +782,7 @@ export function createComboRegistry(root: ParentNode, options: ComboRegistryOpti
   };
 
   return {
-    setOnChange(handler: () => void): void {
+    setOnChange(handler: (edit?: ComboValueEdit) => void): void {
       notifyChange = handler;
     },
     bind(form: HTMLElement): void {

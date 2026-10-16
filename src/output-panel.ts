@@ -267,7 +267,12 @@ export async function copyPrompt(
       feedbackButton = elements.copyPromptMobile;
     }
     const fallbackTarget = useMobileFallback ? elements.mobileOutput : elements.output;
+    const preview = fallbackTarget.closest("details");
+    if (preview) {
+      preview.open = true;
+    }
     try {
+      fallbackTarget.focus({ preventScroll: true });
       fallbackTarget.select();
       copied = document.execCommand("copy");
     } catch {
@@ -296,7 +301,7 @@ function showCopyFeedback(button: HTMLElement | null): void {
   const successLabel = dataset.successLabel ?? "コピーしました。AIへ渡してください";
 
   button.classList.add("is-copied");
-  if (label) label.textContent = successLabel;
+  if (label) label.textContent = "コピーしました";
   if (status) status.textContent = successLabel;
 
   window.setTimeout(() => {

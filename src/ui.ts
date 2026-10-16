@@ -7,7 +7,7 @@ import { renderAiRecipePanel, resetAiRecipeForInputChange } from "./ai-recipe-pa
 import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
 import { getCookTimeValue, updateCookTimeDisplay } from "./combo-field";
-import { type ComboRegistry, createComboRegistry } from "./combo-registry";
+import { type ComboRegistry, type ComboValueEdit, createComboRegistry } from "./combo-registry";
 import { createPromptDataReaderFromInputs } from "./conditions";
 import {
   advancedConditionOrder,
@@ -181,28 +181,25 @@ function isMaterialUsage(value: string | undefined): value is MaterialUsage {
   return materialUsageOptions.some((option) => option.value === value);
 }
 
-function isLikelyEditedMaterialName(previousName: string, nextName: string): boolean {
-  return (
-    previousName.length > 0 &&
-    nextName.startsWith(previousName) &&
-    nextName.slice(previousName.length).trim().length > 0
-  );
-}
-
-function syncMaterialRequests(state: AppState, materialNames: string[]): void {
+function syncMaterialRequests(
+  state: AppState,
+  materialNames: string[],
+  edit?: ComboValueEdit,
+): void {
   const usedRequestIds = new Set<string>();
-  const previousRequests = state.materialRequests;
+  const previousRequests = state.materialRequests.map((request) =>
+    edit?.group === "materials" &&
+    request.name === edit.oldValue &&
+    !state.materialRequests.some((item) => item.name === edit.newValue)
+      ? { ...request, name: edit.newValue }
+      : request,
+  );
 
-  state.materialRequests = materialNames.map((name, index) => {
+  state.materialRequests = materialNames.map((name) => {
     const exactMatch = previousRequests.find(
       (request) => request.name === name && !usedRequestIds.has(request.id),
     );
-    const sameIndexMatch = previousRequests[index];
-    const editedMatch =
-      sameIndexMatch && isLikelyEditedMaterialName(sameIndexMatch.name, name)
-        ? sameIndexMatch
-        : undefined;
-    const request = exactMatch ?? editedMatch ?? createMaterialRequest(name);
+    const request = exactMatch ?? createMaterialRequest(name);
 
     usedRequestIds.add(request.id);
     return {
@@ -301,6 +298,13 @@ function validateMaterialRequestPanel(state: AppState): boolean {
 function renderMaterialUsePanel(state: AppState): void {
   const panel = queryMaybeElement<HTMLElement>("#materialUsePanel");
   if (!panel) return;
+  const activeElement = document.activeElement;
+  const focusedRadio =
+    activeElement instanceof HTMLInputElement &&
+    activeElement.type === "radio" &&
+    panel.contains(activeElement)
+      ? { name: activeElement.name, value: activeElement.value }
+      : null;
 
   panel.hidden = false;
 
@@ -373,6 +377,13 @@ function renderMaterialUsePanel(state: AppState): void {
         .join("")}
     </div>
   `;
+  if (focusedRadio) {
+    panel
+      .querySelector<HTMLInputElement>(
+        `input[name="${CSS.escape(focusedRadio.name)}"][value="${CSS.escape(focusedRadio.value)}"]`,
+      )
+      ?.focus({ preventScroll: true });
+  }
 }
 
 function setCollapsibleStateForField(field: HTMLElement, expanded: boolean): void {
@@ -478,15 +489,14 @@ function renderAppShell(): string {
   return `
     <header>
       <h1 class="site-title">
-        <span class="brand-row">
-          <span class="brand-fridge" aria-hidden="true">
-            <span class="brand-fridge-item"></span>
-            <span class="brand-fridge-item"></span>
-            <span class="brand-fridge-item"></span>
-            <span class="brand-fridge-item"></span>
-          </span>
-          <span class="brand-title-text">ありもの de レシピ</span>
-        </span>
+        <img
+          class="brand-logo"
+          src="/brand/logo-horizontal.webp"
+          alt="ありもの de レシピ"
+          width="2172"
+          height="724"
+          fetchpriority="high"
+        />
       </h1>
       <p class="lead" id="appLead">家にある食材から、このアプリでAIの料理候補を見るか、レシピ依頼文を作って普段使っているAIに渡せます。</p>
       <p class="field-hint" id="aiPrivacyNotice" data-testid="ai-privacy-notice">「今日の候補を見る」または「この依頼文をAIへ送信」を押すと、材料や要望をCloudflareのAIへ送信します。入力・依頼文の確認・コピーだけでは送信しません。</p>
@@ -564,7 +574,7 @@ function renderAppShell(): string {
         <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
       </form>
     </div>
-    <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" hidden></div>
+    <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
         <button
@@ -900,13 +910,13 @@ function createOutputPanelServices(
   elements: ReturnType<typeof getAppElements>,
   comboRegistry: ComboRegistry,
 ): PromptPanelServices {
-  const syncDynamicFormState = (): void => {
+  const syncDynamicFormState = (edit?: ComboValueEdit): void => {
     const activeElement = document.activeElement;
     const amountInputActive = Boolean(
       activeElement instanceof HTMLElement && activeElement.matches("[data-material-amount-for]"),
     );
     readMaterialRequestControls(state);
-    syncMaterialRequests(state, comboRegistry.getValues("materials"));
+    syncMaterialRequests(state, comboRegistry.getValues("materials"), edit);
     syncMaterialRequestValidationState(state);
     if (!amountInputActive) {
       renderMaterialUsePanel(state);
@@ -919,9 +929,9 @@ function createOutputPanelServices(
     updateServingSteppers();
   };
 
-  const notifyOutputChange = (): void => {
+  const notifyOutputChange = (edit?: ComboValueEdit): void => {
     if (!outputPanelServices) return;
-    syncDynamicFormState();
+    syncDynamicFormState(edit);
     resetAiRecipeForInputChange(state, elements);
     markUserHasInputPanel(state, elements, outputPanelServices);
     resetAiPromptForInputChange(state, elements, elements.output.value);

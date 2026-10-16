@@ -228,6 +228,28 @@ describe("buildPrompt", () => {
     expect(prompt).not.toContain("キャベツ1/4玉");
   });
 
+  test("材料をおまかせで使う場合も入力した量を依頼文に残す", () => {
+    const prompt = buildPrompt(
+      makeEmptyPromptData({
+        materials: ["豆腐", "キャベツ"],
+        materialUseMode: "specified",
+        materialRequests: [
+          {
+            id: "material-1",
+            name: "豆腐",
+            usage: "auto",
+            useUpAmountMode: "custom",
+            useUpAmount: " 150g ",
+          },
+        ],
+      }),
+    );
+
+    expect(prompt).toContain("### 家にある食材・材料\n\n- 豆腐（量: 150g）\n- キャベツ");
+    expect(prompt).not.toContain("### 必ず使う食材・材料");
+    expect(prompt).not.toContain("### 使い切りたい食材・材料");
+  });
+
   test("材料の使い方がおまかせなら古い材料リクエストは出さない", () => {
     const prompt = buildPrompt(
       makeEmptyPromptData({

@@ -50,6 +50,7 @@
   --radius-sheet: 28px;
   --radius-pill: 9999px;
   --page-gutter: clamp(16px, 3vw, 32px);
+  --brand-logo-horizontal-width: 720px;
   --sticky-footer-space: 136px;
   --viewport-block: 100dvh;
   --font-sans:
@@ -105,6 +106,12 @@ body {
   accent-color: var(--primary);
 }
 
+html:has(body.has-open-mobile-sheet),
+body.has-open-mobile-sheet {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 button,
 input,
 textarea,
@@ -157,50 +164,16 @@ header {
 }
 
 .site-title {
+  inline-size: min(100%, var(--brand-logo-horizontal-width));
   margin: 0;
 }
 
-.brand-row {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-}
-
-.brand-fridge {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1.08fr));
-  gap: var(--space-2);
-  align-content: center;
-  justify-content: center;
-  inline-size: 56px;
-  block-size: var(--space-8);
-  padding: var(--space-3);
-  color: var(--primary-deep);
-  background: rgba(255, 249, 242, 0.92);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--inner-highlight), var(--elevation-1);
-}
-
-.brand-fridge-item {
-  inline-size: var(--space-2);
-  block-size: var(--space-2);
-  background: var(--ingredient-tint);
-  border: 1px solid rgba(0, 117, 74, 0.16);
-  border-radius: var(--radius-sm);
-}
-
-.brand-title-text {
-  display: inline-block;
-  color: var(--primary-deep);
-  font-family: var(--font-sans);
-  font-size: 2.4rem;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0;
-  filter: drop-shadow(0 18px 26px rgba(78, 44, 22, 0.12));
+.brand-logo {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  aspect-ratio: 4.5 / 1;
+  object-fit: cover;
 }
 
 .lead {
@@ -456,6 +429,8 @@ header {
   gap: 6px;
   min-block-size: 32px;
   max-inline-size: 100%;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   padding: 7px 12px;
   color: var(--primary-deep);
   font-size: 0.8rem;
@@ -496,7 +471,7 @@ header {
 }
 
 .pill-label {
-  min-inline-size: auto;
+  min-inline-size: 0;
   max-inline-size: 100%;
   overflow-wrap: anywhere;
   text-align: start;
@@ -504,6 +479,7 @@ header {
 
 .pill-remove,
 .chip-remove {
+  flex-shrink: 0;
   font-weight: 900;
 }
 
@@ -517,6 +493,7 @@ header {
 }
 
 .pill-edit-input {
+  inline-size: 100%;
   min-inline-size: 96px;
   color: var(--ink);
   background: transparent;
@@ -599,6 +576,8 @@ header {
 
 .material-request-name {
   min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
   padding-inline-end: var(--space-3);
   font-size: 1rem;
 }
@@ -1195,6 +1174,7 @@ input[type="range"] {
   background: rgba(86, 56, 28, 0.12);
   opacity: 0;
   pointer-events: none;
+  touch-action: none;
   transition: opacity 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1299,6 +1279,7 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
 .sticky-chips {
   max-block-size: 96px;
   overflow-x: auto;
+  touch-action: pan-x;
   padding-inline-end: var(--space-8);
 }
 
@@ -1318,6 +1299,7 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
   inset-block-start: calc(var(--space-4) * -1);
   z-index: 2;
   display: flex;
+  touch-action: none;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -1371,16 +1353,12 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
     gap: var(--space-7);
   }
 
-  .brand-title-text {
-    font-size: 3rem;
-  }
-
   .serving-grid {
     grid-template-columns: repeat(2, minmax(0, 1.08fr));
   }
 
   .prompt-action-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--space-8) * 4)), 1fr));
   }
 
   .sheet-actions {
@@ -1391,10 +1369,6 @@ body.has-open-suggestions .bottom-sheet-backdrop.show {
 @media (min-width: 1024px) {
   body {
     padding-block-end: var(--page-gutter);
-  }
-
-  .brand-title-text {
-    font-size: 4.4rem;
   }
 
   .form {

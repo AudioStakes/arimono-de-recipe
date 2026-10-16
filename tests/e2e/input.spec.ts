@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { combos } from "../../src/data";
+import { pressCommittedEnter } from "./helpers/combo";
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const exactText = (value: string): RegExp => new RegExp(`^${escapeRegExp(value)}$`);
@@ -165,12 +166,12 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
   await expect(input).toHaveValue("");
 
   await input.fill("しめじ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await expect(comboPillLabels(page, "materials")).toHaveText(["豆腐", "しめじ"]);
   await expect(input).toHaveValue("");
 
   await input.fill("しめじ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await expect(comboPills(page, "materials")).toHaveCount(2);
   await page.waitForTimeout(50);
 
@@ -237,7 +238,7 @@ test("空入力欄のBackspace/Deleteで直前ピルが選択され、再押下�
 
   const input = comboInput(page, "materials");
   await input.fill("豆腐");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await expect(input).toHaveValue("");
 
   await input.press("Backspace");
@@ -250,7 +251,7 @@ test("空入力欄のBackspace/Deleteで直前ピルが選択され、再押下�
   await expect(input).toBeFocused();
 
   await input.fill("しめじ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await expect(input).toHaveValue("");
   await input.press("Delete");
   await expect(comboPills(page, "materials")).toHaveCount(1);
@@ -269,7 +270,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   const output = page.getByTestId("prompt-output");
 
   await input.fill("ハンバーグ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await expect(comboPillLabels(page, "materials")).toHaveText("ハンバーグ");
 
   await comboPillLabels(page, "materials").click();
@@ -277,7 +278,7 @@ test("ピルのラベルから編集でき、Enterとblurで保存される", as
   await expect(editInput).toHaveValue("ハンバーグ");
 
   await editInput.fill("デミグラスハンバーグ");
-  await editInput.press("Enter");
+  await pressCommittedEnter(editInput);
   await expect(comboPillLabels(page, "materials")).toHaveText("デミグラスハンバーグ");
   await expect(output).toHaveValue(/### 家にある食材・材料\n\n- デミグラスハンバーグ/);
   await expect(page.getByTestId("condition-chips")).toContainText(
@@ -302,7 +303,7 @@ test("編集中の空欄Enterとblurはキャンセルになる", async ({ page 
   const input = comboInput(page, "materials");
 
   await input.fill("ハンバーグ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
 
   await comboPillLabels(page, "materials").click();
   const enterEditInput = comboPillEditInputs(page, "materials");
@@ -339,7 +340,7 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   const input = comboInput(page, "materials");
 
   await input.fill("ハンバーグ");
-  await input.press("Enter");
+  await pressCommittedEnter(input);
   await input.fill("卵");
   await comboOption(page, "materials", "卵").click();
 
@@ -395,72 +396,70 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   await expect(input).toBeFocused();
 });
 
-test("自由入力した値の追加と削除が全項目で依頼文へ反映される", async ({ page }) => {
-  await page.goto("/");
+const freeInputCases = [
+  {
+    comboId: "materials",
+    toggle: null,
+    setup: null,
+    value: "自由入力の食材",
+    heading: "家にある食材・材料",
+  },
+  {
+    comboId: "targetDish",
+    toggle: null,
+    setup: async (page: Page) => {
+      await page.getByLabel("作りたい料理がある").check();
+    },
+    value: "自由入力の作りたい料理",
+    heading: "作りたい料理",
+  },
+  {
+    comboId: "recipeRoles",
+    toggle: null,
+    setup: async (page: Page) => {
+      await page.getByLabel("一緒に出す料理に合わせたい").check();
+      await page.getByLabel("複数品を指定").check();
+    },
+    value: "自由入力の役割",
+    heading: "料理の役割・量感",
+  },
+  {
+    comboId: "cookingTools",
+    toggle: "cookingTools",
+    setup: null,
+    value: "自由入力の調理方法",
+    heading: "調理方法・調理器具",
+  },
+  {
+    comboId: "pairingTargets",
+    toggle: null,
+    setup: async (page: Page) => {
+      await page.getByLabel("一緒に出す料理に合わせたい").check();
+    },
+    value: "自由入力の合わせ料理",
+    heading: "一緒に出す料理",
+  },
+  {
+    comboId: "recipeDirections",
+    toggle: "recipeDirections",
+    setup: null,
+    value: "自由入力の方向性",
+    heading: "レシピの方向性",
+  },
+  {
+    comboId: "ngFoodsAndSeasonings",
+    toggle: "ngFoodsAndSeasonings",
+    setup: null,
+    value: "自由入力のNG条件",
+    heading: "使えない・持っていない食材・調味料",
+  },
+] as const;
 
-  const cases = [
-    {
-      comboId: "materials",
-      toggle: null,
-      setup: null,
-      value: "自由入力の食材",
-      heading: "家にある食材・材料",
-    },
-    {
-      comboId: "targetDish",
-      toggle: null,
-      setup: async () => {
-        await page.getByLabel("作りたい料理がある").check();
-      },
-      value: "自由入力の作りたい料理",
-      heading: "作りたい料理",
-    },
-    {
-      comboId: "recipeRoles",
-      toggle: null,
-      setup: async () => {
-        await page.getByLabel("一緒に出す料理に合わせたい").check();
-        await page.getByLabel("複数品を指定").check();
-      },
-      value: "自由入力の役割",
-      heading: "料理の役割・量感",
-    },
-    {
-      comboId: "cookingTools",
-      toggle: "cookingTools",
-      setup: null,
-      value: "自由入力の調理方法",
-      heading: "調理方法・調理器具",
-    },
-    {
-      comboId: "pairingTargets",
-      toggle: null,
-      setup: async () => {
-        await page.getByLabel("一緒に出す料理に合わせたい").check();
-      },
-      value: "自由入力の合わせ料理",
-      heading: "一緒に出す料理",
-    },
-    {
-      comboId: "recipeDirections",
-      toggle: "recipeDirections",
-      setup: null,
-      value: "自由入力の方向性",
-      heading: "レシピの方向性",
-    },
-    {
-      comboId: "ngFoodsAndSeasonings",
-      toggle: "ngFoodsAndSeasonings",
-      setup: null,
-      value: "自由入力のNG条件",
-      heading: "使えない・持っていない食材・調味料",
-    },
-  ] as const;
-
-  const output = page.getByTestId("prompt-output");
-
-  for (const { comboId, toggle, setup, value, heading } of cases) {
-    await setup?.();
+for (const { comboId, toggle, setup, value, heading } of freeInputCases) {
+  test(`自由入力した値の追加と削除が依頼文へ反映される: ${comboId}`, async ({ page }) => {
+    await page.goto("/");
+    const output = page.getByTestId("prompt-output");
+    await setup?.(page);
     if (toggle) {
       const toggleButton = page.getByTestId(`recipe-item-toggle-${toggle}`);
       if ((await toggleButton.getAttribute("aria-expanded")) !== "true") {
@@ -470,7 +469,7 @@ test("自由入力した値の追加と削除が全項目で依頼文へ反映�
 
     const input = comboInput(page, comboId);
     await input.fill(value);
-    await input.press("Enter");
+    await pressCommittedEnter(input);
 
     await expect(comboPillLabels(page, comboId)).toContainText(value);
     const sectionValuePattern = new RegExp(
@@ -482,5 +481,5 @@ test("自由入力した値の追加と削除が全項目で依頼文へ反映�
     await comboPillRemoveButtons(page, comboId).click();
     await expect(comboPills(page, comboId)).toHaveCount(0);
     await expect(output).not.toHaveValue(sectionValuePattern);
-  }
-});
+  });
+}
