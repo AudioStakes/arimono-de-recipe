@@ -42,13 +42,22 @@ export type CandidateValue = {
 
 ## 検索用テキスト
 
-候補絞り込みでは、将来的に以下を検索対象にします。
+候補絞り込みでは、以下を検索対象にします。
 
 ```txt
 value + aliases + romaji
 ```
 
-既存の `src/suggestions.ts` に接続するときは、`buildCandidateSearchSynonyms()` を使って `Record<string, string>` に変換できます。
+`buildCandidateSearchSynonyms()` で `Record<string, string>` に変換し、`src/suggestions.ts` から利用します。
+
+## 食材・材料の初期候補
+
+`src/data.ts` の `featuredComboOptions.materials` に、卵・豆腐・肉・魚・野菜を組み合わせた日常向けの20件を定義します。
+未入力時はこの20件から選択済みの材料を除いて表示します。
+検索時は材料一覧全体を対象に、一致する初期候補を設定順で先に、その他の一致候補を従来の五十音順で続けます。検索結果は最大40件です。
+
+選定には[タキイ種苗の2025年度野菜調査](https://www.takii.co.jp/info/news_251211.html)、[農畜産業振興機構の鶏肉・鶏卵購買調査](https://www.alic.go.jp/joho-c/joho05_003998.html)、[マイボイスコムの豆腐調査](https://www.myvoice.co.jp/biz/surveys/24602/index.html)、[水産庁の水産物消費資料](https://www.jfa.maff.go.jp/j/kikaku/wpaper/r02_h/trend/1/t1_1_2.html)を参考にしています。
+調査時点・対象・指標が異なるため、全国の料理での使用頻度上位20品を表す統計ランキングではありません。
 
 ## 一緒に出す料理の具体化
 

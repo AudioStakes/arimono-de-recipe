@@ -53,13 +53,39 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await expect(suggestions).toBeVisible();
 
   await input.fill("豆腐");
-  await expect(comboOption(page, "materials", "豆腐")).toBeVisible();
+  await expect(comboOptions(page, "materials")).toHaveText([
+    "豆腐",
+    "絹ごし豆腐",
+    "高野豆腐",
+    "木綿豆腐",
+  ]);
   await input.fill("存在しない材料");
   await expect(page.getByTestId("combo-empty-materials")).toBeVisible();
 
   await input.fill("");
   await input.press("ArrowDown");
-  await expect(comboOptions(page, "materials")).toHaveCount(40);
+  await expect(comboOptions(page, "materials")).toHaveText([
+    "卵",
+    "豆腐",
+    "鶏もも肉",
+    "豚こま肉",
+    "合いびき肉",
+    "鮭",
+    "玉ねぎ",
+    "キャベツ",
+    "にんじん",
+    "じゃがいも",
+    "トマト",
+    "きゅうり",
+    "なす",
+    "もやし",
+    "長ねぎ",
+    "大根",
+    "ほうれん草",
+    "ブロッコリー",
+    "ピーマン",
+    "しめじ",
+  ]);
 
   await input.fill("卵");
   await comboOption(page, "materials", "卵").click();
@@ -68,6 +94,7 @@ test("候補入力UIは独自候補リストで、候補選択とフィルタが
   await input.fill("");
   await input.press("ArrowDown");
   await expect(comboOption(page, "materials", "卵")).toHaveCount(0);
+  await expect(comboOptions(page, "materials")).toHaveCount(19);
 });
 
 test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く", async ({ page }) => {
@@ -101,17 +128,18 @@ test("候補のフォーカス移動、Enter選択、Escapeでの復帰が動く
 
   await input.fill("豆");
   await input.press("ArrowDown");
-  const momenOption = comboOptions(page, "materials").first();
-  await expect(momenOption).toBeFocused();
-  await momenOption.press("Enter");
-  await expect(comboPillLabels(page, "materials")).toHaveText("絹ごし豆腐");
+  const firstMaterialOption = comboOptions(page, "materials").first();
+  await expect(firstMaterialOption).toBeFocused();
+  await firstMaterialOption.press("Enter");
+  await expect(comboPillLabels(page, "materials")).toHaveText("豆腐");
   await expect(input).toHaveValue("");
   await expect(suggestions).not.toBeVisible();
 
   await input.fill("豆");
   await input.press("ArrowDown");
-  await expect(momenOption).toBeFocused();
-  await momenOption.press("Escape");
+  await expect(firstMaterialOption).toBeFocused();
+  await expect(firstMaterialOption).toHaveText("絹ごし豆腐");
+  await firstMaterialOption.press("Escape");
   await expect(suggestions).not.toBeVisible();
   await expect(input).toBeFocused();
 });

@@ -123,6 +123,28 @@ export const comboOptionSets: Record<OptionSetKey, string[]> = {
 };
 
 export const featuredComboOptions: Partial<Record<OptionSetKey, readonly string[]>> = {
+  materials: [
+    "卵",
+    "豆腐",
+    "鶏もも肉",
+    "豚こま肉",
+    "合いびき肉",
+    "鮭",
+    "玉ねぎ",
+    "キャベツ",
+    "にんじん",
+    "じゃがいも",
+    "トマト",
+    "きゅうり",
+    "なす",
+    "もやし",
+    "長ねぎ",
+    "大根",
+    "ほうれん草",
+    "ブロッコリー",
+    "ピーマン",
+    "しめじ",
+  ],
   cookingTools: featuredCookingToolOptions,
   recipeDirections: featuredRecipeDirectionOptions,
 };

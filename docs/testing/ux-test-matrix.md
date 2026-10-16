@@ -14,6 +14,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
+| 材料は未入力時に日常向け20件を表示し、検索時は一致する初期候補を優先して全候補から絞り込む | required priority, full catalog and no mutation | required initial order, selection exclusion and keyboard on all 6 profiles | no |
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
 | モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
 | 表示・コピーと同じ依頼文全文を明示操作だけで送信する | required for client contract | required desktop/mobile, pending input and native copy | no |

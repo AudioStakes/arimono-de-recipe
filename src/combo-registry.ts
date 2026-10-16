@@ -76,9 +76,17 @@ export function getComboOptionValues(group: ComboId): string[] {
     throw new Error(`Combo not found: ${group}`);
   }
   const values = comboOptionSets[combo.optionSet] ?? [];
-  return combo.optionSet === "materials"
-    ? [...values].sort((a, b) => a.localeCompare(b, "ja"))
-    : values;
+  if (combo.optionSet !== "materials") {
+    return values;
+  }
+  const featured = featuredComboOptions.materials ?? [];
+  const featuredValues = new Set(featured);
+  return [
+    ...featured,
+    ...values
+      .filter((value) => !featuredValues.has(value))
+      .sort((a, b) => a.localeCompare(b, "ja")),
+  ];
 }
 
 function getInitialComboOptionValues(group: ComboId): string[] {
