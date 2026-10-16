@@ -320,7 +320,7 @@ describe("POST /api/recipe", () => {
     expect(response.status).toBe(200);
     expect(await readJson(response)).toEqual({
       recipe: "豆腐のあんかけ\n\n1. 豆腐を温める。",
-      model: recipeFunctionLimits.model,
+      model: "@cf/meta/llama-3.1-8b-instruct-fast",
       usage: { input_tokens: 12, output_tokens: 34 },
     });
 
@@ -329,7 +329,7 @@ describe("POST /api/recipe", () => {
     expect(call).toBeDefined();
     if (!call) throw new Error("AI.run was not called.");
     const [model, input] = call;
-    expect(model).toBe(recipeFunctionLimits.model);
+    expect(model).toBe("@cf/meta/llama-3.1-8b-instruct-fast");
     expect(isRecord(input)).toBe(true);
     if (!isRecord(input)) throw new Error("AI input was not an object.");
     expect(input["max_tokens"]).toBe(recipeFunctionLimits.maxTokens);

@@ -49,7 +49,7 @@ type WorkersAiTextResult = {
   usage?: unknown;
 };
 
-const MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 const MAX_PROMPT_LENGTH = maxAiRecipePromptLength;
 const MAX_BODY_BYTES = maxAiRecipeBodyBytes;
 const MAX_TOKENS = 1400;

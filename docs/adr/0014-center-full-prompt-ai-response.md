@@ -22,4 +22,6 @@ Use one answer surface shared by desktop and mobile. Preserve pending-input conf
 
 The application has one AI request contract and one answer flow. Users can read headings, lists, emphasis and tables directly, or copy the unchanged request to another AI. Candidate-specific condition matching is removed with the candidate feature; the remaining free-text answer was never automatically checked against material or NG conditions.
 
-No new endpoint, model, persistence, authentication, telemetry or deployment model is introduced. The existing free-tier and output-token limits still apply; answers may be incomplete or incorrect. See the [implementation scope and acceptance criteria](../prd/direct-ai-recipe-flow.md).
+Reuse `@cf/meta/llama-3.1-8b-instruct-fast`, previously used by the candidate path, for full-prompt answers. Direct testing of the former 3B full-prompt model showed repeated ingredients and unnatural Japanese material labels. The 8B model replaces that legacy model without retaining candidate generation or introducing a new provider, endpoint or client SDK. This is a limited qualitative check, not a guarantee of recipe accuracy.
+
+No persistence, authentication, telemetry or deployment model is introduced. The existing Free plan, 1,400 output-token limit and request/response limits still apply; answers may be incomplete or incorrect. See the [implementation scope and acceptance criteria](../prd/direct-ai-recipe-flow.md).
