@@ -26,11 +26,7 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
     page.getByRole("heading", { name: "ありもの de レシピ", level: 1, exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("img", { name: "ありもの de レシピ", exact: true })).toBeVisible();
-  await expect(
-    page.getByText(
-      "家にある食材から、このアプリでAIの料理候補を見るか、レシピ依頼文を作って普段使っているAIに渡せます。",
-    ),
-  ).toBeVisible();
+  await expect(page.getByText("家にある食材から、AIにレシピを相談できます。")).toBeVisible();
 
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText([
@@ -42,7 +38,7 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.getByTestId("recipe-item-pairingTargets")).toBeHidden();
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
   await expect(page.getByTestId("recipe-item-recipeCount")).toHaveAttribute("data-state", "closed");
-  await expect(page.getByTestId("generate-recipe")).toContainText("今日の候補を見る");
+  await expect(page.getByTestId("ai-prompt-send")).toContainText("AIへ送信");
 
   const visibleToggles = page.locator('[data-testid^="recipe-item-toggle-"]:visible');
   await expect(visibleToggles).toHaveCount(6);
@@ -111,14 +107,14 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n1品だけ/);
 });
 
-test("モバイル初期表示は材料入力と今日の候補CTAを優先する", async ({ page }) => {
+test("モバイル初期表示は材料入力とAI送信CTAを優先する", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");
 
   const materialInput = page.getByTestId("combo-input-materials");
-  const generate = page.getByTestId("generate-recipe-mobile");
+  const generate = page.getByTestId("mobile-ai-prompt-send");
   await expect(materialInput).toBeVisible();
-  await expect(generate).toContainText("今日の候補を見る");
+  await expect(generate).toContainText("AIへ送信");
 
   await expect
     .poll(async () => (await materialInput.boundingBox())?.y ?? Number.POSITIVE_INFINITY)

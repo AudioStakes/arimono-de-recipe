@@ -21,43 +21,29 @@ const requiredStableHooks = [
   "basic-fields",
   "advanced-fields",
   "material-use-panel",
+  "materials-error",
+  "mobile-action-footer",
   "cook-time-range",
   "supplemental-notes",
   "condition-chips",
-  "sticky-condition-chips",
+  "ai-transmission-notice",
+  "mobile-ai-transmission-notice",
   "prompt-output",
   "mobile-prompt-output",
   "copy-prompt",
   "copy-prompt-sticky",
   "copy-prompt-mobile-panel",
-  "generate-recipe",
-  "generate-recipe-mobile",
   "material-card-${",
   "material-usage-control-${",
   "material-usage-option-${",
   "material-amount-${",
   "material-use-up-error-${",
-  "ai-recipe-panel",
-  "ai-recipe-status",
-  "ai-recipe-content",
-  "ai-recipe-error",
-  "ai-recipe-retry",
-  "ai-recipe-adjust-input",
-  "mobile-ai-recipe-panel",
-  "mobile-ai-recipe-status",
-  "mobile-ai-recipe-content",
-  "mobile-ai-recipe-error",
-  "recipe-candidate-list",
-  "recipe-candidate-${",
-  "recipe-candidate-select-${",
-  "recipe-candidate-cook",
-  "recipe-candidate-detail",
-  "recipe-candidate-back",
-  "recipe-cooking-view",
-  "recipe-cooking-tab-${",
-  "recipe-cooking-panel",
-  "recipe-cooking-back",
-  'data-state", selected ? "selected" : "idle"',
+  "ai-prompt-send",
+  "mobile-ai-prompt-send",
+  "ai-prompt-panel",
+  "ai-prompt-heading",
+  "ai-prompt-status",
+  "ai-prompt-reply",
   "mobile-prompt-panel",
   "recipe-item-${",
   "recipe-item-toggle-${",
@@ -293,36 +279,22 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
     ".serving-adjust",
     ".custom-servings-panel",
     ".chips",
-    ".ai-recipe-panel",
-    ".mobile-ai-recipe-panel",
-    ".ai-recipe-content",
-    ".ai-recipe-error-message",
+    ".ai-prompt-panel",
+    ".ai-recipe-answer",
     ".action-button",
     "[data-material-request-id]",
     "[data-serving-id=",
     "#customServingsPanel",
-    "#generateRecipe",
-    "#generateRecipeMobile",
-    "#aiRecipePanel",
-    "#aiRecipePanelMobile",
+    "#aiPromptPanel",
   ] as const;
 
   if (missingHooks.length > 0) {
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
   }
 
-  // biome-ignore lint/suspicious/noTemplateCurlyInString: verify the literal source template, without evaluating it.
-  if (!sourceText.includes("`mobile-${testId}`")) {
-    throw new Error("Missing stable mobile recipe-candidate hook prefix generation.");
-  }
-
-  for (const hook of [
-    "mobile-recipe-candidate-list",
-    "mobile-recipe-candidate-select-b",
-    "mobile-recipe-candidate-detail",
-  ]) {
+  for (const hook of ["ai-prompt-send", "mobile-ai-prompt-send", "ai-prompt-reply"]) {
     if (!e2eText.includes(hook)) {
-      throw new Error(`Missing mobile recipe-candidate E2E hook usage: ${hook}`);
+      throw new Error(`Missing direct AI flow E2E hook usage: ${hook}`);
     }
   }
 

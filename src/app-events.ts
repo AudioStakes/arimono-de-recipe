@@ -1,5 +1,4 @@
 import { sendPromptToAi } from "./ai-prompt-panel";
-import { createAiRecipe } from "./ai-recipe-panel";
 import type { AppElements } from "./app-elements";
 import type { PromptPanelServices } from "./output-panel";
 import {
@@ -87,11 +86,7 @@ function setMobileSheetState(
   elements.bottomBackdrop.hidden = !open;
   elements.bottomBackdrop.classList.toggle("show", open);
   elements.sheetToggle.setAttribute("aria-expanded", String(open));
-  elements.sheetExpand.setAttribute("aria-expanded", String(open));
-  elements.sheetExpand.setAttribute(
-    "aria-label",
-    open ? "レシピ依頼文全文を閉じる" : "レシピ依頼文全文を表示",
-  );
+  elements.sheetToggle.textContent = open ? "依頼文を閉じる" : "依頼文を見る";
   const mobilePromptPanel = $("#mobilePromptPanel");
   mobilePromptPanel.setAttribute("aria-hidden", String(!open));
   mobilePromptPanel.setAttribute("data-state", open ? "open" : "closed");
@@ -116,7 +111,7 @@ function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
     if (
       !(target instanceof Element) ||
       target.closest("input, textarea, button, select, a[href], [contenteditable]") ||
-      !target.closest("#mobilePromptHeading, #stickyChips")
+      !target.closest("#mobilePromptHeading, #footerTransmissionNotice")
     ) {
       return;
     }
@@ -223,10 +218,7 @@ export function bindAppEvents(
   });
 
   elements.sheetToggle.addEventListener("click", () =>
-    setMobileSheetState(state, elements, true, elements.sheetToggle),
-  );
-  elements.sheetExpand.addEventListener("click", () =>
-    setMobileSheetState(state, elements, !state.mobileSheetOpen, elements.sheetExpand),
+    setMobileSheetState(state, elements, !state.mobileSheetOpen, elements.sheetToggle),
   );
   elements.sheetClose.addEventListener("click", () => setMobileSheetState(state, elements, false));
   elements.bottomBackdrop.addEventListener("click", () =>
@@ -271,27 +263,12 @@ export function bindAppEvents(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),
   );
-  $("#generateRecipe").addEventListener(
-    "click",
-    () => void createAiRecipe(state, elements, services, "desktop"),
-  );
-  $("#generateRecipeMobile").addEventListener("click", () => {
-    services.flushPendingInputs();
-    if (!services.validateBeforeAiRecipe()) {
-      return;
-    }
-    setMobileSheetState(state, elements, true, elements.generateRecipeMobile);
-    void createAiRecipe(state, elements, services, "mobile");
-  });
-
   attachBottomSheetDrag(state, elements);
-  elements.sendPrompt.addEventListener(
-    "click",
-    () => void sendPromptToAi(state, elements, services, "desktop"),
-  );
-  elements.sendPromptMobile.addEventListener(
-    "click",
-    () => void sendPromptToAi(state, elements, services, "mobile"),
-  );
+  const send = (): void => {
+    if (state.mobileSheetOpen) setMobileSheetState(state, elements, false);
+    void sendPromptToAi(state, elements, services);
+  };
+  elements.sendPrompt.addEventListener("click", send);
+  elements.sendPromptMobile.addEventListener("click", send);
   syncStickyFooterState(state, elements, services);
 }

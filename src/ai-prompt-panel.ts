@@ -1,63 +1,78 @@
 import { generateRecipeFromPrompt } from "./ai-recipe-client";
 import type { AppElements } from "./app-elements";
+import { icon } from "./icons";
+import { focusInputWithFeedback, setMaterialInputError } from "./input-feedback";
 import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
 import { buildPrompt } from "./prompt";
-import type { AiRecipeSurface, AppState } from "./types";
+import { renderRecipeMarkdown } from "./recipe-markdown";
+import type { AppState } from "./types";
 
-export function renderAiPromptControls(surface: AiRecipeSurface): string {
-  const mobile = surface === "mobile";
-  const prefix = mobile ? "mobile-ai-prompt" : "ai-prompt";
+export function renderAiPromptSendButton(sticky = false): string {
   return `
-    <div class="prompt-action-card">
-      <h3>依頼文をこのアプリのAIへ送る</h3>
-      <p id="${prefix}-notice" class="field-hint">下のボタンを押すと、表示中の依頼文全文をCloudflareのAIへ送信します。コピーだけでは送信しません。</p>
-      <button id="${mobile ? "sendPromptMobile" : "sendPrompt"}" class="action-button button-primary" type="button" data-testid="${prefix}-send" aria-describedby="${prefix}-notice">この依頼文をAIへ送信</button>
-      <div id="${mobile ? "aiPromptPanelMobile" : "aiPromptPanel"}" data-testid="${prefix}-panel" data-state="idle" hidden>
-        <p data-testid="${prefix}-status"></p>
-        <h3 id="${prefix}-reply-heading" hidden>この依頼文へのAIの回答</h3>
-        <textarea class="output" data-testid="${prefix}-reply" aria-labelledby="${prefix}-reply-heading" readonly hidden></textarea>
-        <p class="field-hint" data-testid="${prefix}-answer-notice" hidden>この回答は材料・NG条件の自動照合を行いません。実際に作る前に、材料・分量・NG条件と手順を確認してください。回答が途中で終わる場合もあります。</p>
-      </div>
-    </div>
+    <button id="${sticky ? "sendPromptMobile" : "sendPrompt"}" class="action-button button-primary" type="button" data-testid="${sticky ? "mobile-ai-prompt-send" : "ai-prompt-send"}" aria-label="この依頼文をAIへ送信" aria-describedby="aiPrivacyNotice">
+      <span class="action-button-icon" aria-hidden="true" data-icon="send"></span>
+      <span data-send-label>AIへ送信</span>
+    </button>
+  `;
+}
+
+export function renderAiPromptAnswer(): string {
+  return `
+    <article id="aiPromptPanel" class="ai-prompt-panel" data-testid="ai-prompt-panel" data-state="idle" aria-labelledby="ai-prompt-reply-heading">
+      <h3 id="ai-prompt-reply-heading" data-testid="ai-prompt-heading" tabindex="-1">AIの回答</h3>
+      <p class="ai-prompt-empty" data-testid="ai-prompt-empty"><span aria-hidden="true">${icon("send")}</span>材料を入れて、AIへ送信してください。</p>
+      <p data-testid="ai-prompt-status" role="status" aria-live="polite"></p>
+      <div class="ai-recipe-answer" data-testid="ai-prompt-reply" hidden></div>
+      <p class="field-hint ai-answer-notice" data-testid="ai-prompt-answer-notice" hidden><span aria-hidden="true">${icon("alert")}</span>材料・分量・NG食材・加熱条件を確認してください。</p>
+    </article>
   `;
 }
 
 export function renderAiPromptPanel(state: AppState, elements: AppElements): void {
-  for (const surface of ["desktop", "mobile"] as const) {
-    const button = surface === "desktop" ? elements.sendPrompt : elements.sendPromptMobile;
-    const panel = surface === "desktop" ? elements.aiPromptPanel : elements.aiPromptPanelMobile;
-    const prefix = surface === "desktop" ? "ai-prompt" : "mobile-ai-prompt";
-    const status = panel.querySelector<HTMLElement>(`[data-testid="${prefix}-status"]`);
-    const reply = panel.querySelector<HTMLTextAreaElement>(`[data-testid="${prefix}-reply"]`);
-    const heading = panel.querySelector<HTMLElement>("h3");
-    const notice = panel.querySelector<HTMLElement>(`[data-testid="${prefix}-answer-notice"]`);
+  for (const button of [elements.sendPrompt, elements.sendPromptMobile]) {
     button.disabled = state.aiPrompt.status === "loading";
-    button.textContent = button.disabled ? "AIの回答を待っています…" : "この依頼文をAIへ送信";
-    panel.hidden = state.aiPrompt.status === "idle";
-    panel.dataset["state"] = state.aiPrompt.status;
-    if (status) {
-      if (state.aiPrompt.activeSurface === surface) {
-        status.setAttribute("role", state.aiPrompt.status === "error" ? "alert" : "status");
-      } else {
-        status.removeAttribute("role");
-      }
-      status.textContent =
-        state.aiPrompt.status === "loading"
-          ? "依頼文を送信しました。AIの回答を待っています。コピーは引き続き使えます。"
-          : state.aiPrompt.status === "error"
-            ? state.aiPrompt.errorMessage
-            : state.aiPrompt.status === "success"
-              ? "AIの回答を受け取りました。"
-              : "";
-    }
-    const success = state.aiPrompt.status === "success";
-    if (reply) {
-      reply.hidden = !success;
-      reply.value = state.aiPrompt.recipe;
-    }
-    if (heading) heading.hidden = !success;
-    if (notice) notice.hidden = !success;
+    const label = button.querySelector<HTMLElement>("[data-send-label]");
+    if (label) label.textContent = button.disabled ? "送信中…" : "AIへ送信";
   }
+  const panel = elements.aiPromptPanel;
+  const status = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-status"]');
+  const reply = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-reply"]');
+  const empty = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-empty"]');
+  const notice = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-answer-notice"]');
+  if (
+    reply &&
+    state.aiPrompt.status === "success" &&
+    !renderRecipeMarkdown(reply, state.aiPrompt.recipe)
+  ) {
+    state.aiPrompt.status = "error";
+    state.aiPrompt.recipe = "";
+    state.aiPrompt.errorSource = "request";
+    state.aiPrompt.errorMessage =
+      "AIの回答を表示できませんでした。もう一度送信するか、依頼文をコピーしてください。";
+  }
+  panel.dataset["state"] = state.aiPrompt.status;
+  reply?.setAttribute("aria-busy", String(state.aiPrompt.status === "loading"));
+  if (status) {
+    status.setAttribute("role", state.aiPrompt.status === "error" ? "alert" : "status");
+    status.setAttribute("aria-live", state.aiPrompt.status === "error" ? "assertive" : "polite");
+    status.textContent =
+      state.aiPrompt.status === "loading"
+        ? "AIの回答を待っています。依頼文はコピーできます。"
+        : state.aiPrompt.status === "error"
+          ? state.aiPrompt.errorSource === "input"
+            ? state.aiPrompt.errorMessage
+            : `${state.aiPrompt.errorMessage} 再試行するには「AIへ送信」を押してください。`
+          : state.aiPrompt.status === "success"
+            ? "AIの回答を受け取りました。"
+            : "";
+  }
+  const success = state.aiPrompt.status === "success";
+  if (empty) empty.hidden = state.aiPrompt.status !== "idle";
+  if (reply) {
+    reply.hidden = !success;
+    if (!success) reply.replaceChildren();
+  }
+  if (notice) notice.hidden = !success;
 }
 
 export function resetAiPromptForInputChange(
@@ -69,10 +84,10 @@ export function resetAiPromptForInputChange(
   state.aiPrompt.controller?.abort();
   state.aiPrompt = {
     status: "idle",
-    activeSurface: state.aiPrompt.activeSurface,
     submittedPrompt: "",
     recipe: "",
     errorMessage: "",
+    errorSource: null,
     requestId: state.aiPrompt.requestId + 1,
     controller: null,
   };
@@ -83,7 +98,6 @@ export async function sendPromptToAi(
   state: AppState,
   elements: AppElements,
   services: PromptPanelServices,
-  surface: AiRecipeSurface,
 ): Promise<void> {
   if (state.aiPrompt.status === "loading") return;
   services.flushPendingInputs();
@@ -93,30 +107,56 @@ export async function sendPromptToAi(
   const requestId = state.aiPrompt.requestId + 1;
   const validAmounts = services.validateBeforeAiRecipe();
   const errorMessage = !validAmounts
-    ? "使い切る材料の分量を入力してください。依頼文コピーは引き続き使えます。"
+    ? "使い切る材料の分量を入力してください。依頼文はコピーできます。"
     : data.materials.length === 0
       ? "まずは家にある食材を入れてください。"
       : "";
   const controller = new AbortController();
   state.aiPrompt = {
     status: errorMessage ? "error" : "loading",
-    activeSurface: surface,
     submittedPrompt: prompt,
     recipe: "",
     errorMessage,
+    errorSource: errorMessage ? "input" : null,
     requestId,
     controller: errorMessage ? null : controller,
   };
   renderAiPromptPanel(state, elements);
-  if (errorMessage) return;
-  const result = await generateRecipeFromPrompt(prompt, fetch, controller.signal);
-  if (state.aiPrompt.requestId !== requestId || buildPrompt(services.readConditions()) !== prompt)
+  if (errorMessage) {
+    if (!data.materials.length) {
+      setMaterialInputError(elements.form, true);
+      const input = elements.form.querySelector<HTMLInputElement>(
+        '[data-testid="combo-input-materials"]',
+      );
+      if (input)
+        focusInputWithFeedback(
+          input,
+          elements.form.querySelector<HTMLElement>('[data-testid="materials-error"]'),
+          elements.bottom,
+        );
+    }
     return;
+  }
+  if (window.innerWidth < 1024) {
+    elements.aiPromptHeading.focus({ preventScroll: true });
+    elements.aiPromptHeading.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }
+  const result = await generateRecipeFromPrompt(prompt, fetch, controller.signal);
+  if (state.aiPrompt.requestId !== requestId) return;
+  const currentPrompt = buildPrompt(services.readConditions());
+  if (currentPrompt !== prompt) {
+    resetAiPromptForInputChange(state, elements, currentPrompt);
+    return;
+  }
   state.aiPrompt = {
     ...state.aiPrompt,
     status: result.ok ? "success" : "error",
     recipe: result.ok ? result.recipe : "",
     errorMessage: result.ok ? "" : result.error.message,
+    errorSource: result.ok ? null : "request",
     controller: null,
   };
   renderAiPromptPanel(state, elements);

@@ -1,14 +1,8 @@
-import { maxAiRecipeBodyBytes, maxAiRecipePromptLength } from "./ai-recipe-limits";
-import { parseAiRecipeCandidatesResponse } from "./ai-recipe-schema";
-import type { AiRecipeCandidateRequest, AiRecipeCandidatesResponse } from "./types";
-
-export type GenerateRecipeSuccess = {
-  ok: true;
-  candidates: AiRecipeCandidatesResponse;
-  model: string;
-  usage: unknown | null;
-};
-
+import {
+  maxAiRecipeBodyBytes,
+  maxAiRecipePromptLength,
+  maxAiRecipeResponseLength,
+} from "./ai-recipe-limits";
 export type GenerateRecipeFailure = {
   ok: false;
   error: {
@@ -17,13 +11,10 @@ export type GenerateRecipeFailure = {
   };
 };
 
-export type GenerateRecipeResult = GenerateRecipeSuccess | GenerateRecipeFailure;
-
 export type GeneratePromptRecipeResult =
   | { ok: true; recipe: string; model: string; usage: unknown | null }
   | GenerateRecipeFailure;
 
-const maxAiRecipeRequestBodyLength = 2400;
 export const aiRecipeRequestTimeoutMs = 30_000;
 
 type ApiErrorResponse = {
@@ -31,12 +22,6 @@ type ApiErrorResponse = {
     code: string;
     message: string;
   };
-};
-
-type ApiSuccessResponse = {
-  items: unknown;
-  model: string;
-  usage: unknown | null;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -48,36 +33,12 @@ const isApiErrorResponse = (value: unknown): value is ApiErrorResponse =>
   typeof value["error"]["code"] === "string" &&
   typeof value["error"]["message"] === "string";
 
-const isApiSuccessResponse = (value: unknown): value is ApiSuccessResponse =>
-  isRecord(value) &&
-  Array.isArray(value["items"]) &&
-  typeof value["model"] === "string" &&
-  ("usage" in value ? value["usage"] === null || value["usage"] !== undefined : false);
-
 async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
   } catch {
     return null;
   }
-}
-
-export async function generateRecipe(
-  request: AiRecipeCandidateRequest,
-  fetcher: typeof fetch = fetch,
-): Promise<GenerateRecipeResult> {
-  const body = JSON.stringify(request);
-  if (body.length > maxAiRecipeRequestBodyLength) {
-    return {
-      ok: false,
-      error: {
-        code: "request_too_long",
-        message: "AIへの依頼条件が長すぎます。内容を短くしてください。",
-      },
-    };
-  }
-
-  return postRecipe(body, readRecipeResponse, fetcher);
 }
 
 export async function generateRecipeFromPrompt(
@@ -105,15 +66,14 @@ export async function generateRecipeFromPrompt(
       },
     };
   }
-  return postRecipe(body, readPromptRecipeResponse, fetcher, signal);
+  return postRecipe(body, fetcher, signal);
 }
 
-async function postRecipe<T extends GenerateRecipeResult | GeneratePromptRecipeResult>(
+async function postRecipe(
   body: string,
-  readResponse: (response: Response) => Promise<T>,
   fetcher: typeof fetch,
   signal?: AbortSignal,
-): Promise<T | GenerateRecipeFailure> {
+): Promise<GeneratePromptRecipeResult> {
   const controller = new AbortController();
   let timedOut = false;
   const abort = (): void => controller.abort();
@@ -134,7 +94,7 @@ async function postRecipe<T extends GenerateRecipeResult | GeneratePromptRecipeR
       body,
       signal: controller.signal,
     });
-    const result = await readResponse(response);
+    const result = await readPromptRecipeResponse(response);
     return controller.signal.aborted
       ? timedOut
         ? connectionFailure(true)
@@ -175,6 +135,15 @@ async function readPromptRecipeResponse(response: Response): Promise<GeneratePro
       error: { code: "invalid_response", message: "AIからの応答形式を確認できませんでした。" },
     };
   }
+  if (payload["recipe"].length > maxAiRecipeResponseLength) {
+    return {
+      ok: false,
+      error: {
+        code: "response_too_long",
+        message: "AIの回答が長すぎます。依頼文をコピーして別のAIへ相談できます。",
+      },
+    };
+  }
   return { ok: true, recipe: payload["recipe"], model: payload["model"], usage: payload["usage"] };
 }
 
@@ -187,54 +156,5 @@ function connectionFailure(timedOut: boolean): GenerateRecipeFailure {
         ? "AIの応答待ちが長くなったため中断しました。"
         : "AIへの接続に失敗しました。",
     },
-  };
-}
-
-async function readRecipeResponse(response: Response): Promise<GenerateRecipeResult> {
-  const payload = await readJson(response);
-
-  if (!response.ok) {
-    if (isApiErrorResponse(payload)) {
-      return {
-        ok: false,
-        error: payload.error,
-      };
-    }
-
-    return {
-      ok: false,
-      error: {
-        code: "api_error",
-        message: "AIへの依頼に失敗しました。",
-      },
-    };
-  }
-
-  if (!isApiSuccessResponse(payload)) {
-    return {
-      ok: false,
-      error: {
-        code: "invalid_response",
-        message: "AIからの応答形式を確認できませんでした。",
-      },
-    };
-  }
-
-  const parsedCandidates = parseAiRecipeCandidatesResponse(payload);
-  if (!parsedCandidates.ok) {
-    return {
-      ok: false,
-      error: {
-        code: "invalid_response",
-        message: "AIからの応答形式を確認できませんでした。",
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    candidates: parsedCandidates.value,
-    model: payload.model,
-    usage: payload.usage,
   };
 }

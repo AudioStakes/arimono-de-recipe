@@ -99,7 +99,7 @@ test("本文の選択操作で閉じず、見出しのドラッグでのみシ�
   await page.goto("/");
   await addMaterial(page, "豆腐");
   const panel = page.getByTestId("mobile-prompt-panel");
-  const summary = page.getByTestId("sticky-condition-chips");
+  const summary = page.getByTestId("mobile-ai-transmission-notice");
   await summary.dispatchEvent("pointerdown", { clientY: 100 });
   await summary.dispatchEvent("pointermove", { clientY: 40 });
   await summary.dispatchEvent("pointerup", { clientY: 40 });
@@ -139,7 +139,7 @@ test("モバイル本文の展開中は背景をスクロールせず、閉じ�
   await page.evaluate(() => window.scrollTo(0, 250));
   const originalScrollY = await page.evaluate(() => window.scrollY);
   expect(originalScrollY).toBeGreaterThan(0);
-  const opener = page.getByRole("button", { name: "レシピ依頼文全文を表示", exact: true });
+  const opener = page.getByRole("button", { name: "依頼文を見る", exact: true });
   await opener.click();
   await expect(page.getByRole("dialog")).toBeVisible();
   const lockedScrollY = await page.evaluate(() => window.scrollY);
@@ -228,7 +228,11 @@ for (const width of [1280, 390]) {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ answer: "豆腐150gで調理します。" }),
+        body: JSON.stringify({
+          recipe: "豆腐150gで調理します。",
+          model: "test-model",
+          usage: null,
+        }),
       });
     });
     await page.goto("/");
@@ -243,9 +247,9 @@ for (const width of [1280, 390]) {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     expect(requests).toHaveLength(0);
     if (mobile) {
-      await page.getByRole("button", { name: "レシピ依頼文全文を表示", exact: true }).click();
+      await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
     } else {
-      await page.getByText("コピーする依頼文を確認する", { exact: true }).click();
+      await page.getByTestId("prompt-preview-toggle").click();
     }
     await page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send").click();
     await expect.poll(() => requests.length).toBe(1);
@@ -258,6 +262,16 @@ test("320pxでも長い材料名が画面幅からはみ出さない", async ({ 
   await page.goto("/");
   await addMaterial(page, "A".repeat(200));
   await expect(page.getByTestId("combo-pill-materials")).toHaveCount(1);
+  const card = page.getByTestId(/^material-card-/);
+  const remove = card.getByRole("button", {
+    name: `${"A".repeat(200)}を材料から削除`,
+    exact: true,
+  });
+  const cardBounds = await card.boundingBox();
+  const removeBounds = await remove.boundingBox();
+  if (!cardBounds || !removeBounds) throw new Error("Material and delete control must be visible");
+  expect(removeBounds.width).toBeLessThan(cardBounds.width / 2);
+  expect(removeBounds.x).toBeGreaterThan(cardBounds.x + cardBounds.width / 2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   await page.getByTestId("combo-pill-label-materials").click();
   await expect(page.getByTestId("combo-pill-edit-materials")).toBeVisible();
@@ -307,4 +321,89 @@ test("材料名を置き換えても使い方と分量を保持し、既存名�
   await expect(
     page.getByTestId(destinationId ?? "").getByRole("radio", { name: "おまかせ", exact: true }),
   ).toBeChecked();
+});
+
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+  { width: 844, height: 390 },
+]) {
+  test(`${viewport.width}x${viewport.height}で材料・分量の入力エラーが固定操作に隠れない`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    let requests = 0;
+    await page.route("**/api/recipe", async (route) => {
+      requests += 1;
+      await route.abort();
+    });
+    await page.goto("/");
+    const send = page.getByTestId("mobile-ai-prompt-send");
+    const input = page.getByTestId("combo-input-materials");
+    const missingMaterials = page.getByTestId("materials-error");
+    const footer = page.getByTestId("mobile-action-footer");
+    await send.click();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    await expect(input).toHaveAccessibleDescription(/家にある食材を入れてください。/);
+    await expect(missingMaterials).toBeVisible();
+    expect((await missingMaterials.boundingBox())?.y).toBeGreaterThanOrEqual(0);
+    const assertRevealed = async (
+      field: ReturnType<Page["getByTestId"]>,
+      feedback: ReturnType<Page["getByTestId"]>,
+    ) => {
+      const fieldBounds = await field.boundingBox();
+      const feedbackBounds = await feedback.boundingBox();
+      const footerBounds = await footer.boundingBox();
+      if (!fieldBounds || !feedbackBounds || !footerBounds)
+        throw new Error("Input, feedback and footer must be visible");
+      expect(fieldBounds.y).toBeGreaterThanOrEqual(0);
+      expect(feedbackBounds.y + feedbackBounds.height).toBeLessThanOrEqual(footerBounds.y);
+    };
+    await assertRevealed(input, missingMaterials);
+    expect(requests).toBe(0);
+    await input.fill("キャベツ");
+    await pressCommittedEnter(input);
+    await expect(missingMaterials).toBeHidden();
+    await expect(input).not.toHaveAttribute("aria-invalid", "true");
+    const card = page.getByTestId(/^material-card-/);
+    await card.getByRole("radio", { name: "使い切る", exact: true }).check();
+    await send.click();
+    const amount = card.getByTestId(/^material-amount-/);
+    const amountError = card.getByTestId(/^material-use-up-error-/);
+    await expect(amount).toBeFocused();
+    await expect(amountError).toBeVisible();
+    await assertRevealed(amount, amountError);
+    expect(requests).toBe(0);
+  });
+}
+
+test("分量入力後のTabは次の材料へ進み、入力を続けられる", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  await addMaterial(page, "豆腐");
+  await addMaterial(page, "キャベツ");
+  const tofu = page.getByTestId(/^material-card-/).filter({ hasText: "豆腐" });
+  const cabbage = page.getByTestId(/^material-card-/).filter({ hasText: "キャベツ" });
+  await tofu.getByRole("radio", { name: "使い切る", exact: true }).check();
+  const amount = tofu.getByTestId(/^material-amount-/);
+  await amount.fill("1丁");
+  await page.keyboard.press("Tab");
+  await expect(cabbage.locator(":focus")).toHaveCount(1);
+  const nextAmount = cabbage.getByTestId(/^material-amount-/);
+  // Native Tab can include buttons and the checked radio, depending on OS/settings.
+  // Every step must remain in the next material; losing focus or skipping it fails.
+  for (let tabs = 0; tabs < 3; tabs += 1) {
+    if (await nextAmount.evaluate((element) => element === document.activeElement)) break;
+    await page.keyboard.press("Tab");
+    await expect(cabbage.locator(":focus")).toHaveCount(1);
+  }
+  await expect(nextAmount).toBeFocused();
+  await page.keyboard.type("1/2玉");
+  await expect(nextAmount).toHaveValue("1/2玉");
+  await expect(nextAmount).toBeFocused();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（量: 1\/2玉）/);
+  await expect(amount).not.toHaveAttribute("aria-invalid", "true");
+  await expect(tofu.getByTestId(/^material-use-up-error-/)).toBeHidden();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（使い切りたい量: 1丁）/);
 });

@@ -1,0 +1,169 @@
+{
+  "checkedAt": "2026-10-16",
+  "sourceCommit": "988694c68f917b99a708295bc48fd94a5bd8cd5c",
+  "previewURL": "https://09afb672.arimono-de-recipe.pages.dev",
+  "fullCheck": {
+    "sourceCommit": "988694c68f917b99a708295bc48fd94a5bd8cd5c",
+    "command": "CI=1 npm run check",
+    "exitCode": 0,
+    "e2ePassed": 458,
+    "e2eFailed": 0,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0
+  },
+  "modelOnlyChange": {
+    "functionUnitPassed": 19,
+    "typecheckExitCode": 0,
+    "pagesFunctionCompileExitCode": 0,
+    "maxOutputTokens": 1400,
+    "sourceCommit": "b90399c3ba5a8141b0792df238c01e7c420e10a4"
+  },
+  "independentUX": {
+    "viewports": ["1280x900", "390x844", "320x568", "844x390"],
+    "checksPassed": 41,
+    "exitCode": 0,
+    "mockedAI": true
+  },
+  "pendingInputCopyRegression": {
+    "reproducedBeforeFix": 4,
+    "passedAfterFix": 4,
+    "focusedPassed": 34,
+    "exitCode": 0
+  },
+  "audit": {
+    "exitCode": 0,
+    "vulnerabilities": 0
+  },
+  "liveAI": [
+    {
+      "profile": "desktop",
+      "viewport": {
+        "width": 1280,
+        "height": 900
+      },
+      "qa": "passed",
+      "recording": "passed",
+      "cleanup": "passed",
+      "mockedAI": false,
+      "api": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "model": "@cf/meta/llama-3.1-8b-instruct-fast",
+        "promptSha256": "cd47aa01b8e7bc2cf0422f31c96d045ea9896dba2ff4c20c575f54dc9eeb1ab4",
+        "promptCharacters": 2138,
+        "answerCharacters": 433,
+        "headings": 6,
+        "lists": 5,
+        "exactCopiedBodySubmitted": true
+      },
+      "calls": 1,
+      "pageErrors": 0,
+      "requestFailures": 0
+    },
+    {
+      "profile": "mobile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "qa": "passed",
+      "recording": "passed",
+      "cleanup": "passed",
+      "mockedAI": false,
+      "api": {
+        "status": 200,
+        "cacheControl": "no-store",
+        "model": "@cf/meta/llama-3.1-8b-instruct-fast",
+        "promptSha256": "cd47aa01b8e7bc2cf0422f31c96d045ea9896dba2ff4c20c575f54dc9eeb1ab4",
+        "promptCharacters": 2138,
+        "answerCharacters": 438,
+        "headings": 6,
+        "lists": 5,
+        "exactCopiedBodySubmitted": true
+      },
+      "calls": 1,
+      "pageErrors": 0,
+      "requestFailures": 0
+    }
+  ],
+  "media": {
+    "codec": "h264",
+    "width": 1280,
+    "height": 900,
+    "durationSeconds": 13.64,
+    "decodedFrameVisuallyChecked": true
+  },
+  "initialModelComparison": {
+    "model": "@cf/meta/llama-3.2-3b-instruct",
+    "calls": 2,
+    "reasonForReplacement": "Repeated ingredient labels and unnatural Japanese in the observed samples; this is a qualitative observation, not a general quality benchmark."
+  },
+  "limitations": [
+    "Physical phones, software keyboards and screen readers were not tested.",
+    "Free-text AI answers are not automatically validated against material or NG constraints.",
+    "Local Wrangler remote-proxy startup failed; actual Workers AI verification used a Cloudflare Pages preview instead."
+  ],
+  "initialLinuxCI": {
+    "runURL": "https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38842241778",
+    "sourceCommit": "62706834ed769e95acc1c8da2f16e5bf16fd4a28",
+    "e2ePassed": 444,
+    "e2eFailed": 2,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0,
+    "failedProfiles": ["webkit", "mobile-safari"],
+    "diagnosis": "Pointer action stability waits in the seven-material setup consumed the cumulative 30-second test budget; timeout occurred at different later actions, with no detach or interception retries in completed actions.",
+    "fix": "Keep seven real usage selections and every payload assertion; prepare materials together, then use native Space key selection plus checked assertions. Separate pointer regressions remain.",
+    "applicationChanged": false,
+    "timeoutChanged": false,
+    "retryAdded": false,
+    "skipped": false,
+    "finalVerification": "See the required CI check on pull request 50.",
+    "focusedProfiles": 6,
+    "focusedRepeatEach": 3,
+    "focusedPassed": 18
+  },
+  "initialFullCheck": {
+    "sourceCommit": "ab50dad0f9059c03936cd3d5d541c72e17eafc57",
+    "command": "CI=1 npm run check",
+    "exitCode": 0,
+    "e2ePassed": 446,
+    "e2eFailed": 0,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0
+  },
+  "liveAISourceCommit": "b90399c3ba5a8141b0792df238c01e7c420e10a4",
+  "nativeTabRegression": {
+    "reproducedBeforeFix": true,
+    "focusedPassed": 30,
+    "profiles": 6,
+    "e2eFailed": 0,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0,
+    "exitCode": 0,
+    "checks": [
+      "native Tab focus retention and continued keyboard input",
+      "amount clearing validation and ARIA",
+      "old request aborted once",
+      "new amount submitted on next request"
+    ],
+    "timeoutChanged": false,
+    "retryAdded": false,
+    "forcedFocus": false
+  },
+  "portableNativeTab": {
+    "precedingCI": "https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38845053605",
+    "observedFailure": "OS-specific expected Tab target in the regression test differed on Linux WebKit.",
+    "fix": "Require focus inside the next material immediately and after each of at most three extra native Tabs; require amount input focus, keyboard typing and prompt reflection.",
+    "profiles": 6,
+    "repeatEach": 3,
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "exitCode": 0,
+    "sourceChanged": false,
+    "forcedFocus": false,
+    "timeoutChanged": false,
+    "specSha256": "c0201a5c3f042e6110319c627fbfb4bfb93438c1a103182109feed2d98568b62"
+  }
+}

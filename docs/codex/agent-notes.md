@@ -15,7 +15,7 @@ Every meaningful change should report commands run, exit codes, relevant output,
 ## Local Priority
 
 1. Preserve prompt output behavior.
-2. Preserve the approved privacy boundary: copy stays local; only `今日の候補を見る` sends structured candidate conditions to `/api/recipe`.
+2. Preserve the approved privacy boundary: copy stays local; only the explicit `AIへ送信` action sends the full request text to `/api/recipe`. See ADR 0014 for the current flow.
 3. Preserve Vite static build.
 4. Prefer data/config-centered recipe item changes.
 5. Prefer stable hooks over CSS class selectors in E2E.

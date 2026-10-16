@@ -1,10 +1,10 @@
 # 開発に参加する
 
-不具合や改善案は[Issues](https://github.com/AudioStakes/arimono-de-recipe/issues)へ報告してください。コードの利用条件は[READMEのライセンス](README.md#ライセンス)を確認してください。
+不具合や改善案は[Issues](https://github.com/AudioStakes/arimono-de-recipe/issues)へ報告してください。コードの利用条件は[READMEの利用条件](README.md#問い合わせ利用条件)を確認してください。
 
 ## 不具合の報告
 
-利用したブラウザと端末、再現手順、期待した結果、実際の結果を書いてください。AI候補については、依頼文コピーを利用できるかも確認してください。入力例やスクリーンショットには個人情報を含めないでください。脆弱性は通常のIssueではなく[SECURITY.md](SECURITY.md)に従って報告してください。
+利用したブラウザと端末、再現手順、期待した結果、実際の結果を書いてください。AIの回答については、依頼文コピーを利用できるかも確認してください。入力例やスクリーンショットには個人情報を含めないでください。脆弱性は通常のIssueではなく[SECURITY.md](SECURITY.md)に従って報告してください。
 
 ## 開発環境
 
@@ -15,7 +15,7 @@ npm run dev
 npx playwright install --with-deps chromium firefox webkit
 ```
 
-追加のCLIは必須ではありません。RTKやnvmを使用しない環境でも、記載したnpmコマンドをそのまま実行できます。Vite単体では依頼文コピーを確認し、AI候補はE2Eのモックか[Pagesの開発環境](docs/deployment.md)で確認します。実際のWorkers AIを使うテストは自分のCloudflareアカウントの利用量に計上されます。
+追加のCLIは必須ではありません。RTKやnvmを使用しない環境でも、記載したnpmコマンドをそのまま実行できます。Vite単体では依頼文コピーを確認し、AI回答はE2Eのモックか[Pagesの開発環境](docs/deployment.md)で確認します。実際のWorkers AIを使うテストは自分のCloudflareアカウントの利用量に計上されます。
 
 ## コードの場所
 
@@ -25,9 +25,10 @@ npx playwright install --with-deps chromium firefox webkit
 | `src/prompt.ts` | コピーする依頼文の生成 |
 | `src/ui.ts`、`src/styles.css` | 画面の構成とスタイル |
 | `src/app-events.ts`、`src/types.ts`、`src/ui.ts` | 入力操作と状態 |
-| `src/ai-recipe-request.ts`、`src/ai-recipe-client.ts` | AI候補への依頼と通信 |
-| `src/ai-recipe-schema.ts`、`functions/api/recipe.ts` | リクエスト・応答の検証とWorkers AI呼び出し |
-| `src/recipe-candidate-list.ts` | 候補の詳細と調理ビュー |
+| `src/ai-recipe-client.ts` | 依頼文全文の送信と通信 |
+| `src/ai-recipe-limits.ts`、`functions/api/recipe.ts` | 送受信の上限・検証とWorkers AI呼び出し |
+| `src/ai-prompt-panel.ts` | AI回答の状態と表示 |
+| `src/recipe-markdown.ts` | HTML・画像・リンクを制限したMarkdown表示 |
 | `tests/unit/`、`tests/structure/`、`tests/e2e/` | ユニット、構造、ブラウザの検証 |
 
 ## 変更前に確認すること
@@ -49,7 +50,7 @@ JavaScript・TypeScript・JSON・CSS・HTMLはBiome、MarkdownとYAMLは専用�
 
 `npm run audit:dependencies`はnpmの公開監査情報へ接続し、low以上の既知の脆弱性で失敗します。CIでも実行します。ローカルの`check`には含めず、通信不要の検査と区別しています。
 
-E2EはChromiumのデスクトップとPixel 7相当のモバイル表示で実行し、Workers AIの応答をモックします。実モデルの出力品質や実機Safariを保証するテストではありません。失敗時のHTMLレポートは `playwright-report/`、トレース等は `test-results/` に出ます。CIはこれらを7日間保存します。入力を含むテストを追加する際は実ユーザーのデータを使わないでください。
+E2EはChromiumのデスクトップとPixel 7相当で全件、Firefox・WebKit・iPhone 13相当・iPad Pro 11相当で主要操作を実行し、Workers AIの応答をモックします。範囲は[UXテスト対応表](docs/testing/ux-test-matrix.md)を確認してください。実モデルの出力品質や実機Safariを保証するテストではありません。失敗時のHTMLレポートは `playwright-report/`、トレース等は `test-results/` に出ます。CIはこれらを7日間保存します。入力を含むテストを追加する際は実ユーザーのデータを使わないでください。
 
 UIの重要な操作には既存の `data-testid` を使用し、変更した挙動をテストまたは明示的な確認手順で検証してください。テストを削除・弱体化して通さないでください。
 
