@@ -22,7 +22,8 @@
 
 | コマンド・確認 | 結果 |
 | --- | --- |
-| `CI=1 npm run check` | exit 0。format・lint・typecheck・build・unit・structure・6構成E2Eを完了。446 passed、失敗・skip・flaky 0 |
+| 初回 `CI=1 npm run check` | exit 0。format・lint・typecheck・build・unit・structure・6構成E2Eを完了。446 passed、失敗・skip・flaky 0 |
+| Tab修正後 `CI=1 npm run check` | exit 0。全ゲート成功、458 passed、失敗・skip・flaky 0 |
 | `npm run audit:dependencies` | exit 0、found 0 vulnerabilities |
 | UX修正後のfocused Chromium E2E | exit 0、62 passed |
 | 未確定入力コピー修正後のfocused E2E | exit 0、34 passed。新依頼文のコピー一致・旧signalのabort・回答消去・送信再有効・再送信を確認 |
@@ -30,7 +31,19 @@
 | 既存8Bモデル切替後のFunction unit | exit 0、19 passed |
 | 同切替後の`npm run typecheck`・Pages Function build | exit 0、Compiled Worker successfully |
 
-全checkはUI最終版 `ab50dad` で実行した。その後のアプリ変更は、既存8Bモデルを再利用するFunctionの定数1行のみで、対応unit・型検査・Functionコンパイルを追加実行した。UIを変えずにローカル全checkは重複実行せず、PRの必須CIでは全checkを実行する。
+初回のローカル全checkは `ab50dad` で実行した。初回CIまでのアプリ変更は、既存8Bモデルを再利用するFunctionの定数1行のみで、対応unit・型検査・Functionコンパイルを追加実行した。以下の追加確認で見つかったフォーカス修正後の `988694c` では、ローカル全checkが458件すべて成功した。PRの必須CIも最終HEADで再実行する。
+
+## Linux CIで見つかった準備操作の時間切れ
+
+[PR #50の初回CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38842241778)は444 passed・2 failed・skip/flaky 0で、失敗はWebKitとmobile Safariの大量材料テストだった。失敗したtraceを保存し、別担当も解析した。radioのクリック前に安定を待つ時間が累積し、mobile Safariでは完了した6操作だけで約24秒を使っていた。成功操作にはdetach・遮蔽・再試行の記録がなく、30秒のテスト全体予算が異なる操作地点で尽きていた。
+
+このテストは多数の材料制約を含む依頼文の全文送信を確認するものなので、材料7件を先に追加してから指定する順序へ整理し、使用方法の準備は通常のSpaceキー操作とcheckedの確認に変更した。7件の操作、分量・目的・品数・NG条件、全文一致、送信1回の検証を保持した。pointer操作は既存の専用回帰で確認する。この準備操作の調整ではアプリ・timeout・retry・skip・force操作は変更せず、修正後の全構成をPRの必須CIで再確認する。
+
+## 追加確認で見つかったTabのフォーカス
+
+分量を入力して通常のTabキーで次へ進むと、入力確定時の再描画でフォーカスがbodyへ落ち、次のTabが先頭材料へ戻る問題を再現した。材料のid・名前・使用方法が変わるときだけ構造を描画し直し、分量・required・ARIA・エラーは既存DOMへ反映するように修正した。変更通知と古い通信・回答の無効化は維持した。
+
+回帰テストはnative Tabで次材料へ進み、そのまま入力できること、分量クリア時の検証と通信中断、新しい量での再送信を確認した。Safari系は標準Tabが次のテキスト入力へ進む実測に沿い、Alt+Tabや強制focusは使っていない。修正前の回帰は失敗し、修正後のfocused検証は6構成30件が成功した。多材料の準備操作も6構成各3反復、18件が成功した。差分は独立レビューでも確認した。
 
 ## 実AIと画面・動画
 

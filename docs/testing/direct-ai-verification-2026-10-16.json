@@ -1,12 +1,12 @@
 {
   "checkedAt": "2026-10-16",
-  "sourceCommit": "b90399c3ba5a8141b0792df238c01e7c420e10a4",
+  "sourceCommit": "988694c68f917b99a708295bc48fd94a5bd8cd5c",
   "previewURL": "https://09afb672.arimono-de-recipe.pages.dev",
   "fullCheck": {
-    "sourceCommit": "ab50dad0f9059c03936cd3d5d541c72e17eafc57",
+    "sourceCommit": "988694c68f917b99a708295bc48fd94a5bd8cd5c",
     "command": "CI=1 npm run check",
     "exitCode": 0,
-    "e2ePassed": 446,
+    "e2ePassed": 458,
     "e2eFailed": 0,
     "e2eSkipped": 0,
     "e2eFlaky": 0
@@ -15,7 +15,8 @@
     "functionUnitPassed": 19,
     "typecheckExitCode": 0,
     "pagesFunctionCompileExitCode": 0,
-    "maxOutputTokens": 1400
+    "maxOutputTokens": 1400,
+    "sourceCommit": "b90399c3ba5a8141b0792df238c01e7c420e10a4"
   },
   "independentUX": {
     "viewports": ["1280x900", "390x844", "320x568", "844x390"],
@@ -101,5 +102,52 @@
     "Physical phones, software keyboards and screen readers were not tested.",
     "Free-text AI answers are not automatically validated against material or NG constraints.",
     "Local Wrangler remote-proxy startup failed; actual Workers AI verification used a Cloudflare Pages preview instead."
-  ]
+  ],
+  "initialLinuxCI": {
+    "runURL": "https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38842241778",
+    "sourceCommit": "62706834ed769e95acc1c8da2f16e5bf16fd4a28",
+    "e2ePassed": 444,
+    "e2eFailed": 2,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0,
+    "failedProfiles": ["webkit", "mobile-safari"],
+    "diagnosis": "Pointer action stability waits in the seven-material setup consumed the cumulative 30-second test budget; timeout occurred at different later actions, with no detach or interception retries in completed actions.",
+    "fix": "Keep seven real usage selections and every payload assertion; prepare materials together, then use native Space key selection plus checked assertions. Separate pointer regressions remain.",
+    "applicationChanged": false,
+    "timeoutChanged": false,
+    "retryAdded": false,
+    "skipped": false,
+    "finalVerification": "See the required CI check on pull request 50.",
+    "focusedProfiles": 6,
+    "focusedRepeatEach": 3,
+    "focusedPassed": 18
+  },
+  "initialFullCheck": {
+    "sourceCommit": "ab50dad0f9059c03936cd3d5d541c72e17eafc57",
+    "command": "CI=1 npm run check",
+    "exitCode": 0,
+    "e2ePassed": 446,
+    "e2eFailed": 0,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0
+  },
+  "liveAISourceCommit": "b90399c3ba5a8141b0792df238c01e7c420e10a4",
+  "nativeTabRegression": {
+    "reproducedBeforeFix": true,
+    "focusedPassed": 30,
+    "profiles": 6,
+    "e2eFailed": 0,
+    "e2eSkipped": 0,
+    "e2eFlaky": 0,
+    "exitCode": 0,
+    "checks": [
+      "native Tab focus retention and continued keyboard input",
+      "amount clearing validation and ARIA",
+      "old request aborted once",
+      "new amount submitted on next request"
+    ],
+    "timeoutChanged": false,
+    "retryAdded": false,
+    "forcedFocus": false
+  }
 }
