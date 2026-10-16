@@ -143,8 +143,63 @@
   ],
   "limitations": [
     "Mobile profiles are emulated; physical phones, software keyboards and screen readers are not tested.",
-    "Native Chrome/Safari UI inspection is blocked by the locked Mac.",
-    "Clipboard body readback is verified only in Chromium profiles.",
+    "Clipboard body readback is verified in Chromium profiles and the native Chrome session; Safari pasteback verifies the beginning and entered materials/amount.",
     "AI output correctness is not guaranteed."
+  ],
+  "boundaryViewports": [
+    {
+      "name": "chromium-320x568-permitted",
+      "qa": "passed",
+      "recording": "passed",
+      "apiRequests": 0,
+      "pageErrors": 0,
+      "allCheckpointWidthsMatch": true,
+      "videoFrameDecoded": true
+    },
+    {
+      "name": "chromium-844x390-permitted",
+      "qa": "passed",
+      "recording": "passed",
+      "apiRequests": 0,
+      "pageErrors": 0,
+      "allCheckpointWidthsMatch": true,
+      "videoFrameDecoded": true
+    },
+    {
+      "name": "webkit-320x568",
+      "qa": "passed",
+      "recording": "passed",
+      "apiRequests": 0,
+      "pageErrors": 0,
+      "allCheckpointWidthsMatch": true,
+      "videoFrameDecoded": true
+    },
+    {
+      "name": "webkit-844x390",
+      "qa": "passed",
+      "recording": "passed",
+      "apiRequests": 0,
+      "pageErrors": 0,
+      "allCheckpointWidthsMatch": true,
+      "videoFrameDecoded": true
+    }
+  ],
+  "nativeUI": [
+    {
+      "browser": "Chrome on this Mac",
+      "materials": ["豆腐", "キャベツ"],
+      "amount": "150g",
+      "clipboardBodyMatches": true,
+      "promptCharacters": 1929,
+      "aiButtonsActivated": false
+    },
+    {
+      "browser": "Safari on this Mac",
+      "materials": ["豆腐", "キャベツ"],
+      "amount": "150g",
+      "pastebackConfirmed": ["prompt beginning", "豆腐（量: 150g）", "キャベツ"],
+      "fullClipboardBodyCompared": false,
+      "aiButtonsActivated": false
+    }
   ]
 }
