@@ -29,7 +29,8 @@ Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 
 
 | コマンド・確認 | 結果 |
 | --- | --- |
-| `npm run check` | exit 0。format・lint・型検査・build・unit・structure・E2Eを完了。E2Eは330 passed、失敗・skip・flaky 0 |
+| `npm run check` | exit 0。format・lint・型検査・build・unit・structure・E2Eを完了。E2Eは366 passed、失敗・skip・flaky 0 |
+| `CI=1 npm run check` | exit 0。CIと同じ2 workersでも366 passed、失敗・skip・flaky 0 |
 | `npm run audit:dependencies` | exit 0、found 0 vulnerabilities（依存修正前は7件） |
 | `npx wrangler pages functions build functions --outfile /private/tmp/arimono-pages-function.js` | exit 0、Compiled Worker successfully |
 | 追加UXの独立ブラウザ操作 | Chromium・Firefox・WebKitでexit 0、pageerrorなし |
@@ -37,6 +38,10 @@ Chromium・Pixel 7相当では全E2Eを実行する。Firefox・WebKit・iPhone 
 | 動画のffprobeとフレーム確認 | H.264、1280×900、10.28秒。デスクトップとスマホ画面を目視確認 |
 
 ローカル実行はNode.js 24.18.0、CIはNode.js 22。PlaywrightのJSON・HTMLレポートと失敗時traceを保存する。初回のFirefox検証ではIME完了直後のEnter待機条件を修正し、編集途中のHMR再読み込みによる失敗を分離して再実行した。現在は既存サーバーを再利用せず、アプリは`dist/`を配信する。独立したTypeScript combo harnessだけは別ポートのViteで検証し、本番ビルドへ含めない。
+
+CIのmobile Safari相当では、自由入力7項目を連結した1テストが30秒の累積制限を超えた。traceで各操作は成功していることを確認し、同じ制限と全assertを維持して項目ごとの独立テストへ分割した。操作に1秒ずつ遅延を加えた条件で元の失敗を再現し、分割後は7件すべて成功した。6構成×7項目×3反復も126 passedで、timeout延長・retry・skipは追加していない。
+
+別のローカル全件実行ではChromiumが材料入力の途中で応答せず1件失敗した。traceを保存し、同一テストを1 worker・5 workersで各12回実行したが、24回すべて成功して停止は再現しなかった。高負荷の共有環境での一過性停止として原因は未確定のまま記録し、テストを変更せず2 workersで全件を再実行して成功した。[修正後のGitHub CI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38826011079)も成功している。
 
 画像と動画は[デスクトップ](media/desktop.png)、[スマホ幅](media/mobile.png)、[操作動画](media/demo.mp4)。動画は実際の材料入力・分量指定・依頼文コピーを検証した実行を収録している。
 
