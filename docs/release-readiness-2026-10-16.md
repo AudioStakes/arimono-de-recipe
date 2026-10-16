@@ -60,7 +60,7 @@ CIのmobile Safari相当では、自由入力7項目を連結した1テストが
 
 今回は所有者がPRのマージ・リポジトリ公開・main保護・デプロイを明示的に依頼した。通常のリポジトリ方針を恒常的に変更せず、この依頼の範囲で実施している。
 
-## 本番デプロイ後の検証
+## 初回本番デプロイ後の検証
 
 [公開アプリ](https://arimono-de-recipe.pages.dev/)は、PR #44・#45を統合したmain `aa14135` からビルド・デプロイした。`npm run build` と `npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main` はexit 0。Production deployment `35dc53c4` のSourceが `aa14135` であることと、公開URLのHTTP 200を確認した。
 
@@ -85,6 +85,18 @@ CIのmobile Safari相当では、自由入力7項目を連結した1テストが
 Chromium・WebKitの320×568と844×390でも、材料と150gの入力、下部コピー、本文パネル開閉、入力までのスクロール・focus復帰を追加確認した。4実行すべてexit 0、QA・録画・動画フレーム確認も成功した。各checkpointの横幅はviewportと一致し、API送信・pageerrorは0。Chromiumでは隔離contextに通常のクリップボード権限を付与して本文を読み返し、WebKitではコピー経路と表示を確認した。
 
 当初Macがロックされていたため実UI操作を保留したが、所有者の解除後、このMacのChrome・Safariでも公開URLを操作した。両方で豆腐・キャベツと150gの入力、依頼文への反映を確認した。Chromeはコピー本文1,929文字の完全一致を確認。Safariはコピー後に実際の貼り付けを行い、依頼文の冒頭・豆腐150g・キャベツを確認した。貼り付け先のテスト入力は確認後に削除した。Safariの全文比較は行っていない。AI送信ボタンは操作していない。
+
+## 配色修正後の本番再確認
+
+[PR #48](https://github.com/AudioStakes/arimono-de-recipe/pull/48)のmain `c42bfad` を再ビルドし、Production deployment `0ac0e675` として公開した。`npm run build` と `npx wrangler pages deploy` はexit 0。[同PRのCI](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38832089084)と、ローカルの `CI=1 npm run check` も成功し、E2Eは366 passed、失敗・skip・flaky 0だった。
+
+修正後の公開URLで6ブラウザー構成とインストール済みGoogle Chromeを再実行し、すべてexit 0。材料と150g、依頼文、コピー、モバイル本文パネル、横幅を確認し、pageerror・requestfailedは0。Chromiumのdesktop・Pixel相当とGoogle Chromeではコピー本文の完全一致も再確認した。入力・コピーだけではAI送信は発生しなかった。
+
+実AIも2経路を再確認した。候補送信はHTTP 200で3候補の選択・調理表示に成功。依頼文全文の送信はコピー本文と完全一致し、HTTP 200で495文字の回答を得た。両応答は `Cache-Control: no-store` だった。回答の文字数は実行ごとの観測値であり、固定の仕様ではない。
+
+さらにChromium・WebKitの320×568／844×390を独立して再確認し、4実行ともQA・録画・cleanupがpassed、exit 0。150gの保持、下部コピー、本文パネルの開閉、入力へのスクロールとfocus復帰を確認した。AI送信・pageerror・横はみ出しは0。3主要CTA×通常・hover・キーボードfocus×4条件の36状態を実画像でも確認し、文字の高さにある背景との最小比は5.297:1、gradient全体の最小比は5.057:1で、必要な4.5:1を満たした。4録画のffprobe・フレームdecodeと視認も成功した。
+
+この段階の検証結果は[本番検証JSONのpostContrastRelease](production-verification-2026-10-16.json)に記録した。Macの実Chrome・Safariでの入力・コピー確認は初回の `aa14135` に対する結果として区別している。その後のアプリ変更はCTA背景のCSS指定2か所のみで、JavaScript・Function・配信設定は同一。実Macでの入力・コピーは再実行していない。
 
 ## 検証の限界
 
