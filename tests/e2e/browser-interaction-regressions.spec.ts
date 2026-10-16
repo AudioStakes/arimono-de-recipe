@@ -7,6 +7,93 @@ async function addMaterial(page: Page, name: string): Promise<void> {
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
 }
 
+for (const width of [320, 390, 1280]) {
+  test(`${width}pxで作者リンクとプライバシーを固定操作欄に隠さず表示する`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto("/");
+    await addMaterial(page, "豆腐");
+    const footer = page.getByTestId("site-footer");
+    const creator = footer.getByTestId("creator-link");
+    const privacy = footer.getByTestId("privacy-open");
+    await privacy.scrollIntoViewIfNeeded();
+    await expect(creator).toHaveAttribute("href", "https://x.com/AudioStakes");
+    await expect(creator).toHaveAttribute("target", "_blank");
+    await expect(creator).toHaveAttribute("rel", "noopener noreferrer");
+    await expect(creator).toBeInViewport();
+    await expect(privacy).toBeInViewport();
+    if (width < 1024) {
+      const footerBounds = await footer.boundingBox();
+      const actionsBounds = await page.getByTestId("mobile-action-footer").boundingBox();
+      expect(footerBounds).not.toBeNull();
+      expect(actionsBounds).not.toBeNull();
+      expect((footerBounds?.y ?? 0) + (footerBounds?.height ?? 0)).toBeLessThanOrEqual(
+        actionsBounds?.y ?? 0,
+      );
+    }
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+  });
+}
+
+test("プライバシーをアプリ内で開き、背景操作を防いで閉じた位置へ戻れる", async ({
+  page,
+  browserName,
+  isMobile,
+}) => {
+  await page.setViewportSize({ width: 390, height: 600 });
+  let apiCalls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    apiCalls += 1;
+    await route.abort();
+  });
+  await page.goto("/");
+  const opener = page.getByTestId("privacy-open");
+  const dialog = page.getByRole("dialog", { name: "プライバシー", exact: true });
+  const close = page.getByTestId("privacy-close");
+  await opener.scrollIntoViewIfNeeded();
+  const originalScrollY = await page.evaluate(() => window.scrollY);
+  await opener.click();
+  await expect(dialog).toBeVisible();
+  await expect(close).toBeFocused();
+  await expect(dialog).toContainText("食材・要望・依頼文・AI回答はアクセス解析へ送信しません。");
+  await expect(dialog).toContainText("Cloudflare Web Analytics");
+  await expect(page.locator("html")).toHaveCSS("overflow-y", "hidden");
+  const lockedScrollY = await page.evaluate(() => window.scrollY);
+  const lastLink = dialog.getByRole("link").last();
+  await close.press("Shift+Tab");
+  await expect(lastLink).toBeFocused();
+  await lastLink.press("Tab");
+  await expect(close).toBeFocused();
+  await page.getByTestId("combo-input-materials").evaluate((element) => {
+    (element as HTMLElement).focus();
+  });
+  await expect(close).toBeFocused();
+  const supportsWheel = browserName !== "webkit" || !isMobile;
+  if (supportsWheel) {
+    await page.mouse.move(5, 5);
+    await page.mouse.wheel(0, 500);
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    expect(await page.evaluate(() => window.scrollY)).toBe(lockedScrollY);
+  }
+  await close.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(originalScrollY);
+  await opener.click();
+  await close.click();
+  await expect(dialog).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.mouse.click(4, 4);
+  await expect(dialog).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  expect(apiCalls).toBe(0);
+});
+
 test("材料名の編集中はBackspaceとDeleteで文字だけを削除する", async ({ page }) => {
   await page.goto("/");
   await addMaterial(page, "豆腐");

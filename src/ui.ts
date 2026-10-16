@@ -500,7 +500,7 @@ function renderAppShell(): string {
         <section class="prompt-section" aria-labelledby="promptHeading">
           <div class="prompt-heading"><h2 id="promptHeading">ありもので、何を作る？</h2><p id="promptDescription">材料と要望をまとめた依頼文を送ります。</p></div>
           <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span>Cloudflare AIへ送信</p>
-          <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。入力やコピーだけでは送信しません。</p>
+          <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
           <div class="prompt-main-actions" role="group" aria-label="実行方法">
             ${renderAiPromptSendButton()}
             ${renderCopyButton("copyPrompt", "copy-prompt")}
@@ -513,6 +513,26 @@ function renderAppShell(): string {
         </section>
       </form>
     </div>
+    <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
+      <span>created by <a href="https://x.com/AudioStakes" target="_blank" rel="noopener noreferrer" data-testid="creator-link">@AudioStakes<span class="visually-hidden">（X・別タブで開く）</span></a></span>
+      <span aria-hidden="true">·</span>
+      <button id="privacyOpen" type="button" aria-haspopup="dialog" aria-controls="privacyDialog" data-testid="privacy-open">プライバシー</button>
+    </footer>
+    <dialog id="privacyDialog" class="privacy-dialog" aria-labelledby="privacyHeading" data-testid="privacy-dialog">
+      <div class="privacy-heading">
+        <h2 id="privacyHeading">プライバシー</h2>
+        <button id="privacyClose" type="button" class="privacy-close" aria-label="プライバシーを閉じる" data-testid="privacy-close">×</button>
+      </div>
+      <div class="privacy-body">
+        <h3>入力内容とAIへの送信</h3>
+        <p>このアプリは入力内容を保存しません。食材・要望・依頼文の作成とコピーはブラウザ内で行います。「AIへ送信」を押したときだけ、依頼文全文をCloudflare Workers AIへ送信します。</p>
+        <h3>アクセス解析</h3>
+        <p>改善のため、Cloudflare Web Analyticsで閲覧ページ・参照元・端末・ブラウザ・表示速度などを集計します。食材・要望・依頼文・AI回答はアクセス解析へ送信しません。</p>
+        <h3>Cookieなどの利用</h3>
+        <p>アクセス解析にCookieやlocalStorage、個人を識別するフィンガープリントを使いません。通信に伴うIPアドレスはCloudflareで処理されます。</p>
+        <p>詳しくは<a href="https://developers.cloudflare.com/web-analytics/data-metrics/core-web-vitals/#information-collected" target="_blank" rel="noopener noreferrer">解析データの説明<span class="visually-hidden">（別タブで開く）</span></a>と<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflareのプライバシーポリシー<span class="visually-hidden">（別タブで開く）</span></a>をご確認ください。</p>
+      </div>
+    </dialog>
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-testid="mobile-action-footer" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
@@ -551,6 +571,9 @@ function getAppElements(): AppElements {
     sendPromptMobile: queryElement("#sendPromptMobile"),
     aiPromptPanel: queryElement("#aiPromptPanel"),
     aiPromptHeading: queryElement("#ai-prompt-reply-heading"),
+    privacyOpen: queryElement("#privacyOpen"),
+    privacyDialog: queryElement("#privacyDialog"),
+    privacyClose: queryElement("#privacyClose"),
   };
 }
 

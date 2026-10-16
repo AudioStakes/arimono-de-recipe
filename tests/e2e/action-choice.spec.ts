@@ -28,7 +28,7 @@ for (const width of [1280, 390, 320]) {
     await expect(copy.getByText("依頼文をコピー", { exact: true })).toBeVisible();
     await expect(ai).toHaveAccessibleName("この依頼文をAIへ送信");
     await expect(ai).toHaveAccessibleDescription(
-      "「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。入力やコピーだけでは送信しません。",
+      "「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。",
     );
     await expect(
       page.getByTestId(mobile ? "mobile-ai-transmission-notice" : "ai-transmission-notice"),

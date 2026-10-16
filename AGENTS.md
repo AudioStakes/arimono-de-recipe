@@ -45,6 +45,7 @@ lint・formatter・型検査・CIを変更する場合は、`docs/quality-gates.
 - ログイン機能を持たない。
 - ユーザーが `この依頼文をAIへ送信`（画面表示は `AIへ送信`）を押した場合に限り、既存の `/api/recipe` へ依頼文全文を送信する。
 - ADR 0011 の Cloudflare Workers AI 送信以外で、外部送信や保存を前提とする設計にしない。
+- アクセス解析は、承認済みの[ADR 0015](docs/adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md)に限り例外とする。入力内容の送信制限は維持する。
 - 未指定項目はプロンプトに出力しない。
 - 未指定項目に対応するルール文も出力しない。
 - 家にない材料を主材料として追加させるレシピ依頼文にしない。

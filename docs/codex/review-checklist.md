@@ -10,8 +10,9 @@
 ## Product Guardrails
 
 - The copyable `レシピ依頼文` remains a first-class artifact.
-- API/server/external transmission is limited to the approved `/api/recipe` Pages Function and Workers AI binding.
-- No auth, storage, telemetry, analytics, provider SDK, or external LLM auto-posting was added.
+- Recipe input transmission is limited to the approved `/api/recipe` Pages Function and Workers AI binding.
+- Analytics follows ADR 0015: the standard Cloudflare beacon only, on the exact production origin, without form content or custom events.
+- No auth, storage, other telemetry/analytics, provider SDK, or external LLM auto-posting was added.
 - Prompt output still omits unspecified items and their rules.
 - Prompt output source-of-truth remains in prompt/domain-oriented modules.
 

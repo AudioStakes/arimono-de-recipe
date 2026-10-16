@@ -28,6 +28,7 @@ This repo is a public single Vite app. It uses source-module boundaries instead 
 - `src/ui.ts` owns rendering structure and stable hooks.
 - `src/app-events.ts` owns interaction state changes.
 - `src/ai-recipe-client.ts` owns the browser call to the same-origin `/api/recipe` endpoint.
+- `src/web-analytics.ts` owns the approved production-only Cloudflare Web Analytics script installation; it does not read form state.
 - `src/ai-prompt-panel.ts` owns full-prompt submission, answer state and stale-response handling; the answer stays separate from the copyable request text.
 - `src/recipe-markdown.ts` owns safe answer presentation only; it does not build the request or validate ingredients.
 - `src/recipe-decision/materials.ts` retains material amount validation; candidate adapters and cooking-view state have been removed under ADR 0014.

@@ -14,6 +14,8 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
+| 作者リンクとプライバシーを狭い画面でも操作でき、モーダル内のTab循環・背景操作禁止・閉じた後のfocusと位置を保持する | no | required all 6 profiles, 320/390/1280px footer clearance | stable hooks |
+| Cloudflare解析は本番originだけで一度読み込み、遮断時も入力とプライバシーを操作できる | no | required all 6 profiles, production CSP, local/Preview exclusion, stubbed beacon | existing application fetch restrictions retained |
 | 材料は未入力時に日常向け20件を表示し、検索時は一致する初期候補を優先して全候補から絞り込む | required priority, full catalog and no mutation | required initial order, selection exclusion and keyboard on all 6 profiles | no |
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
 | モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
@@ -35,6 +37,11 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 ## Stable Hook Convention
 
 - `data-testid="app-shell"`
+- `data-testid="site-footer"`
+- `data-testid="creator-link"`
+- `data-testid="privacy-open"`
+- `data-testid="privacy-dialog"`
+- `data-testid="privacy-close"`
 - `data-testid="recipe-form"`
 - `data-testid="basic-fields"`
 - `data-testid="advanced-fields"`
