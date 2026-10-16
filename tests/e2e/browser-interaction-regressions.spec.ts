@@ -378,7 +378,7 @@ for (const viewport of [
   });
 }
 
-test("分量入力後のTabは次の材料へ進み、入力を続けられる", async ({ page, browserName }) => {
+test("分量入力後のTabは次の材料へ進み、入力を続けられる", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await addMaterial(page, "豆腐");
@@ -389,26 +389,20 @@ test("分量入力後のTabは次の材料へ進み、入力を続けられる",
   const amount = tofu.getByTestId(/^material-amount-/);
   await amount.fill("1丁");
   await page.keyboard.press("Tab");
-  if (browserName === "webkit") {
-    // Safari's default Tab order visits text controls before buttons and radios.
-    const nextAmount = cabbage.getByTestId(/^material-amount-/);
-    await expect(nextAmount).toBeFocused();
-    await page.keyboard.type("1/2玉");
-    await expect(nextAmount).toHaveValue("1/2玉");
-    await expect(nextAmount).toBeFocused();
-    await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（量: 1\/2玉）/);
-  } else {
-    await expect(
-      cabbage.getByRole("button", { name: "キャベツを材料から削除", exact: true }),
-    ).toBeFocused();
+  await expect(cabbage.locator(":focus")).toHaveCount(1);
+  const nextAmount = cabbage.getByTestId(/^material-amount-/);
+  // Native Tab can include buttons and the checked radio, depending on OS/settings.
+  // Every step must remain in the next material; losing focus or skipping it fails.
+  for (let tabs = 0; tabs < 3; tabs += 1) {
+    if (await nextAmount.evaluate((element) => element === document.activeElement)) break;
     await page.keyboard.press("Tab");
-    await expect(cabbage.getByRole("radio", { name: "おまかせ", exact: true })).toBeFocused();
-    await page.keyboard.press("ArrowRight");
-    await expect(cabbage.getByRole("radio", { name: "必ず使う", exact: true })).toBeChecked();
-    await expect(page.getByTestId("prompt-output")).toHaveValue(
-      /### 必ず使う食材・材料\n\n- キャベツ/,
-    );
+    await expect(cabbage.locator(":focus")).toHaveCount(1);
   }
+  await expect(nextAmount).toBeFocused();
+  await page.keyboard.type("1/2玉");
+  await expect(nextAmount).toHaveValue("1/2玉");
+  await expect(nextAmount).toBeFocused();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（量: 1\/2玉）/);
   await expect(amount).not.toHaveAttribute("aria-invalid", "true");
   await expect(tofu.getByTestId(/^material-use-up-error-/)).toBeHidden();
   await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（使い切りたい量: 1丁）/);

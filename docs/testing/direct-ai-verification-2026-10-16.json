@@ -149,5 +149,21 @@
     "timeoutChanged": false,
     "retryAdded": false,
     "forcedFocus": false
+  },
+  "portableNativeTab": {
+    "precedingCI": "https://github.com/AudioStakes/arimono-de-recipe/actions/runs/38845053605",
+    "observedFailure": "OS-specific expected Tab target in the regression test differed on Linux WebKit.",
+    "fix": "Require focus inside the next material immediately and after each of at most three extra native Tabs; require amount input focus, keyboard typing and prompt reflection.",
+    "profiles": 6,
+    "repeatEach": 3,
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "exitCode": 0,
+    "sourceChanged": false,
+    "forcedFocus": false,
+    "timeoutChanged": false,
+    "specSha256": "c0201a5c3f042e6110319c627fbfb4bfb93438c1a103182109feed2d98568b62"
   }
 }
