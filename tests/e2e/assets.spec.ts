@@ -102,7 +102,7 @@ test("ブランド見出しとビルド済みアセットが参照できる", as
       )
       .toEqual({
         loaded: true,
-        file: "/brand/logo-horizontal.webp",
+        file: "/brand/arimono-title-logo.png",
       });
     const bounds = await logo.boundingBox();
     expect(bounds).not.toBeNull();

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { pressCommittedEnter } from "./helpers/combo";
+import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
 
 function materialCard(page: Page, name: string): Locator {
   return page.getByTestId(/^material-card-/).filter({ hasText: name });
@@ -26,25 +26,22 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
     page.getByRole("heading", { name: "ありもの de レシピ", level: 1, exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("img", { name: "ありもの de レシピ", exact: true })).toBeVisible();
-  await expect(page.getByText("家にある食材から、AIにレシピを相談できます。")).toBeVisible();
+  await expect(page.getByText("冷蔵庫にあるもので、今日のごはんを。")).toBeVisible();
 
   const basicFields = page.getByTestId("basic-fields");
-  await expect(basicFields.locator(".field-title:visible")).toHaveText([
-    "家にある食材・材料",
-    "材料の使い方",
-    "人数・分量",
-  ]);
+  await expect(basicFields.locator(".field-title:visible")).toHaveText(["家にある食材・材料"]);
   await expect(page.getByTestId("recipe-item-targetDish")).toBeHidden();
   await expect(page.getByTestId("recipe-item-pairingTargets")).toBeHidden();
+  await openRequestOptions(page);
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
   await expect(page.getByTestId("recipe-item-recipeCount")).toHaveAttribute("data-state", "closed");
   await expect(page.getByTestId("ai-prompt-send")).toContainText("AIへ送信");
 
   const visibleToggles = page.locator('[data-testid^="recipe-item-toggle-"]:visible');
-  await expect(visibleToggles).toHaveCount(6);
-  await expect(visibleToggles.nth(0)).toHaveText(/作りたい品数/);
+  await expect(visibleToggles).toHaveCount(8);
+  await expect(visibleToggles.nth(0)).toHaveText(/人数・分量/);
   await expect(visibleToggles.nth(1)).toHaveText(/調理方法・調理器具/);
-  await expect(visibleToggles.nth(5)).toHaveText(/その他の要望/);
+  await expect(visibleToggles.nth(7)).toHaveText(/その他の要望/);
   await expect(page.getByTestId("recipe-item-cookingTools")).toHaveAttribute(
     "data-state",
     "closed",
@@ -72,12 +69,12 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
 test("intent 切り替えで主要フィールドが切り替わる", async ({ page }) => {
   await page.goto("/");
 
+  await openRequestOptions(page);
+
   await page.getByLabel("作りたい料理がある").check();
   await expect(page.getByTestId("recipe-item-targetDish")).toBeVisible();
   await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
     "家にある食材・材料",
-    "材料の使い方",
-    "人数・分量",
   ]);
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeHidden();
   await expect(page.getByTestId("prompt-output")).toHaveValue(
@@ -94,13 +91,13 @@ test("intent 切り替えで主要フィールドが切り替わる", async ({ p
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- オムライス/);
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/- カレー/);
 
+  await openRequestOptions(page);
+
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await expect(page.getByTestId("recipe-item-targetDish")).toBeHidden();
   await expect(page.getByTestId("recipe-item-pairingTargets")).toBeVisible();
   await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
     "家にある食材・材料",
-    "材料の使い方",
-    "人数・分量",
   ]);
   await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
   await expect(page.getByTestId("recipe-item-recipeRoles")).toBeVisible();
@@ -129,10 +126,14 @@ test("モバイル初期表示は材料入力とAI送信CTAを優先する", asy
 test("intent 往復で対象外の値が依頼文とチップに残らない", async ({ page }) => {
   await page.goto("/");
 
+  await openRequestOptions(page);
+
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
   await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
   await expect(page.getByTestId("prompt-output")).toHaveValue(/### 一緒に出す料理/);
+
+  await openRequestOptions(page);
 
   await page.getByLabel("作りたい料理がある").check();
   await page.getByTestId("combo-input-targetDish").fill("カレー");
@@ -141,6 +142,8 @@ test("intent 往復で対象外の値が依頼文とチップに残らない", a
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 一緒に出す料理/);
   await expect(page.getByTestId("condition-chips")).not.toContainText("餃子");
 
+  await openRequestOptions(page);
+
   await page.getByLabel("ありものでおまかせ").check();
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 作りたい料理/);
   await expect(page.getByTestId("condition-chips")).not.toContainText("カレー");
@@ -148,6 +151,8 @@ test("intent 往復で対象外の値が依頼文とチップに残らない", a
 
 test("おまかせでもこだわり条件から品数と役割を指定できる", async ({ page }) => {
   await page.goto("/");
+
+  await openRequestOptions(page);
 
   await page.getByTestId("recipe-item-toggle-recipeCount").click();
   await page.getByLabel("複数品を指定").check();
@@ -256,6 +261,8 @@ test("複数材料の使い方と分量は材料名を編集しても元の材�
 test("一緒に出す料理と複数品指定はブラウザ上で反映される", async ({ page }) => {
   await page.goto("/");
 
+  await openRequestOptions(page);
+
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
   await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
@@ -284,6 +291,8 @@ test("一緒に出す料理と複数品指定はブラウザ上で反映され�
 test("折りたたみ項目は開いた中で入力できる", async ({ page }) => {
   await page.goto("/");
 
+  await openRequestOptions(page);
+
   await page.getByTestId("recipe-item-toggle-cookTime").click();
   await page.getByTestId("cook-time-range").evaluate((input) => {
     const range = input as HTMLInputElement;
@@ -291,9 +300,12 @@ test("折りたたみ項目は開いた中で入力できる", async ({ page }) 
     range.dispatchEvent(new Event("input", { bubbles: true }));
     range.dispatchEvent(new Event("change", { bubbles: true }));
   });
+  await openRequestOptions(page);
   await page.getByTestId("recipe-item-toggle-recipeDirections").click();
   await page.getByTestId("combo-input-recipeDirections").fill("あっさり");
   await pressCommittedEnter(page.getByTestId("combo-input-recipeDirections"));
+
+  await openRequestOptions(page);
 
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("子ども用に辛くしない。");
@@ -311,9 +323,5 @@ test("基本項目の DOM 順序がフォーム定義と一致する", async ({ 
     .getByTestId("basic-fields")
     .locator(".field-title:visible")
     .allTextContents();
-  expect(labels.map((text) => text.trim())).toEqual([
-    "家にある食材・材料",
-    "材料の使い方",
-    "人数・分量",
-  ]);
+  expect(labels.map((text) => text.trim())).toEqual(["家にある食材・材料"]);
 });

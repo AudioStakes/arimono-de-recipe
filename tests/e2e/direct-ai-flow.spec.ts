@@ -1,8 +1,37 @@
 import { expect, type Page, test } from "@playwright/test";
-import { pressCommittedEnter } from "./helpers/combo";
+import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
 
 const answer = "# 豆腐の料理\n\n- 豆腐を温めます。";
 const response = (recipe = answer) => JSON.stringify({ recipe, model: "test-model", usage: null });
+
+test("編集中の材料名もコピー・送信の直前に確定し、量とIDを保つ", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  let posted: { prompt: string } | undefined;
+  await page.route("**/api/recipe", async (route) => {
+    posted = route.request().postDataJSON() as { prompt: string };
+    await route.fulfill({ contentType: "application/json", body: response() });
+  });
+  await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
+  const card = page.getByTestId(/^material-card-/);
+  const id = await card.getAttribute("data-testid");
+  await card.getByTestId(/^material-amount-/).fill("150g");
+  await page.getByTestId("combo-pill-label-materials").click();
+  await page.getByTestId("combo-pill-edit-materials").fill("木綿豆腐");
+  await page.getByTestId("copy-prompt-sticky").click();
+  let prompt = await page.getByTestId("prompt-output").inputValue();
+  expect(prompt).toContain("木綿豆腐（量: 150g）");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
+  expect(posted).toBeUndefined();
+  await page.getByTestId("combo-pill-label-materials").click();
+  await page.getByTestId("combo-pill-edit-materials").fill("冷凍豆腐");
+  await page.getByTestId("mobile-ai-prompt-send").click();
+  prompt = await page.getByTestId("prompt-output").inputValue();
+  expect(prompt).toContain("冷凍豆腐（量: 150g）");
+  await expect.poll(() => posted).toEqual({ prompt });
+  await expect(page.getByTestId(id ?? "").getByTestId(/^material-amount-/)).toHaveValue("150g");
+});
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -54,6 +83,7 @@ for (const width of [1280, 390]) {
     await page.getByTestId(copyId).click();
     expect(calls).toBe(0);
     if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
+    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = `改行と"引用符"を残す\n${"あ".repeat(250)}`;
     await page.getByTestId("supplemental-notes").fill(notes);
@@ -132,6 +162,7 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
+    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = "あ".repeat(11000);
     await page.getByTestId("supplemental-notes").fill(notes);
@@ -246,13 +277,16 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
     .filter({ hasText: "豆腐" })
     .getByTestId(/^material-amount-/)
     .fill("１丁");
+  await openRequestOptions(page);
   await page.getByRole("radio", { name: "一緒に出す料理に合わせたい", exact: true }).check();
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
   await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
   await page.getByRole("radio", { name: "複数品を指定", exact: true }).check();
+  await openRequestOptions(page);
   await page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings").click();
   await page.getByTestId("combo-input-ngFoodsAndSeasonings").fill("にんにく");
   await pressCommittedEnter(page.getByTestId("combo-input-ngFoodsAndSeasonings"));
+  await openRequestOptions(page);
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("家族用に薄味で。");
   await openPreview(page, false);
@@ -459,7 +493,7 @@ test("過大なMarkdown表を表示せず、定型エラーからコピーと再
 for (const width of [1280, 320]) {
   test(`${width}pxで横長の表の分量を分割せず、表内だけ横スクロールできる`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
-    const table = `| 材料 | 分量 | 時間 | 道具 | 目的 | 下処理 | 手順 | 注意 |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| 豆腐 | 150g | 10分 | 鍋 | 主菜 | 切る | 温める | 加熱 |`;
+    const table = `| 材料 | 分量 | 時間 | 道具 | 目的 | 下処理 | 手順 | 注意 | 保存 | 味 | 調整 | 盛付 | 温度 | 火力 | 順番 | 仕上げ |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| 豆腐 | 150g | 10分 | 鍋 | 主菜 | 切る | 温める | 加熱 | 冷蔵 | 薄味 | 適量 | 皿 | 熱め | 弱火 | 最後 | 完成 |`;
     const url = `https://example.com/${"long".repeat(100)}`;
     await page.route("**/api/recipe", (route) =>
       route.fulfill({

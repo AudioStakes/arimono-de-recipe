@@ -1,5 +1,6 @@
 import { buildConditionChipSpecs } from "./chips";
-import { buildPrompt } from "./prompt";
+import type { RecipeApplication } from "./recipe-application";
+import type { ServingGroupId } from "./servings";
 import { getStickyFooterView } from "./sticky-footer";
 import type { ChipItem, ComboId, PromptData } from "./types";
 
@@ -28,6 +29,9 @@ type ViewportMetrics = {
 type ChipTone = NonNullable<ChipItem["tone"]>;
 
 export type PromptPanelServices = {
+  application: RecipeApplication;
+  getPrompt: () => string;
+  adjustServings: (id: ServingGroupId, delta: number) => void;
   readConditions: () => PromptData;
   flushPendingInputs: () => void;
   setHasUserInput: (value: boolean) => void;
@@ -163,7 +167,7 @@ export function refreshPromptPanel(
   services: PromptPanelServices,
 ): void {
   const data = services.readConditions();
-  const prompt = buildPrompt(data);
+  const prompt = services.getPrompt();
   elements.output.value = prompt;
   elements.mobileOutput.value = prompt;
 
@@ -226,7 +230,7 @@ export async function copyPrompt(
   refreshPromptPanel(state, elements, services);
   let copied = false;
   try {
-    await copyText(String(elements.output.value || ""));
+    await copyText(services.getPrompt());
     copied = true;
   } catch {
     const useMobileFallback =

@@ -5,7 +5,6 @@ import {
   copyPrompt as copyPromptPanel,
   syncStickyFooter as syncStickyFooterPanel,
 } from "./output-panel";
-import { adjustServingValue } from "./serving-controls";
 import type { ServingGroupId } from "./servings";
 import type { AppState } from "./types";
 
@@ -238,7 +237,7 @@ export function bindAppEvents(
       const id = (stepper?.dataset as DOMStringMap & { servingId?: ServingGroupId })?.servingId;
       const delta = servingButton.classList.contains("serving-plus") ? 1 : -1;
       if (id) {
-        adjustServingValue(id, delta);
+        services.adjustServings(id, delta);
         services.onChange();
       }
       return;
@@ -297,7 +296,7 @@ export function bindAppEvents(
   attachBottomSheetDrag(state, elements);
   const send = (): void => {
     if (state.mobileSheetOpen) setMobileSheetState(state, elements, false);
-    void sendPromptToAi(state, elements, services);
+    void sendPromptToAi(elements, services);
   };
   elements.sendPrompt.addEventListener("click", send);
   elements.sendPromptMobile.addEventListener("click", send);
