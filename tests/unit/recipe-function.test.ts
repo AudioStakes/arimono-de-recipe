@@ -1,12 +1,29 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { type Env, onRequest, recipeFunctionLimits } from "../../functions/api/recipe";
+import { defaultAiModelId } from "../../src/ai-models";
+import { createUsageDatabase } from "../helpers/usage-database";
 
 type RecipeFunctionContext = Parameters<typeof onRequest>[0];
 
 const apiUrl = "https://example.test/api/recipe";
+const stores: ReturnType<typeof createUsageDatabase>[] = [];
+afterEach(() => {
+  for (const store of stores.splice(0)) store.close();
+  vi.unstubAllGlobals();
+});
 
 function createContext(request: Request, env: Env): RecipeFunctionContext {
-  return { request, env };
+  const store = createUsageDatabase();
+  stores.push(store);
+  return {
+    request,
+    env: {
+      AI_USAGE: store.database,
+      AI_USAGE_SECRET: "unit-test-secret-with-at-least-32-characters",
+      CLOUDFLARE_FREE_ONLY: "true",
+      ...env,
+    },
+  };
 }
 
 function createRequest(body: unknown): Request {
@@ -15,6 +32,7 @@ function createRequest(body: unknown): Request {
     headers: {
       "content-type": "application/json",
       origin: "https://example.test",
+      "CF-Connecting-IP": "192.0.2.1",
     },
     body: JSON.stringify(body),
   });
@@ -289,18 +307,18 @@ describe("POST /api/recipe", () => {
     });
   });
 
-  test("AI binding未設定を500で返す", async () => {
+  test("AI binding未設定では送信せず503を返す", async () => {
     const response = await onRequest(
       createContext(createRequest({ prompt: "豆腐" }), {
         AI: undefined as unknown as Env["AI"],
       }),
     );
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(await readJson(response)).toEqual({
       error: {
-        code: "ai_binding_unavailable",
-        message: "AI設定を確認してください。",
+        code: "model_unavailable",
+        message: "このAIは現在利用できません。別のモデルを選ぶか、依頼文をコピーしてください。",
       },
     });
   });
@@ -320,7 +338,7 @@ describe("POST /api/recipe", () => {
     expect(response.status).toBe(200);
     expect(await readJson(response)).toEqual({
       recipe: "豆腐のあんかけ\n\n1. 豆腐を温める。",
-      model: "@cf/meta/llama-3.1-8b-instruct-fast",
+      model: defaultAiModelId,
       usage: { input_tokens: 12, output_tokens: 34 },
     });
 
@@ -329,7 +347,7 @@ describe("POST /api/recipe", () => {
     expect(call).toBeDefined();
     if (!call) throw new Error("AI.run was not called.");
     const [model, input] = call;
-    expect(model).toBe("@cf/meta/llama-3.1-8b-instruct-fast");
+    expect(model).toBe(defaultAiModelId);
     expect(isRecord(input)).toBe(true);
     if (!isRecord(input)) throw new Error("AI input was not an object.");
     expect(input["max_tokens"]).toBe(recipeFunctionLimits.maxTokens);

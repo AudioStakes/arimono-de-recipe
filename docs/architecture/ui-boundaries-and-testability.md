@@ -45,7 +45,7 @@ This repo is a public single Vite app. It uses source-module boundaries instead 
   adapter and retains manual recovery. Copy/submit commit eligible drafts synchronously.
 - `src/recipe-markdown.ts` owns safe answer presentation only; it does not build the request or validate ingredients.
 - `src/recipe-decision/materials.ts` retains material amount validation; candidate adapters and cooking-view state have been removed under ADR 0014.
-- `functions/api/recipe.ts` owns the approved Cloudflare Pages Function boundary for Workers AI.
+- `functions/api/recipe.ts` owns the approved Cloudflare Pages Function boundary. [ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md) adds the fixed Workers AI/Groq adapters and atomic D1 usage reservations in `server/`; recipe inputs and answers remain outside storage.
 
 Do not add fake root `exports` just to make this app look like a package. If future `packages/*` are introduced, each package must declare explicit `exports` and avoid exposing broad internals.
 

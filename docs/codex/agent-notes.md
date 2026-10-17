@@ -19,3 +19,8 @@ Every meaningful change should report commands run, exit codes, relevant output,
 3. Preserve Vite static build.
 4. Prefer data/config-centered recipe item changes.
 5. Prefer stable hooks over CSS class selectors in E2E.
+
+For AI models, providers, usage limits or funding, read
+[ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md).
+The metadata GET contains no recipe input; only explicit POST invokes AI. D1
+stores usage aggregates only. OpenAI funding is unresolved and remains disabled.
