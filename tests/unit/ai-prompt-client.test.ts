@@ -36,12 +36,19 @@ describe("generateRecipeFromPrompt", () => {
       expect(input).toBe("/api/recipe");
       expect(JSON.parse(String(init?.body))).toEqual({
         prompt,
-        model: "@cf/qwen/qwen3-30b-a3b-fp8",
+        model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
       });
       return jsonResponse(success);
     });
     expect(
-      (await generateRecipeFromPrompt(prompt, fetcher, undefined, "@cf/qwen/qwen3-30b-a3b-fp8")).ok,
+      (
+        await generateRecipeFromPrompt(
+          prompt,
+          fetcher,
+          undefined,
+          "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+        )
+      ).ok,
     ).toBe(true);
   });
 

@@ -201,6 +201,10 @@ function extractRecipeText(result: unknown): string {
     return "";
   }
 
+  const choices = result["choices"];
+  const first: unknown = Array.isArray(choices) ? choices[0] : null;
+  if (isRecord(first) && first["finish_reason"] === "length") return "";
+
   const output = result as WorkersAiTextResult;
   if (typeof output.response === "string") {
     return output.response;
@@ -212,8 +216,6 @@ function extractRecipeText(result: unknown): string {
     return output.result;
   }
 
-  const choices = result["choices"];
-  const first: unknown = Array.isArray(choices) ? choices[0] : null;
   const message = isRecord(first) ? first["message"] : null;
   if (isRecord(message) && typeof message["content"] === "string") return message["content"];
 

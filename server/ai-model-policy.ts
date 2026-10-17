@@ -7,6 +7,7 @@ export const aiModelPolicies: Record<
     inputNeuronsPerMillion: number;
     outputNeuronsPerMillion: number;
     outputParameter: "max_tokens" | "max_completion_tokens";
+    chatTemplateKwargs?: { enable_thinking: false };
   }
 > = {
   "@cf/meta/llama-3.1-8b-instruct-fp8": {
@@ -15,10 +16,10 @@ export const aiModelPolicies: Record<
     outputNeuronsPerMillion: 26128,
     outputParameter: "max_tokens",
   },
-  "@cf/qwen/qwen3-30b-a3b-fp8": {
-    contextTokens: 32768,
-    inputNeuronsPerMillion: 4625,
-    outputNeuronsPerMillion: 30475,
+  "@cf/meta/llama-3.3-70b-instruct-fp8-fast": {
+    contextTokens: 24000,
+    inputNeuronsPerMillion: 26668,
+    outputNeuronsPerMillion: 204805,
     outputParameter: "max_tokens",
   },
   "@cf/google/gemma-4-26b-a4b-it": {
@@ -26,6 +27,7 @@ export const aiModelPolicies: Record<
     inputNeuronsPerMillion: 9091,
     outputNeuronsPerMillion: 27273,
     outputParameter: "max_completion_tokens",
+    chatTemplateKwargs: { enable_thinking: false },
   },
   "openai/gpt-oss-20b": {
     contextTokens: 131072,

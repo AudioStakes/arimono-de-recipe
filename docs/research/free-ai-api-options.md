@@ -58,7 +58,7 @@ WebLLMはWebGPUを使い、ブラウザ内でLlama・Gemma等を実行できる�
 
 ### 今回の呼び出し候補
 
-Cloudflareでは既存Llama 3.1に加え、Qwen3とGemma 4を固定候補にする。
+Cloudflareでは既存Llama 3.1に加え、Llama 3.3とGemma 4を固定候補にする。
 Groqの追加にはFree契約の確認とサーバー側のsecretが必要。
 ブラウザへAPI keyを渡さず、有料モデルへの自動fallback・自動retryは行わない。
 
@@ -68,12 +68,24 @@ productionのGPT OSS 20Bへ変更する。これはGroqで動く公開weightモ�
 [Llamaモデル](https://developers.cloudflare.com/workers-ai/models/llama-3.1-8b-instruct-fp8/)、
 [Groqモデル区分](https://console.groq.com/docs/models)、[推論指定](https://console.groq.com/docs/reasoning)。
 
+Qwen3は既定thinking有効で、Cloudflare native APIにhard-disableの正式指定を確認できなかったため、
+レシピ本文の出力予算を確保しやすいLlama 3.3へ置き換える。
+Gemma 4はCloudflare公式例に従って`chat_template_kwargs: {enable_thinking: false}`を明示する。
+Groq GPT OSSのlowとinclude_reasoning=falseは推論の無効化ではない。
+非表示の推論も1,400の総出力予算に含まれるため、本文が空またはfinish_reason=lengthなら失敗扱いにする。
+終了理由のないCloudflare native応答では中断を検出できないため、全モデルでの本文完結を保証するものではない。
+失敗時も予約を返さず、自動再送せず、コピーを継続できる。
+GroqのLlama 3.3/3.1は2026-08-16にFree・Developer向け提供を終了しており、無料の非推論代替として追加しない。
+[Qwen公式仕様](https://huggingface.co/Qwen/Qwen3-30B-A3B-FP8/blob/main/README.md)、
+[CloudflareのGemma例](https://developers.cloudflare.com/workers-ai/get-started/workers-wrangler/)、
+[Groq推論仕様](https://console.groq.com/docs/reasoning)、[Groq終了告知](https://console.groq.com/docs/deprecations)。
+
 | モデルID | 上限・見積もり | 一次資料 |
 | --- | --- | --- |
 | `@cf/meta/llama-3.1-8b-instruct-fp8` | 現行のFP8モデル。context 32K、入力13,778・出力26,128 neurons/100万tokens | [料金](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
-| `@cf/qwen/qwen3-30b-a3b-fp8` | context 32,768、`max_tokens`を明示。入力4,625・出力30,475 neurons/100万tokens | [モデル](https://developers.cloudflare.com/workers-ai/models/qwen3-30b-a3b-fp8/)、[料金](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
-| `@cf/google/gemma-4-26b-a4b-it` | context 256K、`max_completion_tokens`を明示。入力9,091・出力27,273 neurons/100万tokens | [モデル](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/)、[料金](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
-| `openai/gpt-oss-20b` (Groq) | `max_completion_tokens`を固定。productionモデル。low reasoningとinclude_reasoning=false。TPMのため長文は単発でも制限され得る | [モデル](https://console.groq.com/docs/model/openai/gpt-oss-20b)、[API](https://console.groq.com/docs/api-reference) |
+| `@cf/meta/llama-3.3-70b-instruct-fp8-fast` | context 24K、`max_tokens`を明示。入力26,668・出力204,805 neurons/100万tokens | [モデル](https://developers.cloudflare.com/workers-ai/models/llama-3.3-70b-instruct-fp8-fast/)、[料金](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
+| `@cf/google/gemma-4-26b-a4b-it` | context 256K、`max_completion_tokens`とthinking=falseを明示。入力9,091・出力27,273 neurons/100万tokens | [モデル](https://developers.cloudflare.com/workers-ai/models/gemma-4-26b-a4b-it/)、[料金](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
+| `openai/gpt-oss-20b` (Groq) | `max_completion_tokens`を固定。productionモデル。low reasoningとinclude_reasoning=false。推論を含む出力予算やTPMで失敗し得る | [モデル](https://console.groq.com/docs/model/openai/gpt-oss-20b)、[API](https://console.groq.com/docs/api-reference) |
 
 Cloudflareは標準推論の内容を保持・学習利用しないと説明する。保存・ログ・キャッシュの機能は別。
 Groqも通常推論は保持しないが、障害・不正利用の調査で最大30日保存する場合がありopt-outを案内する。

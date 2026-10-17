@@ -6,8 +6,8 @@ export const aiModels = [
     recipient: "CloudflareのAI",
   },
   {
-    id: "@cf/qwen/qwen3-30b-a3b-fp8",
-    label: "Qwen3 30B",
+    id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    label: "Llama 3.3 70B",
     provider: "cloudflare",
     recipient: "CloudflareのAI",
   },

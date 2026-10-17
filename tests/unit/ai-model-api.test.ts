@@ -88,22 +88,50 @@ describe("model selection and enforced usage", () => {
     expect(env.AI.run).not.toHaveBeenCalled();
   });
 
-  test.each(["@cf/qwen/qwen3-30b-a3b-fp8", "@cf/google/gemma-4-26b-a4b-it"])(
+  test.each(["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/google/gemma-4-26b-a4b-it"])(
     "selected model %s uses its own capped output field",
     async (model) => {
       const env = environment();
-      vi.mocked(env.AI.run).mockResolvedValue({
-        choices: [{ message: { content: "選択モデルの料理" } }],
-      });
+      vi.mocked(env.AI.run).mockResolvedValue(
+        model.includes("gemma")
+          ? { choices: [{ finish_reason: "stop", message: { content: "選択モデルの料理" } }] }
+          : { response: "選択モデルの料理" },
+      );
       const response = await onRequest({ request: request(model), env });
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({ recipe: "選択モデルの料理", model });
       expect(env.AI.run).toHaveBeenCalledWith(
         model,
         expect.objectContaining(
-          model.includes("gemma") ? { max_completion_tokens: 1400 } : { max_tokens: 1400 },
+          model.includes("gemma")
+            ? { max_completion_tokens: 1400, chat_template_kwargs: { enable_thinking: false } }
+            : { max_tokens: 1400 },
         ),
       );
+    },
+  );
+
+  test.each(["cloudflare", "groq"])(
+    "%s does not present an answer cut off at the token limit as a recipe",
+    async (provider) => {
+      const env = environment();
+      const payload = {
+        choices: [{ finish_reason: "length", message: { content: "途中で切れた料理手順" } }],
+      };
+      vi.mocked(env.AI.run).mockResolvedValue(payload);
+      env.GROQ_API_KEY = "unit-test-key";
+      env.GROQ_FREE_ONLY = "true";
+      const fetcher = vi.fn(async () => Response.json(payload));
+      vi.stubGlobal("fetch", fetcher);
+      const response = await onRequest({
+        request: request(
+          provider === "groq" ? "openai/gpt-oss-20b" : "@cf/google/gemma-4-26b-a4b-it",
+        ),
+        env,
+      });
+      expect(response.status).toBe(500);
+      expect(await response.text()).not.toContain("途中で切れた料理手順");
+      expect(provider === "groq" ? fetcher : env.AI.run).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -111,7 +139,10 @@ describe("model selection and enforced usage", () => {
     const env = environment();
     for (let i = 0; i < 3; i += 1)
       expect((await onRequest({ request: request(), env })).status).toBe(200);
-    const response = await onRequest({ request: request("@cf/qwen/qwen3-30b-a3b-fp8"), env });
+    const response = await onRequest({
+      request: request("@cf/meta/llama-3.3-70b-instruct-fp8-fast"),
+      env,
+    });
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
     expect(env.AI.run).toHaveBeenCalledTimes(3);

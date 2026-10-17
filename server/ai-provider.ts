@@ -108,6 +108,7 @@ export async function generateWithModel(
       { role: "user", content: prompt },
     ],
     [policy.outputParameter]: aiMaxOutputTokens,
+    ...(policy.chatTemplateKwargs ? { chat_template_kwargs: policy.chatTemplateKwargs } : {}),
     temperature: 0.4,
   };
   if (model.provider === "cloudflare") return env.AI.run(model.id, input);
@@ -142,15 +143,7 @@ export async function generateWithModel(
     }
     const payload: unknown = JSON.parse(text + decoder.decode());
     if (typeof payload !== "object" || payload === null) throw new Error("Invalid AI response");
-    const choices = "choices" in payload && Array.isArray(payload.choices) ? payload.choices : [];
-    const first: unknown = choices[0];
-    const message: unknown =
-      typeof first === "object" && first !== null && "message" in first ? first.message : null;
-    const content =
-      typeof message === "object" && message !== null && "content" in message
-        ? message.content
-        : null;
-    return { response: content, usage: "usage" in payload ? payload.usage : null };
+    return payload;
   } finally {
     reader.releaseLock();
   }
