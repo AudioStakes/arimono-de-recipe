@@ -8,6 +8,35 @@ const createApp = () =>
   });
 
 describe("recipe application without a browser", () => {
+  it("captures model choice, cancels old generations, and never automatically switches providers", async () => {
+    const requests: {
+      model: string;
+      signal: AbortSignal;
+      finish: (value: GeneratePromptRecipeResult) => void;
+    }[] = [];
+    const app = createRecipeApplication({
+      sendRecipe: (_prompt, signal, model) =>
+        new Promise((finish) => requests.push({ model, signal, finish })),
+    });
+    app.commitInput("materials", "豆腐");
+    const prompt = app.getSnapshot().prompt;
+    const first = app.send();
+    app.setAiModel("@cf/qwen/qwen3-30b-a3b-fp8");
+    expect(requests[0]?.signal.aborted).toBe(true);
+    requests[0]?.finish({ ok: true, recipe: "古い回答", model: "old", usage: null });
+    await first;
+    expect(app.getSnapshot().aiPrompt.status).toBe("idle");
+    const second = app.send();
+    expect(requests[1]?.model).toBe("@cf/qwen/qwen3-30b-a3b-fp8");
+    requests[1]?.finish({ ok: true, recipe: "新しい回答", model: "new", usage: null });
+    await second;
+    expect(app.getSnapshot().prompt).toBe(prompt);
+    app.setAvailableAiModels(["openai/gpt-oss-20b"]);
+    expect(app.getSnapshot().selectedAiModel).toBe("@cf/qwen/qwen3-30b-a3b-fp8");
+    await app.send();
+    expect(requests).toHaveLength(2);
+    expect(app.getSnapshot().aiPrompt.status).toBe("error");
+  });
   it("commits exact material names and preserves metadata through rename and duplicate merge", () => {
     const app = createApp();
     app.commitInput("materials", "  豆腐 150g  ");

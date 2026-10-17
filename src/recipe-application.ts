@@ -1,3 +1,4 @@
+import { type AiModelId, aiModels, defaultAiModelId, findAiModel } from "./ai-models";
 import type { GeneratePromptRecipeResult } from "./ai-recipe-client";
 import { getComboOptionValues, getInitialComboOptionValues } from "./combo-options";
 import { updateComboValues } from "./combo-values";
@@ -15,7 +16,11 @@ import { filterAvailableComboOptions } from "./suggestions";
 import type { ComboId, MaterialRequest, RecipeCount, RequestIntent, ServingsMode } from "./types";
 
 export type RecipeApplicationDependencies = {
-  sendRecipe: (prompt: string, signal: AbortSignal) => Promise<GeneratePromptRecipeResult>;
+  sendRecipe: (
+    prompt: string,
+    signal: AbortSignal,
+    model: AiModelId,
+  ) => Promise<GeneratePromptRecipeResult>;
 };
 
 export function createRecipeApplication(dependencies: RecipeApplicationDependencies) {
@@ -35,6 +40,10 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
   let cookTime = "";
   let supplementalNotes = "";
   let nextId = 0;
+  let selectedAiModel: AiModelId = defaultAiModelId;
+  let availableAiModels = new Set<AiModelId>(
+    aiModels.filter((model) => model.provider === "cloudflare").map((model) => model.id),
+  );
 
   const getValues = (group: ComboId): string[] =>
     group === "materials" ? materialRequests.map((request) => request.name) : [...values[group]];
@@ -264,7 +273,9 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
         ? "使い切る材料の分量を入力してください。依頼文はコピーできます。"
         : !materialRequests.length
           ? "まずは家にある食材を入れてください。"
-          : "";
+          : !availableAiModels.has(selectedAiModel)
+            ? "選択したAIは現在利用できません。別のモデルを選ぶか、依頼文をコピーしてください。"
+            : "";
       const requestGeneration = ++generation;
       if (errorMessage) {
         aiPrompt = {
@@ -283,7 +294,7 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
       emit();
       let result: GeneratePromptRecipeResult;
       try {
-        result = await dependencies.sendRecipe(submittedPrompt, signal);
+        result = await dependencies.sendRecipe(submittedPrompt, signal, selectedAiModel);
       } catch {
         result = {
           ok: false,
@@ -308,6 +319,25 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
       aiPrompt = idle();
       emit();
     },
+    setAiModel(model: AiModelId): void {
+      if (!findAiModel(model) || !availableAiModels.has(model) || model === selectedAiModel) return;
+      selectedAiModel = model;
+      generation += 1;
+      controller?.abort();
+      controller = null;
+      aiPrompt = idle();
+      emit();
+    },
+    setAvailableAiModels(models: readonly AiModelId[]): void {
+      availableAiModels = new Set(models.filter((model) => findAiModel(model)));
+      if (!availableAiModels.has(selectedAiModel)) {
+        generation += 1;
+        controller?.abort();
+        controller = null;
+        aiPrompt = idle();
+      }
+      emit();
+    },
     reportRenderFailure(): void {
       if (aiPrompt.status !== "success") return;
       aiPrompt = {
@@ -327,6 +357,8 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
         })) as readonly Readonly<MaterialRequest>[],
         materialErrors: validateMaterialRequestAmounts(materialRequests),
         aiPrompt: { ...aiPrompt } as Readonly<AiState>,
+        selectedAiModel,
+        availableAiModels: [...availableAiModels] as readonly AiModelId[],
         requestIntent,
         recipeCount,
         effectiveRecipeCount: effectiveCount(),

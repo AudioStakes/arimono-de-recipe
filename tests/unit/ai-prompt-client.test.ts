@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { aiRecipeRequestTimeoutMs, generateRecipeFromPrompt } from "../../src/ai-recipe-client";
+import { defaultAiModelId } from "../../src/ai-models";
+import {
+  aiRecipeRequestTimeoutMs,
+  generateRecipeFromPrompt,
+  loadAiModelCatalog,
+} from "../../src/ai-recipe-client";
 
 const success = { recipe: "豆腐を温めます。", model: "test-model", usage: null };
 const jsonResponse = (payload: unknown, status = 200): Response =>
@@ -7,6 +12,38 @@ const jsonResponse = (payload: unknown, status = 200): Response =>
 
 describe("generateRecipeFromPrompt", () => {
   afterEach(() => vi.useRealTimers());
+  test("model metadata contains no recipe and unsupported or failed catalogs expose no optional provider", async () => {
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      expect(input).toBe("/api/recipe?models");
+      expect(init?.method).toBe("GET");
+      expect(init?.body).toBeUndefined();
+      return jsonResponse({ models: [{ id: defaultAiModelId, enabled: false }] });
+    });
+    expect(await loadAiModelCatalog(fetcher)).toEqual({
+      confirmed: true,
+      models: [{ id: defaultAiModelId, enabled: false }],
+    });
+    for (const payload of [{ models: [{ id: "unknown", enabled: true }] }, null]) {
+      const result = await loadAiModelCatalog(async () => jsonResponse(payload));
+      expect(result.confirmed).toBe(false);
+      expect(result.models.find((model) => model.id === "openai/gpt-oss-20b")?.enabled).toBe(false);
+    }
+  });
+
+  test("nondefault model selection preserves the exact prompt and the existing endpoint", async () => {
+    const prompt = '材料: 豆腐\n要望: "温かい料理"';
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      expect(input).toBe("/api/recipe");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        prompt,
+        model: "@cf/qwen/qwen3-30b-a3b-fp8",
+      });
+      return jsonResponse(success);
+    });
+    expect(
+      (await generateRecipeFromPrompt(prompt, fetcher, undefined, "@cf/qwen/qwen3-30b-a3b-fp8")).ok,
+    ).toBe(true);
+  });
 
   test("日本語・改行・引用符を含む依頼文をそのまま既存APIへ送る", async () => {
     const prompt = '## 材料\n豆腐（１丁）\n要望: "あっさり"';

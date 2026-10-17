@@ -47,7 +47,7 @@ test("食べる人数は4区分のステッパーUIで増減できる", async ({
   await expect(page.getByTestId("serving-count-toddlerCount")).toHaveText("1人");
   await expect(output).toHaveValue(/### 人数・分量[\s\S]*大人2人、子供1人、幼児1人/);
   await expect(page.getByTestId("condition-chips")).toContainText("大人2人、子供1人、幼児1人");
-  await expect(page.locator("select")).toHaveCount(0);
+  await expect(page.getByTestId("custom-servings-panel").locator("select")).toHaveCount(0);
 
   for (let index = 0; index < 8; index += 1) {
     await page.getByTestId("serving-plus-adultCount").click();
