@@ -1,4 +1,11 @@
 import {
+  type AiModelId,
+  type AvailableAiModel,
+  aiModels,
+  defaultAiModelId,
+  findAiModel,
+} from "./ai-models";
+import {
   maxAiRecipeBodyBytes,
   maxAiRecipePromptLength,
   maxAiRecipeResponseLength,
@@ -45,8 +52,9 @@ export async function generateRecipeFromPrompt(
   prompt: string,
   fetcher: typeof fetch = fetch,
   signal?: AbortSignal,
+  model: AiModelId = defaultAiModelId,
 ): Promise<GeneratePromptRecipeResult> {
-  const body = JSON.stringify({ prompt });
+  const body = JSON.stringify(model === defaultAiModelId ? { prompt } : { prompt, model });
   if (!prompt.trim()) {
     return {
       ok: false,
@@ -67,6 +75,41 @@ export async function generateRecipeFromPrompt(
     };
   }
   return postRecipe(body, fetcher, signal);
+}
+
+export async function loadAiModelCatalog(fetcher: typeof fetch = fetch): Promise<{
+  models: AvailableAiModel[];
+  confirmed: boolean;
+}> {
+  try {
+    const response = await fetcher("/api/recipe?models", {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    });
+    const payload = await readJson(response);
+    if (!response.ok || !isRecord(payload) || !Array.isArray(payload["models"]))
+      throw new Error("Unavailable model catalog");
+    const models: AvailableAiModel[] = [];
+    for (const entry of payload["models"]) {
+      if (
+        !isRecord(entry) ||
+        typeof entry["id"] !== "string" ||
+        typeof entry["enabled"] !== "boolean"
+      )
+        throw new Error("Invalid model catalog");
+      const model = findAiModel(entry["id"]);
+      if (!model || models.some((item) => item.id === model.id))
+        throw new Error("Invalid model catalog");
+      models.push({ id: model.id, enabled: entry["enabled"] });
+    }
+    if (!models.length) throw new Error("Empty model catalog");
+    return { models, confirmed: true };
+  } catch {
+    return {
+      models: aiModels.map((model) => ({ id: model.id, enabled: model.provider === "cloudflare" })),
+      confirmed: false,
+    };
+  }
 }
 
 async function postRecipe(

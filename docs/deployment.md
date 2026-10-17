@@ -1,6 +1,6 @@
 # Cloudflareでの公開・ローカル確認
 
-依頼文コピーだけなら `npm run dev` または `dist/` の静的配信で動きます。アプリ内の「AIへ送信」には、Cloudflare Pages FunctionsとWorkers AIの設定が必要です。既存の `/api/recipe` と `AI` バインディングを使います。ブラウザへAPIキーを渡す必要はありません。
+依頼文コピーだけなら `npm run dev` または `dist/` の静的配信で動きます。アプリ内の「AIへ送信」には、Cloudflare Pages Functions、AI、D1の利用制限設定が必要です。既存の `/api/recipe` を使い、ブラウザへAPIキーを渡しません。[モデルと利用制限の設定](architecture/ai-provider-setup.md)を完了してから有効にしてください。設定不足ではAI送信を停止します。
 
 ## 公開先と設定
 
@@ -33,6 +33,8 @@ npm run dev:pages
 
 `dev:pages` はビルド後に `wrangler pages dev dist --ai=AI` を起動します。表示されたローカルURLを開いてください。**Workers AIの推論はローカルで起動した場合もCloudflareアカウントを利用し、利用量・料金の対象になります。** ログインやAI利用は実行者のアカウントで行ってください。
 
+今回の利用制限ガードは、D1・Free確認・信頼できるedge IPが不足する通常のローカル環境ではAIを呼びません。ローカル検証のために接続元判定を緩めないでください。自動テストはfakeのbindingとIPを使います。
+
 AIを呼ばずに画面と依頼文コピーを確認する場合は、Functionを起動しない静的プレビューを使います。
 
 ```bash
@@ -44,7 +46,7 @@ npm run preview
 
 ## 公開APIの濫用・費用対策
 
-`/api/recipe` にログインや回数制限はありません。Originは同じサイトからのブラウザ送信を検証しますが、直接HTTPを送るプログラムはOriginを設定できるため、認証や濫用対策の代わりにはなりません。
+`/api/recipe` はログインを持たず、接続元ごとの回数と全体・提供元の使用量をD1で制限します。Origin検証だけでは直接HTTP送信を防げません。IP制限も一人単位の識別ではなく、VPN等で回避され得るため全体上限を併用します。
 
 公開運用前に、所有者が次を確認してください。
 
@@ -59,7 +61,9 @@ npm run preview
 
 2026-10-16にDashboardでWorkers **Free** を確認しました。このアプリは `AI.run` を直接利用し、AI Gatewayや前払課金を使いません。有料プランへの変更は行っていません。
 
-FreeではWorkers AIはアカウント全体で10,000 Neurons／日、Pages FunctionsはWorkersと共有で100,000 requests／日が上限です。上限到達後はAI応答が失敗し、日次枠は09:00 JSTにリセットします。他アプリと枠を共有するため、第三者の反復呼び出しによる可用性低下は残ります。これは利用者別のレート制限ではありません。[Workers AI料金](https://developers.cloudflare.com/workers-ai/platform/pricing/)・[Pages料金](https://developers.cloudflare.com/pages/functions/pricing/)
+FreeではWorkers AIはアカウント全体で10,000 Neurons／日、Pages FunctionsはWorkersと共有で100,000 requests／日が上限です。上限到達後はAI応答が失敗し、日次枠は09:00 JSTにリセットします。他アプリと枠を共有するため、第三者の反復呼び出しによる可用性低下は残ります。アプリの利用制限とは別の、提供元側の課金停止境界です。[Workers AI料金](https://developers.cloudflare.com/workers-ai/platform/pricing/)・[Pages料金](https://developers.cloudflare.com/pages/functions/pricing/)
+
+制限導入前の旧deploymentはこのD1制限を持ちません。本番を有効化する前に、旧URL・Previewからの迂回を止めるか、不要なdeploymentを運営者が削除してください。コード作業中には削除やアカウント設定を行っていません。
 
 PagesはWorkersのRate Limiting bindingに対応していません。有料運用へ変更する前には、管理下の独自ドメインのWAF等で全入口の制限を設計してください。`pages.dev`、過去のdeployment URL、Previewからの迂回も確認します。[公式の対応表](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/#compatibility-matrix)
 

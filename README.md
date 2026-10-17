@@ -14,9 +14,14 @@
 
 1. **材料を追加する。** 「豆腐」「キャベツ」など、家にある食材を入力します。
 2. **使い方を選ぶ。** 材料ごとに「おまかせ」「必ず使う」「使い切る」と分量を指定できます。人数・調理時間・NG食材も必要な分だけ追加します。
-3. **AIへ送信する。** 「AIへ送信」を押すと、依頼文全文をアプリ内AIへ送り、見出し・材料・手順を読みやすいMarkdown表示で確認できます。
+3. **AIを選んで送信する。** 利用できるモデルと送信先を確認し、「AIへ送信」を押すと依頼文全文を送り、回答を読みやすいMarkdown表示で確認できます。
 
 別のAIを使う場合は「依頼文をコピー」を押して貼り付けてください。入力条件を整理した日本語の依頼文を作ります。アプリ内AIが利用できないときもコピーできます。
+
+アプリ内AIには接続元ごとの回数と全体の無料枠の制限があります。モデル変更だけでは送信しません。
+提供元の無料契約と[利用制限の設定](docs/architecture/ai-provider-setup.md)が必要です。
+[無料API候補の調査](docs/research/free-ai-api-options.md)には、継続無料・試用限定・有料契約付属の違いを記録しています。
+接続中のProアカウントの62,500はCodex用クレジットと確認しました。通常のPlatform API key課金残高へ転用できないため、OpenAI連携は有効にしていません。[残高の確認結果と利用条件](docs/research/free-ai-api-options.md#chatgpt-proと62500クレジット)
 
 登録は不要です。入力・依頼文の生成・コピーはブラウザ内で行い、入力内容はAIへ送るボタンを押すまで自動送信しません。入力は保存せず、再読み込みすると消えます。本番はCloudflare Web Analyticsでアクセス状況を集計しますが、食材や依頼文を解析へ送りません。フッターの「プライバシー」でデータの扱いを確認できます。AIの回答は参考情報です。調理前に材料・アレルギー・加熱条件を確認してください。[入力上限とデータの扱い](docs/usage.md)
 
@@ -25,7 +30,8 @@
 | 領域 | 採用技術・役割 |
 | --- | --- |
 | フロントエンド | TypeScript、HTML、CSS、Vite。UIフレームワークを使わず、画面と入力状態を管理 |
-| 配信・AI | Cloudflare Pages、Pages Functions、Workers AI。AI送信は同一オリジンの `/api/recipe` に限定 |
+| 配信・AI | Cloudflare Pages、Pages Functions、Workers AI、任意のGroq Free。ブラウザは同一オリジンの `/api/recipe` だけを利用 |
+| 利用制限 | Cloudflare D1の原子的な回数・使用量予約。入力・回答は保存しない |
 | 回答表示 | micromarkと表拡張。raw HTML・外部画像を表示せず、安全なMarkdownを描画 |
 | テスト | Vitestで依頼文・入力条件・API契約を検証。Playwrightでブラウザ操作とレスポンシブ表示を確認 |
 | 品質管理 | Biome、TypeScript、HTML・Markdown・YAML検査、npm auditをGitHub Actionsで実行 |
@@ -36,7 +42,7 @@
 
 ## ローカルで動かす
 
-Node.js 22.12以上の22系、または24以上とnpmを使います。CIはNode.js 22です。
+Node.js 22.22以上の22系、または24.8以上とnpmを使います。CIはNode.js 22です。
 
 ```bash
 npm ci

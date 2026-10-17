@@ -29,11 +29,12 @@ export function renderAiPromptAnswer(): string {
 export function renderAiPromptPanel(
   aiPrompt: RecipeSnapshot["aiPrompt"],
   elements: AppElements,
+  enabled = true,
 ): boolean {
   for (const button of [elements.sendPrompt, elements.sendPromptMobile]) {
-    button.disabled = aiPrompt.status === "loading";
+    button.disabled = aiPrompt.status === "loading" || !enabled;
     const label = button.querySelector<HTMLElement>("[data-send-label]");
-    if (label) label.textContent = button.disabled ? "送信中…" : "AIへ送信";
+    if (label) label.textContent = aiPrompt.status === "loading" ? "送信中…" : "AIへ送信";
   }
   const panel = elements.aiPromptPanel;
   const status = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-status"]');
