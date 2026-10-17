@@ -12,6 +12,7 @@
 | `ASDF_NODEJS_VERSION=26.4.0 npm run audit:dependencies` | 0 | found 0 vulnerabilities |
 | `ASDF_NODEJS_VERSION=24.18.0 npm run format:check` | 0 | 別のサポート対象Nodeでも整形・Markdown・YAML検査が成功 |
 | 同Nodeの`npm run test:unit`と`npm run test:structure` | 各0 | SQLiteを含む単体テストと構造検査が成功 |
+| `ASDF_NODEJS_VERSION=26.4.0 npm run format:check` | 0 | Codex残高の種類を確認したMarkdown追記を検査。runtime変更がないため、この追記だけのローカルE2E再実行は省略 |
 
 E2Eの内訳はChromium 114、Pixel相当114、Firefox 88、WebKit 88、iPhone相当88、iPad相当88。
 モデル選択の追加ケース18件を含む。モデル変更時の未送信、全文と選択IDの明示送信、
@@ -52,4 +53,6 @@ packageとlockfileの必要バージョン・開発手順をその範囲へ揃�
 実機Safari、OSのソフトウェアキーボード、実AIの品質・モデル可用性、実アカウントのFree契約、
 remote D1、秘密情報、課金停止は未実施。料金を使う実API確認と配信を行っていないためである。
 運営者は[有効化手順](../architecture/ai-provider-setup.md)で設定を確認する。
-62,500の残高の表示元・単位・期限の回答待ちであり、OpenAI API経路は実装・有効化していない。
+接続済みProアカウントの利用情報を読み取り専用で確認し、62,500はCodex用creditと判明した。
+通常のPlatform API key課金へ転用できず、有効期限・自動補充設定・別のAPI残高の有無は未確認。
+OpenAI連携には別のAPI残高、またはhosted appとして承認された本人認可経路の判断が必要で、実装・有効化はしていない。

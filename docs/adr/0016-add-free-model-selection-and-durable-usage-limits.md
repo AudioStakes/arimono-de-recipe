@@ -39,12 +39,20 @@ change. A Free-only flag is operator attestation, not an API check of billing.
 Operators must retain the provider Free plan and avoid auto top-up or paid
 upgrades. Do not claim the estimator alone guarantees a zero provider bill.
 
-The reported 62,500 credit balance has no confirmed service or unit yet. No
-OpenAI API adapter or pooled Pro credential is activated. ChatGPT/Codex credits,
-API money and model tokens are distinct. OpenAI's native spend limits can lag.
-An actual prepaid API integration needs a separately confirmed funding unit,
-conversion and worst-case prices before its lifetime reservation can be enabled.
-This is an unresolved part of the owner's requested goal, not completed support.
+A read-only check of the connected Pro account on 2026-10-17 confirmed a Codex
+credit balance of 62,500. These personal ChatGPT/Codex credits cannot be moved
+to a Platform API-key billing balance. Expiry, automatic reload settings and
+the existence of a separate API balance remain unverified. Do not store the
+raw account response, identifiers or credentials in the repository.
+
+Sign in with ChatGPT can authorize eligible Responses API usage on the user's
+own plan; remotely hosted apps need prior access approval and an authentication
+design decision. No evidence authorizes pooling the owner's Pro credentials for
+this anonymous public app. No OpenAI adapter or pooled credential is activated.
+A separately funded API integration needs a confirmed funding unit, worst-case
+prices and lifetime reservations; native API spend limits can lag. Using the
+62,500 balance in this app remains unresolved, not completed support. See the
+[confirmed source and official conditions](../research/free-ai-api-options.md#chatgpt-proと62500クレジット).
 
 ## Alternatives and consequences
 

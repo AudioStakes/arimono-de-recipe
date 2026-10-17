@@ -3,7 +3,7 @@
 確認日: 2026-10-17。対象は公開レシピアプリから呼べるテキスト生成API。
 主要31提供元を公式資料で確認した一覧であり、世界中のサービスや全モデルを列挙したものではない。
 無料のチャット画面、開発用の評価キー、期限付きの試用、継続無料APIを区別する。
-実AI送信、アカウント残高の参照、契約・秘密情報の変更は行っていない。
+実AI送信、契約・秘密情報の変更は行っていない。接続中のCodex/Pro利用情報だけを読み取り専用で確認した。
 
 ## 比較
 
@@ -96,19 +96,29 @@ Groqも通常推論は保持しないが、障害・不正利用の調査で最�
 ## ChatGPT Proと62,500クレジット
 
 ChatGPT/Codexの契約・creditsとPlatform APIのトークン課金は別の体系である。
-62,500の表示元・単位・対象アカウント・期限が未確認なので、USDやAPI tokensへの換算を実装しない。
+2026-10-17に接続済みアカウントの利用情報を読み取り専用で確認し、
+Codex区分・Proプラン・credit残高62,500という組み合わせを確認した。
+これはCodex/ChatGPTの個人利用creditであり、通常のPlatform API key課金残高やAPI token数ではない。
+公式説明もAPI creditsではなく、非移転と明記している。USDやAPI tokensへの換算・API残高への移転は実装しない。
+有効期限、自動補充の設定、別のPlatform API残高の有無はこの読み取り結果では確認できない。
+アカウントID、リセット権のID、資格情報、利用情報の生レスポンスはリポジトリに保存しない。
+[個人用creditsの公式説明](https://help.openai.com/en/articles/12642688-using-credits-for-flexible-usage-in-chatgpt-free-go-plus-pro)、
 [契約とAPIの料金](https://learn.chatgpt.com/docs/pricing)、
 [API料金](https://developers.openai.com/api/docs/pricing)。
 
 公式Sign in with ChatGPTには利用者本人が認可するプラン共有の経路があるが、
 所有者のPro資格情報を匿名の公開アプリ利用者へ共用する仕組みとしては扱わない。
-remote-hosted appの適用手続きとログイン導入の判断が必要となる。
+本人認可のeligible Responses APIへプラン利用を共有する経路はあるため、「API経由では一切使えない」とは説明しない。
+remote-hosted appとして利用者へ提供するには事前のaccess申請が必要で、ログイン・資格情報管理の設計判断も必要となる。
+今回の匿名公開Pagesアプリで所有者のProを共用する条件が満たされた根拠は確認できていない。
 [公式の共有経路](https://developers.openai.com/siwc/token-sharing-open-source)、
-[アカウント境界](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)。
+[アカウント境界](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)、
+[提供前の利用条件](https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt#usage-policy-and-terms)。
 
 APIのorg/project hard spend limitも、公式に反映遅延と少額超過が明記されている。
 これだけで「62,500を絶対に超えない」と説明してはいけない。
-追加支払いゼロが必須で残高・換算・価格の上限を確定できない間、OpenAI API送信は無効のままとする。
+別のAPI用残高または承認済みのプラン共有経路が確定しない間、OpenAIへのアプリ内送信は無効のままとする。
+Codex残高62,500をAPI予算とみなした実装は追加しない。これは残高利用の実装完了を意味しない。
 [公式spend limits](https://developers.openai.com/api/docs/guides/spend-limits)。
 
 ## 上限の設計

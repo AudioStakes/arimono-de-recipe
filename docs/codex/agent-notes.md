@@ -23,4 +23,6 @@ Every meaningful change should report commands run, exit codes, relevant output,
 For AI models, providers, usage limits or funding, read
 [ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md).
 The metadata GET contains no recipe input; only explicit POST invokes AI. D1
-stores usage aggregates only. OpenAI funding is unresolved and remains disabled.
+stores usage aggregates only. The connected Pro account's 62,500 balance is
+personal Codex credit, not Platform API-key funding. OpenAI app integration
+remains unresolved and disabled; do not ask for the already-confirmed source again.
