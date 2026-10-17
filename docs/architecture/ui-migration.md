@@ -178,3 +178,29 @@ remain the sources of truth. The starting HEAD is
 `e4effb77dff608fd6118cddc998a3bf0568fba89`. Delivery separates the application
 boundary, UI migration and review evidence into commits on a feature branch.
 The draft PR leaves approval and merge to a human; no deployment is performed.
+
+### CI follow-up — 2026-10-17
+
+PR #53's [initial CI run](https://github.com/AudioStakes/arimono-de-recipe/actions/runs/39000856532)
+failed only the 320px Chromium action-choice test: the copy label wrapped onto
+two lines on Linux. The equal-width columns left too little room for the icon,
+gap and platform font. The supplied HTML and old UI both kept that label on one
+line; the migration had omitted this constraint.
+
+Restore nonwrapping text and a compact icon gap, and let the copy column reserve
+its intrinsic width while otherwise retaining equal columns. Add a 320px test
+with an 18px root font so wider text metrics reproduce on macOS too. Before the
+fix it failed with two label rectangles; after the fix all 8 Chromium/mobile
+action-choice cases passed. The regression also checks label containment, 44px
+targets and viewport bounds. No assertion was relaxed and no test was skipped.
+
+Visually checked 320px screenshots at 16px and 18px root sizes: the label stays
+on one line, both actions remain inside the page, and the page width is 320px.
+CI trace and local red-run evidence are kept under
+`/tmp/arimono-ci-39000856532/` and `/tmp/arimono-copy-regression-red/`.
+
+Final `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run check`: exit 0. All quality gates
+passed, including 562 E2E cases across six profiles, with zero failures, skips
+or flaky results (154 seconds for E2E). The new regression runs in both Chromium
+profiles using the browser's default-font setting, without inline CSS or a gate
+exception. The log is `/tmp/arimono-ci-fix-check.log`.

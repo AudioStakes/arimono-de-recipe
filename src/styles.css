@@ -902,6 +902,11 @@ input[type="range"] {
 }
 .sheet-actions {
   grid-row: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(max-content, 1fr);
+}
+.sheet-actions .copy-request-button {
+  gap: var(--space-1);
+  white-space: nowrap;
 }
 .sheet-summary-row {
   display: flex;

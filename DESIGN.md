@@ -74,6 +74,9 @@ application and domain modules, not this visual specification.
   and copy actions, 56px nested toggle rows and 80px top-level toggle rows.
 - The bottom action bar stays available at all widths. Reserve 160px and the
   safe-area inset below normal-flow content. Its content is at most 860px wide.
+- Keep the bottom copy label on one line. Give its column enough intrinsic width
+  for system-font differences and larger default text, sharing remaining space
+  with the primary action.
 - Only opened preview sheets/dialogs scroll internally. Preview text is between
   160px and 48dvh. Read-only full request text uses the same sans-serif font.
 - Candidate lists scroll above content, at most 320px tall. They remain ordinary
