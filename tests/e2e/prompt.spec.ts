@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openRequestOptions } from "./helpers/combo";
 
 test("依頼文欄は初期表示と自動更新の両方が機能する", async ({ page }) => {
   let apiCalls = 0;
@@ -24,12 +25,15 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   await expect(output).not.toHaveValue(/### 調理時間/);
   await expect(output).not.toHaveValue(/### 一緒に出す料理/);
 
+  await openRequestOptions(page);
+
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await page.getByLabel("複数品を指定").check();
   await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
   await page.getByTestId("combo-input-recipeRoles").press("Enter");
   await page.getByTestId("combo-input-pairingTargets").fill("餃子");
   await page.getByTestId("combo-input-pairingTargets").press("Enter");
+  await openRequestOptions(page);
   await page.getByTestId("recipe-item-toggle-cookTime").click();
   await page.getByTestId("cook-time-range").evaluate((input) => {
     const range = input as HTMLInputElement;

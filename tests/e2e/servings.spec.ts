@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("食べる人数は4区分のステッパーUIで増減できる", async ({ page }) => {
   await page.goto("/");
+  await page.getByTestId("recipe-item-toggle-servings").click();
   await page.getByLabel("詳しく指定").check();
   const output = page.getByTestId("prompt-output");
 
@@ -59,6 +60,7 @@ test("食べる人数は4区分のステッパーUIで増減できる", async ({
 
 test("人数・分量プリセットはステッパーなしで依頼文へ反映される", async ({ page }) => {
   await page.goto("/");
+  await page.getByTestId("recipe-item-toggle-servings").click();
   const output = page.getByTestId("prompt-output");
 
   await page.getByLabel("2人分").check();

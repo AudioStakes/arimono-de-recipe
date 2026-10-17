@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { combos } from "../../src/data";
-import { pressCommittedEnter } from "./helpers/combo";
+import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const exactText = (value: string): RegExp => new RegExp(`^${escapeRegExp(value)}$`);
@@ -154,6 +154,8 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   await materialInput.fill("たまご");
   await expect(comboOption(page, "materials", "卵")).toBeVisible();
 
+  await openRequestOptions(page);
+
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await pairingInput.fill("ぎょうざ");
   await expect(comboOption(page, "pairingTargets", "餃子")).toBeVisible();
@@ -195,7 +197,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
 
   await input.fill("しめじ");
   await pressCommittedEnter(input);
-  await expect(comboPillLabels(page, "materials")).toHaveText(["豆腐", "しめじ"]);
+  await expect(comboPillLabels(page, "materials")).toHaveText(["しめじ", "豆腐"]);
   await expect(input).toHaveValue("");
 
   await input.fill("しめじ");
@@ -206,7 +208,7 @@ test("候補クリック、自由入力Enter、blur でピル化し、重複追�
   await input.fill("しろ菜");
   await expect(input).toHaveValue("しろ菜");
   await page.locator("header").click();
-  await expect(comboPillLabels(page, "materials")).toHaveText(["豆腐", "しめじ", "しろ菜"], {
+  await expect(comboPillLabels(page, "materials")).toHaveText(["しろ菜", "しめじ", "豆腐"], {
     timeout: 10000,
   });
   await expect(input).toHaveValue("");
@@ -372,14 +374,14 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
   await input.fill("卵");
   await comboOption(page, "materials", "卵").click();
 
-  await comboPillLabels(page, "materials").nth(1).click();
+  await comboPillLabels(page, "materials").filter({ hasText: /^卵$/ }).click();
   const editInput = comboPillEditInputs(page, "materials");
   await expect(editInput).toBeVisible();
   await editInput.fill("オムハンバーグ");
   await page.keyboard.press("Escape");
-  await expect(comboPillLabels(page, "materials").nth(1)).toHaveText("卵");
+  await expect(comboPillLabels(page, "materials").filter({ hasText: /^卵$/ })).toHaveText("卵");
 
-  await comboPillLabels(page, "materials").nth(1).click();
+  await comboPillLabels(page, "materials").filter({ hasText: /^卵$/ }).click();
   const duplicateEditInput = comboPillEditInputs(page, "materials");
   await expect(duplicateEditInput).toBeVisible();
   await duplicateEditInput.fill("ハンバーグ");
@@ -436,6 +438,7 @@ const freeInputCases = [
     comboId: "targetDish",
     toggle: null,
     setup: async (page: Page) => {
+      await openRequestOptions(page);
       await page.getByLabel("作りたい料理がある").check();
     },
     value: "自由入力の作りたい料理",
@@ -445,6 +448,7 @@ const freeInputCases = [
     comboId: "recipeRoles",
     toggle: null,
     setup: async (page: Page) => {
+      await openRequestOptions(page);
       await page.getByLabel("一緒に出す料理に合わせたい").check();
       await page.getByLabel("複数品を指定").check();
     },
@@ -462,6 +466,7 @@ const freeInputCases = [
     comboId: "pairingTargets",
     toggle: null,
     setup: async (page: Page) => {
+      await openRequestOptions(page);
       await page.getByLabel("一緒に出す料理に合わせたい").check();
     },
     value: "自由入力の合わせ料理",
@@ -487,6 +492,7 @@ for (const { comboId, toggle, setup, value, heading } of freeInputCases) {
   test(`自由入力した値の追加と削除が依頼文へ反映される: ${comboId}`, async ({ page }) => {
     await page.goto("/");
     const output = page.getByTestId("prompt-output");
+    await openRequestOptions(page);
     await setup?.(page);
     if (toggle) {
       const toggleButton = page.getByTestId(`recipe-item-toggle-${toggle}`);

@@ -27,9 +27,7 @@ export function focusInputWithFeedback(
   const feedbackBottom = feedback && !feedback.hidden ? feedback.getBoundingClientRect().bottom : 0;
   const footerBounds = footer.getBoundingClientRect();
   const visibleBottom =
-    window.innerWidth < 1024 && footerBounds.height > 0
-      ? Math.min(window.innerHeight, footerBounds.top)
-      : window.innerHeight;
+    footerBounds.height > 0 ? Math.min(window.innerHeight, footerBounds.top) : window.innerHeight;
   const gap = 12;
   const bottom = Math.max(inputBounds.bottom, feedbackBottom);
   const delta =

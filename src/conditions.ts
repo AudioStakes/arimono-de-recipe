@@ -1,4 +1,3 @@
-import type { ComboRegistry } from "./combo-registry";
 import type {
   ComboId,
   MaterialRequest,
@@ -26,7 +25,7 @@ export type PromptDataReader = {
 };
 
 export type PromptDataInputs = {
-  comboRegistry: Pick<ComboRegistry, "getValues">;
+  comboRegistry: { getValues: (group: ComboId) => string[] };
   getRequestIntent?: () => RequestIntent;
   getMaterialUseMode?: () => MaterialUseMode;
   getMaterialRequests?: () => MaterialRequest[];

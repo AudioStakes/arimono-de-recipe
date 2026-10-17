@@ -1,5 +1,38 @@
 import { expect, test } from "@playwright/test";
 
+test("320pxで標準文字を大きくしてもコピー文言と両操作が収まる", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  // Exercise wider text metrics on every OS, including macOS where the default font fits.
+  const session = await page.context().newCDPSession(page);
+  await session.send("Page.setFontSizes", { fontSizes: { standard: 18 } });
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveCSS("font-size", "18px");
+  const copy = page.getByTestId("copy-prompt-sticky");
+  const labelBounds = await copy
+    .getByText("依頼文をコピー", { exact: true })
+    .evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return Array.from(range.getClientRects(), (rect) => ({ left: rect.left, right: rect.right }));
+    });
+  expect(labelBounds).toHaveLength(1);
+  const copyBounds = await copy.boundingBox();
+  if (!copyBounds) throw new Error("Copy action must be rendered");
+  for (const rect of labelBounds) {
+    expect(rect.left).toBeGreaterThanOrEqual(copyBounds.x);
+    expect(rect.right).toBeLessThanOrEqual(copyBounds.x + copyBounds.width);
+  }
+  for (const action of [copy, page.getByTestId("mobile-ai-prompt-send")]) {
+    const bounds = await action.boundingBox();
+    if (!bounds) throw new Error("Both actions must be rendered");
+    expect(bounds.width).toBeGreaterThanOrEqual(44);
+    expect(bounds.height).toBeGreaterThanOrEqual(44);
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
 for (const width of [1280, 390, 320]) {
   test(`${width}pxでAIを先に案内し、同じ画面からコピーと明示AI送信を選べる`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });

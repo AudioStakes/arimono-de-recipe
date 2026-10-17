@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openRequestOptions } from "./helpers/combo";
 
 test("モバイル展開中は背景を操作せずTabをパネル内で循環できる", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
@@ -123,6 +124,7 @@ test("料理の目的と品数を実際のフォーム操作から送信し、�
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
+  await openRequestOptions(page);
   await page.getByRole("radio", { name: "作りたい料理がある", exact: true }).check();
   await page.getByTestId("combo-input-targetDish").fill("カレー");
   await page.getByTestId("combo-input-targetDish").press("Enter");
@@ -139,6 +141,8 @@ test("料理の目的と品数を実際のフォーム操作から送信し、�
   expect(requests[1]?.["prompt"]).toContain("一緒に出す料理");
   expect(requests[1]?.["prompt"]).toContain("複数品");
   expect(requests).toHaveLength(2);
+
+  await openRequestOptions(page);
 
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("あ".repeat(11000));

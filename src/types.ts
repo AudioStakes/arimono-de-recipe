@@ -103,22 +103,10 @@ export type ChipItem = {
   action?: () => void;
 };
 
-export type AiPromptStatus = "idle" | "loading" | "success" | "error";
-
 export type AppState = {
   hasUserInput: boolean;
   inlineVisible: boolean;
   nearBottom: boolean;
   ticking: boolean;
   mobileSheetOpen: boolean;
-  materialRequests: MaterialRequest[];
-  aiPrompt: {
-    status: AiPromptStatus;
-    submittedPrompt: string;
-    recipe: string;
-    errorMessage: string;
-    errorSource: "input" | "request" | null;
-    requestId: number;
-    controller: AbortController | null;
-  };
 };
