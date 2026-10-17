@@ -42,7 +42,7 @@ ChatGPT Proと未確認の62,500クレジットを、API残高へ自動換算す
 
 ## ローカルで動かす
 
-Node.js 22.12以上の22系、または24以上とnpmを使います。CIはNode.js 22です。
+Node.js 22.22以上の22系、または24.8以上とnpmを使います。CIはNode.js 22です。
 
 ```bash
 npm ci

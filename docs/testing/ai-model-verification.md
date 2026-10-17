@@ -10,6 +10,8 @@
 | `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run check` | 0 | format、lint、typecheck、build、unit、structure、E2Eの全段階を実行 |
 | 同コマンド内の`npm run test:e2e` | 0 | 580 passed、0 failed、0 skipped、0 flaky、156.5秒 |
 | `ASDF_NODEJS_VERSION=26.4.0 npm run audit:dependencies` | 0 | found 0 vulnerabilities |
+| `ASDF_NODEJS_VERSION=24.18.0 npm run format:check` | 0 | 別のサポート対象Nodeでも整形・Markdown・YAML検査が成功 |
+| 同Nodeの`npm run test:unit`と`npm run test:structure` | 各0 | SQLiteを含む単体テストと構造検査が成功 |
 
 E2Eの内訳はChromium 114、Pixel相当114、Firefox 88、WebKit 88、iPhone相当88、iPad相当88。
 モデル選択の追加ケース18件を含む。モデル変更時の未送信、全文と選択IDの明示送信、
@@ -35,6 +37,10 @@ SQLiteで実migrationと同じ予約SQLを実行し、複数上限の原子的ro
 - 現行Cloudflareの`choices[].message.content`形式を受け取り、返すusageは数値の既知項目に限定する。
 
 最後の静的レビューでは、送信前予約・Free設定の必須化・秘密情報・古い応答の破棄について追加の修正必須事項はなかった。
+
+SQLiteは[Node 22.13から追加フラグ不要](https://nodejs.org/download/release/latest-jod/docs/api/sqlite.html)。
+既存HTML検査ツールのengine条件が22.22以上または24.8以上のため、
+packageとlockfileの必要バージョン・開発手順をその範囲へ揃えた。依存のバージョンは変更していない。
 
 ## 画面の証拠と未実施範囲
 
