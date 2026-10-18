@@ -50,9 +50,17 @@ own plan; remotely hosted apps need prior access approval and an authentication
 design decision. No evidence authorizes pooling the owner's Pro credentials for
 this anonymous public app. No OpenAI adapter or pooled credential is activated.
 A separately funded API integration needs a confirmed funding unit, worst-case
-prices and lifetime reservations; native API spend limits can lag. Using the
-62,500 balance in this app remains unresolved, not completed support. See the
+prices and lifetime reservations; native API spend limits can lag. The reported
+62,500 balance was not enabled as an API budget. See the
 [confirmed source and official conditions](../research/free-ai-api-options.md#chatgpt-proと62500クレジット).
+
+### Owner scope update — 2026-10-18
+
+The owner explicitly declined OpenAI integration. Close that item as out of scope;
+do not resume balance, API-key or Sign in with ChatGPT setup for this app without
+a new request. The historical credit check above is research, not an active
+funding configuration. Groq's `openai/gpt-oss-20b` remains a model served and billed
+by Groq; its name does not activate an OpenAI API connection.
 
 ## Alternatives and consequences
 

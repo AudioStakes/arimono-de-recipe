@@ -13,7 +13,7 @@ npm ci
 npx playwright install --with-deps chromium firefox webkit
 npm run check
 npm run audit:dependencies
-npx wrangler login --scopes account:read user:read workers:write pages:write ai:write
+npx wrangler login --scopes account:read user:read workers:write pages:write ai:write d1:write
 npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main
 ```
 
@@ -21,7 +21,7 @@ npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main
 
 `public/_routes.json` はビルド時に `dist/_routes.json` へコピーし、Functionの実行対象を `/api/recipe` に限定します。通常の画面・静的ファイルへのアクセスでFunctionを起動する必要はありません。
 
-独自のアカウントで公開する場合は、コード・画像の利用条件を確認し、Pagesプロジェクト名を変更してください。Git連携ビルドを選ぶ場合はNode.js 22、ビルド `npm run build`、配信ディレクトリ `dist` を使用します。
+独自のアカウントで公開する場合は、コード・画像の利用条件を確認し、Pagesプロジェクト名を変更してください。Git連携ビルドを選ぶ場合はNode.js 22.22以上の22系、ビルド `npm run build`、配信ディレクトリ `dist` を使用します。
 
 ## ローカルでFunctionも動かす
 
@@ -42,7 +42,7 @@ npm run build
 npm run preview
 ```
 
-このモードはFunctionを配信しません。新しい `wrangler.jsonc` は `AI` バインディングを含むため、`wrangler pages dev` を使うとローカルでも実AIを呼べます。通常の自動テストはモックを使い、Cloudflareアカウントや課金を必要としません。AI未設定時のFunctionの応答もユニットテストで確認します。
+このモードはFunctionを配信しません。通常の自動テストはモックを使い、Cloudflareアカウントや課金を必要としません。AI未設定時のFunctionの応答もユニットテストで確認します。
 
 ## 公開APIの濫用・費用対策
 
@@ -52,7 +52,7 @@ npm run preview
 
 - `/api/recipe` に適用できるCloudflareのRate limiting/WAF設定と、使用するプランの対応範囲を確認する。Preview URL等で保護を迂回できないかも確認する。
 - 想定利用者数に合わせて呼び出し頻度を制限し、AI使用量と課金を定期的に確認する。通知は必ずしも利用停止や上限を意味しないため、利用を止める手順も用意する。
-- AIを停止する必要がある場合は `AI` バインディングを外して再デプロイするなど、AI回答の生成を止めても依頼文コピーを利用できることを確認する。
+- AIを停止する必要がある場合は、下記の全AI停止手順を使い、AI回答の生成を止めても依頼文コピーを利用できることを確認する。
 - 本番テストにはダミーの材料を使う。負荷試験を行う場合は、課金や運用への影響を事前に確認する。
 
 依頼文12,000文字、本文32,000バイト、回答20,000文字、出力トークン数の上限は1回の処理を抑えるためのもので、継続的な呼び出しの費用を制限しません。具体的な料金や利用枠は[Workers AIの料金](https://developers.cloudflare.com/workers-ai/platform/pricing/)で確認してください。
@@ -67,7 +67,14 @@ FreeではWorkers AIはアカウント全体で10,000 Neurons／日、Pages Func
 
 PagesはWorkersのRate Limiting bindingに対応していません。有料運用へ変更する前には、管理下の独自ドメインのWAF等で全入口の制限を設計してください。`pages.dev`、過去のdeployment URL、Previewからの迂回も確認します。[公式の対応表](https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/#compatibility-matrix)
 
-緊急停止する場合は `wrangler.jsonc` の `ai` を削除して再デプロイします。旧deployment URLでAIが使える場合は、Cloudflare Dashboardから不要な旧deploymentも削除します。入力・依頼文コピーが動くことと、AIボタンで失敗を案内することを確認してください。プラン変更時にはこの無料枠前提を再確認します。
+### 全AIの緊急停止
+
+1. Pagesの対象環境で `CLOUDFLARE_FREE_ONLY` を削除するか文字列 `false` にし、設定を反映したdeploymentを再配信します。これはCloudflare・Groq両方の新規推論の受付を止める共通の条件です。`AI` バインディングの削除だけではGroqは停止しません。既に上流へ送った推論の取消や使用量予約の返却は保証しません。
+2. 本番originの `GET /api/recipe?models` で全モデルが `enabled: false` であることを確認します。入力内容や実AI呼び出しを伴わない確認です。
+3. ページを再読込し、AI送信が無効で、材料入力・依頼文コピーを利用できることを確認します。既に開いている画面からの送信もAPIは503で拒否します。
+4. ProductionだけでなくPreview・旧deployment URLも確認します。設定変更は既に配信済みの旧deploymentへ遡及しないため、推論できる旧URLを運営者が無効化するか、不要なdeploymentを削除します。
+
+再開は[有効化前の確認](architecture/ai-provider-setup.md#有効化前の確認)をやり直してから行います。プラン変更時には無料枠の前提も再確認します。
 
 ## 配信とプライバシーの確認
 
@@ -83,7 +90,7 @@ CSPではスクリプトを `https://static.cloudflareinsights.com/beacon.min.js
 
 公開URLで以下を確認してください。
 
-- 材料の入力・依頼文の確認・コピーだけでは `/api/recipe` が呼ばれない。
+- 材料の入力・依頼文の確認・コピーだけでは推論の `POST /api/recipe` が呼ばれない。初期表示の `GET /api/recipe?models` は入力を含まない設定確認だけを行う。
 - 明示的な「AIへ送信」は表示・コピーする依頼文全文を送る。待機・失敗後もコピーできる。
 - 成功時はMarkdown形式の回答を表示する。HTMLや外部画像は実行せず、安全なリンクだけを利用者の操作で開く。
 - AIを停止した場合、応答が失敗した場合、入力上限を超えた場合もコピーできる。
@@ -95,7 +102,7 @@ CSPではスクリプトを `https://static.cloudflareinsights.com/beacon.min.js
 | 症状 | 確認すること |
 | --- | --- |
 | Viteの開発画面でAI回答が出ない | `npm run dev` にFunctionはありません。コピーを使うかPages devへ切り替える。 |
-| 本番でAIへの送信に失敗する | `AI` の名前、Production/Previewの設定、再デプロイ、使用量・モデルの利用可否を確認する。 |
+| 本番でAIへの送信に失敗する | [AI・D1・Free設定とsecret](architecture/ai-provider-setup.md)、Production/Previewの分離、再デプロイ、使用量・モデルの利用可否を確認する。 |
 | Function自体が動かない | `functions/` を含むPagesのビルドか、`dist/` だけの静的配信かを確認する。 |
 | 上限超過の案内が出る | 材料や条件を減らすか、条件を含む依頼文コピーを使う。 |
 | コピーできない | HTTPSやブラウザの権限を確認し、出力欄を選択して手動でコピーする。 |

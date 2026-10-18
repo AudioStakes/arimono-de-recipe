@@ -65,16 +65,14 @@ D1に保存するのはbucket key・予約量・上限・有効期限だけ。
 利用を完全に終了するときは運営者がDBを削除する。
 現在lifetime残高bucketを有効にする提供元はない。再deployで残高を補充する実装を追加しない。
 
-## 確認済みのCodex残高と未解決のOpenAI連携
+## 停止と連携範囲
 
-接続済みのProアカウントの利用情報から、62,500はCodex/ChatGPTの個人利用creditと確認した。
-通常のPlatform API key課金へ転用できないため、この残高をAPI予算として有効化しない。
-有効期限・自動補充設定・別のAPI残高の有無は未確認。確認のために秘密情報や残高の生レスポンスをGitへ保存しない。
+全AIを止める場合は[緊急停止手順](../deployment.md#全aiの緊急停止)を使う。
+共通の`CLOUDFLARE_FREE_ONLY`を無効にして再配信すると、GroqのkeyとFree設定が残っていても全モデルを停止する。
 
-別のPlatform API残高がある場合は、その単位・専用project・価格上限・送信前のlifetime予約を具体化する。
-本人認可のSign in with ChatGPTは別経路だが、公開hosted app向けの事前access申請と認証設計が必要となる。
-所有者のProを匿名の公開利用者へ共用できる根拠は確認できておらず、今回のAPI接続として実装・有効化していない。
-[残高の根拠と公式条件](../research/free-ai-api-options.md#chatgpt-proと62500クレジット)を参照する。
+2026-10-18に所有者がOpenAI連携を不要と決定したため、OpenAI API・Sign in with ChatGPT・個人Pro残高の設定は行わない。
+過去の残高調査は[調査記録](../research/free-ai-api-options.md#chatgpt-proと62500クレジット)に残す。
+GroqのGPT OSSモデルはGroqの利用枠を使い、OpenAIのアカウントへ接続しない。
 
 ## 検証範囲
 

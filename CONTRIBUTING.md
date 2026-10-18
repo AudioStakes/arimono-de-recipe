@@ -17,7 +17,7 @@ npx playwright install --with-deps chromium firefox webkit
 
 追加のCLIは必須ではありません。RTKやnvmを使用しない環境でも、記載したnpmコマンドをそのまま実行できます。Vite単体では依頼文コピーを確認し、AI回答はE2Eのモックか[Pagesの開発環境](docs/deployment.md)で確認します。実際のWorkers AIを使うテストは自分のCloudflareアカウントの利用量に計上されます。
 
-必要なNodeバージョンはHTML検査ツールのengine条件に揃えています。利用制限テストの`node:sqlite`も追加フラグなしで使える範囲です。依存バージョンは変更していません。
+必要なNodeバージョンはHTML検査ツールのengine条件に揃えています。利用制限テストの`node:sqlite`も追加フラグなしで使える範囲です。
 
 ## コードの場所
 
@@ -26,9 +26,12 @@ npx playwright install --with-deps chromium firefox webkit
 | `src/data.ts`、`src/candidate-values/` | 候補値と項目の設定 |
 | `src/prompt.ts` | コピーする依頼文の生成 |
 | `src/ui.ts`、`src/styles.css` | 画面の構成とスタイル |
-| `src/app-events.ts`、`src/types.ts`、`src/ui.ts` | 入力操作と状態 |
+| `src/recipe-application.ts` | 確定入力・依頼文・AI通信世代の状態と操作 |
+| `src/app-events.ts`、`src/ui.ts` | ブラウザ操作と表示への接続 |
 | `src/ai-recipe-client.ts` | 依頼文全文の送信と通信 |
-| `src/ai-recipe-limits.ts`、`functions/api/recipe.ts` | 送受信の上限・検証とWorkers AI呼び出し |
+| `src/ai-models.ts`、`src/ai-model-picker.ts` | 公開モデルの設定と選択UI |
+| `src/ai-recipe-limits.ts`、`functions/api/recipe.ts` | 送受信の上限・検証、モデル情報と推論の入口 |
+| `server/`、`migrations/` | 固定提供元、送信前のD1利用制限と集計テーブル |
 | `src/ai-prompt-panel.ts` | AI回答の状態と表示 |
 | `src/recipe-markdown.ts` | HTML・画像・リンクを制限したMarkdown表示 |
 | `tests/unit/`、`tests/structure/`、`tests/e2e/` | ユニット、構造、ブラウザの検証 |
@@ -37,7 +40,7 @@ npx playwright install --with-deps chromium firefox webkit
 
 [AGENTS.md](AGENTS.md)に検証・変更範囲のルールがあります。用語は[CONTEXT.md](CONTEXT.md)、設計判断は[ADR](docs/adr/)を確認してください。生成する依頼文は `buildPrompt(data)` を基準とし、指定していない項目や条件を追加しません。
 
-新しいAPI、ログイン、保存、解析、外部送信、広範なUI再設計、パッケージマネージャやホスティング方式の変更は、実装前にIssueまたはDraft PRで提案してください。既存の `/api/recipe` とCloudflare Workers AIが、現在承認されているアプリ内AI経路です。
+新しいAPI、ログイン、保存、解析、外部送信、広範なUI再設計、パッケージマネージャやホスティング方式の変更は、実装前にIssueまたはDraft PRで提案してください。既存の `/api/recipe`、Workers AI・GroqとD1集計は[ADR 0016](docs/adr/0016-add-free-model-selection-and-durable-usage-limits.md)、本番だけの解析は[ADR 0015](docs/adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md)の承認範囲です。
 
 ## 検証
 

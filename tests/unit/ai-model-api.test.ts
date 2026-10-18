@@ -88,6 +88,32 @@ describe("model selection and enforced usage", () => {
     expect(env.AI.run).not.toHaveBeenCalled();
   });
 
+  test.each(["missing", "false"])(
+    "the emergency stop (%s master flag) disables every model including configured Groq",
+    async (flag) => {
+      const env = environment();
+      env.GROQ_API_KEY = "unit-test-key";
+      env.GROQ_FREE_ONLY = "true";
+      if (flag === "missing") delete env.CLOUDFLARE_FREE_ONLY;
+      else env.CLOUDFLARE_FREE_ONLY = "false";
+      const fetcher = vi.fn();
+      vi.stubGlobal("fetch", fetcher);
+      const metadata = await onRequest({
+        request: new Request("https://example.test/api/recipe?models"),
+        env,
+      });
+      expect(metadata.status).toBe(200);
+      expect(await metadata.json()).toMatchObject({
+        models: Array.from({ length: 4 }, () => expect.objectContaining({ enabled: false })),
+      });
+      for (const model of [undefined, "openai/gpt-oss-20b"]) {
+        expect((await onRequest({ request: request(model), env })).status).toBe(503);
+      }
+      expect(fetcher).not.toHaveBeenCalled();
+      expect(env.AI.run).not.toHaveBeenCalled();
+    },
+  );
+
   test.each(["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/google/gemma-4-26b-a4b-it"])(
     "selected model %s uses its own capped output field",
     async (model) => {

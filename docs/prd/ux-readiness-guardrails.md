@@ -36,11 +36,11 @@ Prepare the repo so future UX changes are reviewable, testable, scoped, and reve
 
 ## Superseded Scope
 
-ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Function + Workers AI path. The guardrail intent still applies, but the old static-only non-goal is superseded for that approved route only.
+ADR 0011 later approved a narrow optional `/api/recipe` Cloudflare Pages Function + Workers AI path. [ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md) extends that route with fixed model/provider selection, an input-free metadata GET and D1 usage aggregates. The guardrail intent still applies outside those approved exceptions. Recipe input and answers are not persisted.
 
 ## Recipe-Decision UX Extension
 
-The candidate-specific extension below is superseded by [ADR 0014](../adr/0014-center-full-prompt-ai-response.md) and the [full-prompt AI flow](direct-ai-recipe-flow.md). The copy, explicit-transmission and no-persistence guardrails remain.
+The candidate-specific extension below is historical and superseded by [ADR 0014](../adr/0014-center-full-prompt-ai-response.md) and the [full-prompt AI flow](direct-ai-recipe-flow.md). Current tests cover full-request submission and Markdown answers rather than candidate cards or cooking tabs. Copy stays local; explicit POST alone sends recipe input; persistence is limited to ADR 0016's usage aggregates.
 
 ADR 0012 centers the visible product flow on deciding 今日作る料理 from 家にある食材・材料.
 
@@ -52,4 +52,4 @@ The guardrail intent now includes:
 - Candidate cards, candidate detail, and cooking tabs as behavior-critical E2E surfaces.
 - Empty/loading/error/retry states for the in-app AI candidate path.
 
-The guardrail intent still excludes login, persistence, history, favorites, family settings, and broad architecture changes. Analytics and telemetry are limited to the explicitly approved Cloudflare Web Analytics exception in [ADR 0015](../adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md).
+The guardrail intent still excludes login, recipe persistence, history, favorites, family settings, and broad architecture changes. D1 stores only ADR 0016's usage aggregates. Analytics and telemetry are limited to the explicitly approved Cloudflare Web Analytics exception in [ADR 0015](../adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md).

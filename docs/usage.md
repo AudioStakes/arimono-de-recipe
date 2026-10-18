@@ -32,7 +32,7 @@
 - アプリのコードには入力の永続保存・ログ出力・ログイン機能はありません。再読み込みすると入力は失われます。
 - 同じ接続元は1分3回・UTC日10回、全体はUTC日100回を上限とします。使用量の上限も別にあり、停止中もコピーはできます。日次枠は日本時間9時に切り替わります。
 - 接続元を日替わりHMACで仮名化したbucketと回数・使用量だけをD1へ保存し、期限切れの集計は次のAI送信時に削除します。元のIP・食材・依頼文・回答はこの集計に保存しません。同じネットワークで枠を共有する場合があり、厳密な一人単位の識別ではありません。
-- Cloudflareは標準推論を学習利用しないと説明しています。Groqは障害・不正利用の調査で入力・出力を最大30日保持する場合があります。[Cloudflareのデータ方針](https://developers.cloudflare.com/workers-ai/platform/data-usage/)、[Groqのデータ方針](https://console.groq.com/docs/your-data)
+- Cloudflareは標準推論を学習利用しないと説明しています。Groqは障害・不正利用の調査で入力・出力を通常最大30日保持する場合があります（法令でより長い保持が必要な場合を除きます）。[Cloudflareのデータ方針](https://developers.cloudflare.com/workers-ai/platform/data-usage/)、[Groqのデータ方針](https://console.groq.com/docs/your-data)
 - ホスティング事業者や、自分で貼り付けるAIサービスによるデータの取扱いは各サービスの方針に従います。自由記述には氏名などの個人情報を入れないでください。
 
 ## アクセス解析とプライバシー

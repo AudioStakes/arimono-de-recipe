@@ -23,6 +23,6 @@ Every meaningful change should report commands run, exit codes, relevant output,
 For AI models, providers, usage limits or funding, read
 [ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md).
 The metadata GET contains no recipe input; only explicit POST invokes AI. D1
-stores usage aggregates only. The connected Pro account's 62,500 balance is
-personal Codex credit, not Platform API-key funding. OpenAI app integration
-remains unresolved and disabled; do not ask for the already-confirmed source again.
+stores usage aggregates only. The owner declined OpenAI integration on
+2026-10-18; treat it as out of scope, not pending setup. Historical credit research
+belongs in the research record linked by ADR 0016.

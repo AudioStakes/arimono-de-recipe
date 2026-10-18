@@ -41,9 +41,8 @@ application and domain modules, not this visual specification.
   --radius-lg: 14px;
   --page-gutter: clamp(16px, 3vw, 32px);
   --brand-logo-horizontal-width: 400px;
-  --sticky-footer-space: 160px;
+  --sticky-footer-space: max(160px, calc(8rem + 32px));
   --viewport-block: 100dvh;
-  --material-amount-width: 110px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
   --space-1: 4px;
   --space-2: 8px;
@@ -64,22 +63,43 @@ application and domain modules, not this visual specification.
   1.16fr / 1fr columns with a 36px gap. Place the shared answer below them.
 - Keep material input and candidate button before specified values. Material
   cards display latest first; the domain order and prompt order remain unchanged.
-- Each material has a name editor, amount and a 44px delete control, followed by
-  three native radio choices. Preserve native checked indicators as well as sage.
-- Use 110px for the amount column, 152px on desktop and 96px below 360px. Name
-  editors wrap and may not widen the page. All text inputs are at least 1rem.
+- Each material has two visibly labelled editing fields, the amount example
+  `150g、1/2個` as a placeholder, three native usage choices and a top-right ×.
+  Name and amount controls share a 46px minimum height and aligned top edges.
+  Give name and amount a 7rem and 8rem minimum basis with 3:2 flexible growth, and let them
+  stack when text size or available width requires it. Never shrink their text.
+- Keep cards compact with 8px padding and a 4px label-to-input gap. Reserve a
+  46px label band and 46px end padding for the × target so it cannot overlap
+  labels or inputs, including when fields stack. The × glyph is 1.25rem; its
+  button retains a 46px touch target without a separate action row. Keep the
+  usage fieldset legend visually hidden while preserving its accessible name.
+- Name buttons keep a single line with ellipsis and the full accessible name and
+  title; activating them opens the existing native text editor. All text inputs
+  remain at least 1rem. The short amount placeholder must fit in full at 320px.
+  Long examples in other combo fields and supplemental notes use wrapping,
+  described help text.
+- Usage radios wrap by their content width. Preserve native checked indicators
+  as well as sage. Use 4px inner padding so ordinary labels fit one row even with
+  a desktop scrollbar at 320px; retain the 44px minimum target height. Preserve
+  the amount error's described relationship when invalid.
 - Request options are grouped in this order: servings; methods/tools; intent,
   time and preferences. Closed sections show their current specified values.
 - Use 44px minimum interactive targets, 46px ordinary controls, 52px primary
   and copy actions, 56px nested toggle rows and 80px top-level toggle rows.
-- AI model choice uses a labelled native select with a 46px target and the
-  current recipient described beside it. Keep model metadata separate from
+- AI model choice uses a labelled native select with a 46px minimum target and
+  a font-relative explicit height, retaining Safari's native-control sizing. Keep
+  the current recipient described beside it. Keep model metadata separate from
   recipe request output.
-- The bottom action bar stays available at all widths. Reserve 160px and the
-  safe-area inset below normal-flow content. Its content is at most 860px wide.
-- Keep the bottom copy label on one line. Give its column enough intrinsic width
-  for system-font differences and larger default text, sharing remaining space
-  with the primary action.
+  Use `block-size: max(46px, calc(1.5em + 18px))`: the line box plus 16px vertical
+  padding and 2px of border, with the ordinary minimum target retained.
+- The bottom action bar stays available at all widths. Reserve at least 160px,
+  increasing with text size, and the safe-area inset below normal-flow content.
+  Its content is at most 860px wide. Main and fixed action rows use the same
+  intrinsic-width wrapping: keep ordinary labels on one line, and stack actions
+  when both do not fit. Long copy-error feedback can wrap. Recipient and preview
+  controls also wrap instead of compressing the send button.
+- Serving steppers use a 9.5rem minimum card basis and adapt their column count.
+  Keep the count on one line, including 10 people and enlarged text.
 - Only opened preview sheets/dialogs scroll internally. Preview text is between
   160px and 48dvh. Read-only full request text uses the same sans-serif font.
 - Candidate lists scroll above content, at most 320px tall. They remain ordinary
@@ -91,7 +111,7 @@ application and domain modules, not this visual specification.
 
 ## Type, spacing and accessibility
 
-The text scale is 0.7rem for compact amount labels at narrow widths, 0.75rem for
+The text scale is 0.8rem for material field labels and help, 0.75rem for
 metadata, 0.8rem for hints, 0.85rem for supporting controls, 0.95rem for answers,
 1rem for editable text, 1.125rem for section headings and 1.25rem for symbols.
 Use 1.5, 1.6, 1.65 or 1.75 line height according to density. Paragraphs and
@@ -104,13 +124,8 @@ transition. Empty control surfaces use:
 .plain-control { background: transparent; }
 ```
 
-## Responsive token variants
+## Responsive fields
 
-```css
-@media (min-width: 1024px) {
-  :root { --material-amount-width: 152px; }
-}
-@media (max-width: 359px) {
-  :root { --material-amount-width: 96px; }
-}
-```
+Field and action wrapping follows available space and text size. The 1024px
+workspace breakpoint changes the overall column layout; it does not prescribe
+a narrow fixed width for the amount field.

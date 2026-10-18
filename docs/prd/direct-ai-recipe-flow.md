@@ -28,4 +28,4 @@
 
 ## 維持する境界
 
-送信先は既存の同一オリジン `/api/recipe` とCloudflare Workers AIのみ。明示的な送信操作まで外部送信しない。依頼文を省略して送らず、文字数・UTF-8本文サイズ・30秒timeoutを維持する。保存・ログイン・解析・別のAI連携は追加しない。AIの回答を材料・NG条件の検証済み結果として扱わない。
+このフロー導入時の送信先は同一オリジン `/api/recipe` とCloudflare Workers AIに限定した。その後、[ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md)が同じ入口での固定モデル・Groq選択とD1利用制限集計を承認した。モデル情報のGETには入力を含めず、明示POSTだけが依頼文全文を送る。依頼文を省略して送らず、文字数・UTF-8本文サイズ・30秒timeoutを維持する。入力・回答の保存とログインは追加しない。解析は[ADR 0015](../adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md)の本番beaconだけに限る。AIの回答を材料・NG条件の検証済み結果として扱わない。
