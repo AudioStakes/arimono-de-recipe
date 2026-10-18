@@ -7,6 +7,61 @@ async function addMaterial(page: Page, name: string): Promise<void> {
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
 }
 
+for (const item of [
+  "materials",
+  "cookTime",
+  "ngFoodsAndSeasonings",
+  "supplementalNotes",
+] as const) {
+  test(`条件サマリーの${item}をキーボードで削除しても編集位置を保持する`, async ({ page }) => {
+    let sends = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/recipe")
+        sends += 1;
+    });
+    await page.goto("/");
+    await addMaterial(page, "豆腐");
+    let target = page.getByTestId("combo-input-materials");
+    let label = /家にある食材・材料.*を削除/;
+    let removedText = "### 家にある食材・材料";
+    if (item !== "materials") await openRequestOptions(page);
+    if (item === "cookTime") {
+      await page.getByTestId("recipe-item-toggle-cookTime").click();
+      target = page.getByTestId("cook-time-range");
+      await target.focus();
+      await target.press("ArrowRight");
+      label = /調理時間.*を削除/;
+      removedText = "### 調理時間";
+    } else if (item === "ngFoodsAndSeasonings") {
+      const toggle = page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings");
+      await toggle.click();
+      const input = page.getByTestId("combo-input-ngFoodsAndSeasonings");
+      await input.fill("卵");
+      await pressCommittedEnter(input);
+      await toggle.click();
+      target = toggle;
+      label = /使えない・持っていない.*を削除/;
+      removedText = "### 使えない・持っていない食材・調味料";
+    } else if (item === "supplementalNotes") {
+      await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+      await page.getByTestId("supplemental-notes").fill("洗い物を減らす");
+      target = page.getByTestId("recipe-item-toggle-requestOptions");
+      await target.click();
+      label = /その他の要望ありを削除/;
+      removedText = "洗い物を減らす";
+    }
+    const remove = page.getByTestId("condition-chips").getByRole("button", { name: label });
+    await remove.focus();
+    await remove.press("Enter");
+    await expect(remove).toHaveCount(0);
+    await expect(target).toBeFocused();
+    await expect(target).toBeInViewport();
+    await expect(page.getByTestId("prompt-output")).not.toHaveValue(new RegExp(removedText));
+    if (item !== "materials") await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐/);
+    expect(sends).toBe(0);
+  });
+}
+
 for (const width of [320, 390, 1280]) {
   test(`${width}pxで作者リンクとプライバシーを固定操作欄に隠さず表示する`, async ({ page }) => {
     await page.setViewportSize({ width, height: 720 });

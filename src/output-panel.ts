@@ -112,6 +112,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
         action: () => {
           services.clearCombo(spec.id);
           services.onChange();
+          focusConditionControl(spec.id);
         },
       };
     }
@@ -124,6 +125,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
         action: () => {
           services.clearCookTime();
           services.onChange();
+          focusConditionControl("cookTime");
         },
       };
     }
@@ -136,6 +138,7 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
         action: () => {
           services.clearSupplementalNotes();
           services.onChange();
+          focusConditionControl("supplementalNotes");
         },
       };
     }
@@ -146,6 +149,21 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
       removable: spec.removable,
     };
   });
+}
+
+function focusConditionControl(id: ComboId | "cookTime" | "supplementalNotes"): void {
+  const inputId =
+    id === "cookTime" ? "cookTimeRange" : id === "supplementalNotes" ? id : `${id}Input`;
+  const controls = [
+    document.getElementById(inputId),
+    document.querySelector(`[data-testid="recipe-item-toggle-${id}"]`),
+    document.querySelector('[data-testid="recipe-item-toggle-requestOptions"]'),
+  ];
+  const target = controls.find(
+    (control): control is HTMLElement =>
+      control instanceof HTMLElement && control.getClientRects().length > 0,
+  );
+  target?.focus();
 }
 
 function getChipTone(spec: ReturnType<typeof buildConditionChipSpecs>[number]): ChipTone {
