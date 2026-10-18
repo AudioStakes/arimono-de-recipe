@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const compatibilityTests = [
+  "**/ai-model-selection.spec.ts",
   "**/app.spec.ts",
   "**/input.spec.ts",
   "**/assets.spec.ts",

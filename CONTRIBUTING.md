@@ -9,13 +9,15 @@
 ## 開発環境
 
 ```bash
-# Node.js 22.12以上の22系（推奨）または24以上
+# Node.js 22.22以上の22系（推奨）または24.8以上
 npm ci
 npm run dev
 npx playwright install --with-deps chromium firefox webkit
 ```
 
 追加のCLIは必須ではありません。RTKやnvmを使用しない環境でも、記載したnpmコマンドをそのまま実行できます。Vite単体では依頼文コピーを確認し、AI回答はE2Eのモックか[Pagesの開発環境](docs/deployment.md)で確認します。実際のWorkers AIを使うテストは自分のCloudflareアカウントの利用量に計上されます。
+
+必要なNodeバージョンはHTML検査ツールのengine条件に揃えています。利用制限テストの`node:sqlite`も追加フラグなしで使える範囲です。依存バージョンは変更していません。
 
 ## コードの場所
 

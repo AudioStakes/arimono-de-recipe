@@ -36,6 +36,14 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 
 ## Stable Hook Convention
 
+The Node-only `recipe-application.test.ts` covers public operations, material IDs,
+hidden input retention, detached snapshots, subscriptions, input errors, retry,
+copyable text and request generations. Existing client tests own timeout and size
+validation. New UI entry points are `recipe-item-toggle-servings` and
+`recipe-item-toggle-requestOptions`; nested options are opened through the latter.
+Material cards display latest first while prompt order remains insertion order.
+The fixed send/copy bar is available at desktop widths as well as mobile widths.
+
 - `data-testid="app-shell"`
 - `data-testid="site-footer"`
 - `data-testid="creator-link"`
@@ -73,6 +81,9 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 - `data-testid="mobile-prompt-panel"`
 - `data-state="open|closed"` for collapsible panels and the mobile prompt panel.
 - `data-testid="ai-prompt-send"`
+- `data-testid="ai-model-select"`
+- `data-testid="ai-model-info"`
+- `data-testid="ai-model-status"`
 - `data-testid="mobile-ai-prompt-send"`
 - `data-testid="ai-prompt-panel"`
 - `data-testid="ai-prompt-heading"`

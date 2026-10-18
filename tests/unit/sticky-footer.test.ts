@@ -42,7 +42,7 @@ describe("sticky-footer", () => {
     });
   });
 
-  test("デスクトップ幅では旧条件どおり表示判定する", () => {
+  test("デスクトップ幅でも入力やスクロールに関係なく表示する", () => {
     expect(
       getStickyFooterView(
         {
@@ -58,8 +58,8 @@ describe("sticky-footer", () => {
         },
       ),
     ).toEqual({
-      show: false,
-      suppress: true,
+      show: true,
+      suppress: false,
       nearBottom: false,
     });
 
@@ -78,8 +78,8 @@ describe("sticky-footer", () => {
         },
       ),
     ).toEqual({
-      show: false,
-      suppress: true,
+      show: true,
+      suppress: false,
       nearBottom: false,
     });
   });

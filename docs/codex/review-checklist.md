@@ -10,9 +10,9 @@
 ## Product Guardrails
 
 - The copyable `レシピ依頼文` remains a first-class artifact.
-- Recipe input transmission is limited to the approved `/api/recipe` Pages Function and Workers AI binding.
+- Recipe input transmission is limited to the approved `/api/recipe` Pages Function and the fixed Workers AI/Groq adapters in [ADR 0016](../adr/0016-add-free-model-selection-and-durable-usage-limits.md). Model metadata GET carries no recipe input.
 - Analytics follows ADR 0015: the standard Cloudflare beacon only, on the exact production origin, without form content or custom events.
-- No auth, storage, other telemetry/analytics, provider SDK, or external LLM auto-posting was added.
+- No auth, recipe storage, other telemetry/analytics, provider SDK, or automatic LLM posting was added. ADR 0016 permits only aggregate D1 usage reservations; verify that raw IPs, prompts and answers never enter that ledger.
 - Prompt output still omits unspecified items and their rules.
 - Prompt output source-of-truth remains in prompt/domain-oriented modules.
 

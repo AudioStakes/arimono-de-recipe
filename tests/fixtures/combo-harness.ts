@@ -1,4 +1,6 @@
+import { generateRecipeFromPrompt } from "../../src/ai-recipe-client";
 import { createComboRegistry } from "../../src/combo-registry";
+import { createRecipeApplication } from "../../src/recipe-application";
 
 const form = document.querySelector<HTMLFormElement>("#harnessForm");
 const values = document.querySelector<HTMLElement>("#values");
@@ -16,6 +18,11 @@ const syncValues = (): void => {
   values.textContent = registry.getValues("materials").join("、");
 };
 
-registry = createComboRegistry(form, { onChange: syncValues });
+registry = createComboRegistry(form, {
+  onChange: syncValues,
+  application: createRecipeApplication({
+    sendRecipe: (prompt, signal) => generateRecipeFromPrompt(prompt, fetch, signal),
+  }),
+});
 registry.bind(form);
 syncValues();

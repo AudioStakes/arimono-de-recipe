@@ -129,7 +129,7 @@ function assertClientNetworkBoundary(files: readonly TextFile[]): void {
     {
       label: "API key",
       pattern:
-        /\b(?:API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|CLOUDFLARE_API_TOKEN)\b/,
+        /\b(?:API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|GROQ_API_KEY|AI_USAGE_SECRET|CLOUDFLARE_API_TOKEN)\b/,
     },
     { label: "runtime env access", pattern: /\b(?:import\.meta|process)\.env\b/ },
   ] as const;
@@ -150,7 +150,7 @@ function assertClientNetworkBoundary(files: readonly TextFile[]): void {
       )
     : [];
   const disallowedAiClientEndpoints = aiClientEndpoints.filter(
-    (endpoint) => endpoint !== "/api/recipe",
+    (endpoint) => endpoint !== "/api/recipe" && endpoint !== "/api/recipe?models",
   );
 
   const violations = files.flatMap((file) =>
@@ -187,7 +187,12 @@ function assertClientNetworkBoundary(files: readonly TextFile[]): void {
 }
 
 function assertApprovedFunctionBoundary(files: readonly TextFile[]): void {
-  const approvedFunctionFiles = new Set(["functions/api/recipe.ts"]);
+  const approvedFunctionFiles = new Set([
+    "functions/api/recipe.ts",
+    "server/ai-provider.ts",
+    "server/ai-model-policy.ts",
+    "server/ai-usage.ts",
+  ]);
   const unexpectedFunctionFiles = files
     .map((file) => file.path)
     .filter((file) => !approvedFunctionFiles.has(file));
@@ -207,7 +212,14 @@ function assertApprovedFunctionBoundary(files: readonly TextFile[]): void {
 
   const violations = files.flatMap((file) =>
     forbiddenPatterns
-      .filter(({ pattern }) => pattern.test(file.text))
+      .filter(
+        ({ label, pattern }) =>
+          pattern.test(file.text) &&
+          !(
+            file.path === "server/ai-provider.ts" &&
+            (label === "server fetch call" || label === "authorization header")
+          ),
+      )
       .map(({ label }) => `${file.path}: ${label}`),
   );
 
@@ -224,8 +236,23 @@ function assertApprovedFunctionBoundary(files: readonly TextFile[]): void {
   }
 
   const recipeFunction = files.find((file) => file.path === "functions/api/recipe.ts");
-  if (!recipeFunction?.text.includes("context.env.AI.run(")) {
-    violations.push("functions/api/recipe.ts: must use context.env.AI.run");
+  const provider = files.find((file) => file.path === "server/ai-provider.ts");
+  if (
+    !recipeFunction?.text.includes("context.env.AI.run(") &&
+    !(recipeFunction?.text.includes("generateWithModel(") && provider?.text.includes("env.AI.run("))
+  ) {
+    violations.push("functions/api/recipe.ts: must use the approved Workers AI binding adapter");
+  }
+  if (provider) {
+    const calls = [...provider.text.matchAll(/\bfetch\s*\(/g)];
+    const endpoints = [...provider.text.matchAll(/\bfetch\s*\(\s*["']([^"']+)["']/g)];
+    if (
+      calls.length !== 1 ||
+      endpoints.length !== 1 ||
+      endpoints[0]?.[1] !== "https://api.groq.com/openai/v1/chat/completions"
+    ) {
+      violations.push("server/ai-provider.ts: only the fixed Groq endpoint is allowed");
+    }
   }
 
   if (violations.length > 0) {
@@ -359,7 +386,8 @@ describe("current repository guardrails", () => {
     const functionFiles = hasFunctionsDirectory
       ? await collectFiles("functions", isScriptFile)
       : [];
-    assertApprovedFunctionBoundary(functionFiles);
+    const serverFiles = await collectFiles("server", isScriptFile);
+    assertApprovedFunctionBoundary([...functionFiles, ...serverFiles]);
   });
 
   it("keeps prompt output rules out of generic UI rendering modules", async () => {
@@ -464,6 +492,29 @@ describe("guardrail violation samples", () => {
         },
       ]),
     ).toThrow(/server fetch call/);
+  });
+
+  it("limits the new provider adapter to one fixed URL and keeps keys out of clients", () => {
+    for (const text of [
+      'fetch("https://example.test"); env.AI.run();',
+      "fetch(endpoint); env.AI.run();",
+      'fetch("https://api.groq.com/openai/v1/chat/completions"); fetch(other); env.AI.run();',
+    ]) {
+      expect(() =>
+        assertApprovedFunctionBoundary([
+          { path: "functions/api/recipe.ts", text: "generateWithModel();" },
+          { path: "server/ai-provider.ts", text },
+        ]),
+      ).toThrow(/fixed Groq endpoint/);
+    }
+    expect(() =>
+      assertClientNetworkBoundary([
+        {
+          path: "src/ai-recipe-client.ts",
+          text: 'fetcher("/api/recipe"); const secret = GROQ_API_KEY;',
+        },
+      ]),
+    ).toThrow(/API key/);
   });
 
   it("rejects prompt rules in UI rendering", () => {

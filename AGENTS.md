@@ -39,12 +39,11 @@ lint・formatter・型検査・CIを変更する場合は、`docs/quality-gates.
 ## Non-Negotiable Rules
 
 - このアプリの中核成果物は、AI に渡すレシピ依頼文である。
-- ADR 0011 の `/api/recipe` 以外で、アプリ内 AI 生成やレシピ生成を行わない。
-- ADR 0011 の `/api/recipe` 以外で、API 連携を行わない。
+- ADR 0011・[ADR 0016](docs/adr/0016-add-free-model-selection-and-durable-usage-limits.md) の `/api/recipe` 以外で、アプリ内 AI 生成やレシピ生成・API 連携を行わない。
 - ADR 0011 の Cloudflare Pages Function 以外で、サーバー処理を行わない。
 - ログイン機能を持たない。
 - ユーザーが `この依頼文をAIへ送信`（画面表示は `AIへ送信`）を押した場合に限り、既存の `/api/recipe` へ依頼文全文を送信する。
-- ADR 0011 の Cloudflare Workers AI 送信以外で、外部送信や保存を前提とする設計にしない。
+- 外部送信・保存はADR 0016の固定AI送信先とD1利用制限集計、およびADR 0011のWorkers AIに限る。AI提供元・モデル・利用制限・残高処理を変更する前にADR 0016を読む。
 - アクセス解析は、承認済みの[ADR 0015](docs/adr/0015-add-cloudflare-web-analytics-and-privacy-dialog.md)に限り例外とする。入力内容の送信制限は維持する。
 - 未指定項目はプロンプトに出力しない。
 - 未指定項目に対応するルール文も出力しない。

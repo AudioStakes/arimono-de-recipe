@@ -22,23 +22,8 @@ export function isNearBottom(viewport: StickyViewport): boolean {
 }
 
 export function getStickyFooterView(
-  state: StickyFooterState,
-  viewport: StickyViewport,
+  _state: StickyFooterState,
+  _viewport: StickyViewport,
 ): StickyFooterView {
-  if ((viewport.innerWidth ?? window.innerWidth) < 1024) {
-    return {
-      show: true,
-      suppress: false,
-      nearBottom: false,
-    };
-  }
-
-  const nearBottom = isNearBottom(viewport);
-  const show = state.hasUserInput && !state.inlineVisible && !nearBottom;
-
-  return {
-    show,
-    suppress: !show,
-    nearBottom,
-  };
+  return { show: true, suppress: false, nearBottom: false };
 }

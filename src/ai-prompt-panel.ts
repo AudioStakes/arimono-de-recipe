@@ -1,11 +1,9 @@
-import { generateRecipeFromPrompt } from "./ai-recipe-client";
 import type { AppElements } from "./app-elements";
 import { icon } from "./icons";
 import { focusInputWithFeedback, setMaterialInputError } from "./input-feedback";
-import { type PromptPanelServices, refreshPromptPanel } from "./output-panel";
-import { buildPrompt } from "./prompt";
+import type { PromptPanelServices } from "./output-panel";
+import type { RecipeSnapshot } from "./recipe-application";
 import { renderRecipeMarkdown } from "./recipe-markdown";
-import type { AppState } from "./types";
 
 export function renderAiPromptSendButton(sticky = false): string {
   return `
@@ -28,136 +26,85 @@ export function renderAiPromptAnswer(): string {
   `;
 }
 
-export function renderAiPromptPanel(state: AppState, elements: AppElements): void {
+export function renderAiPromptPanel(
+  aiPrompt: RecipeSnapshot["aiPrompt"],
+  elements: AppElements,
+  enabled = true,
+): boolean {
   for (const button of [elements.sendPrompt, elements.sendPromptMobile]) {
-    button.disabled = state.aiPrompt.status === "loading";
+    button.disabled = aiPrompt.status === "loading" || !enabled;
     const label = button.querySelector<HTMLElement>("[data-send-label]");
-    if (label) label.textContent = button.disabled ? "送信中…" : "AIへ送信";
+    if (label) label.textContent = aiPrompt.status === "loading" ? "送信中…" : "AIへ送信";
   }
   const panel = elements.aiPromptPanel;
   const status = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-status"]');
   const reply = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-reply"]');
   const empty = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-empty"]');
   const notice = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-answer-notice"]');
-  if (
-    reply &&
-    state.aiPrompt.status === "success" &&
-    !renderRecipeMarkdown(reply, state.aiPrompt.recipe)
-  ) {
-    state.aiPrompt.status = "error";
-    state.aiPrompt.recipe = "";
-    state.aiPrompt.errorSource = "request";
-    state.aiPrompt.errorMessage =
-      "AIの回答を表示できませんでした。もう一度送信するか、依頼文をコピーしてください。";
+  if (reply && aiPrompt.status === "success" && !renderRecipeMarkdown(reply, aiPrompt.recipe)) {
+    return false;
   }
-  panel.dataset["state"] = state.aiPrompt.status;
-  reply?.setAttribute("aria-busy", String(state.aiPrompt.status === "loading"));
+  panel.dataset["state"] = aiPrompt.status;
+  reply?.setAttribute("aria-busy", String(aiPrompt.status === "loading"));
   if (status) {
-    status.setAttribute("role", state.aiPrompt.status === "error" ? "alert" : "status");
-    status.setAttribute("aria-live", state.aiPrompt.status === "error" ? "assertive" : "polite");
+    if (aiPrompt.errorSource === "input") status.removeAttribute("role");
+    else status.setAttribute("role", aiPrompt.status === "error" ? "alert" : "status");
+    status.setAttribute(
+      "aria-live",
+      aiPrompt.errorSource === "input"
+        ? "off"
+        : aiPrompt.status === "error"
+          ? "assertive"
+          : "polite",
+    );
     status.textContent =
-      state.aiPrompt.status === "loading"
+      aiPrompt.status === "loading"
         ? "AIの回答を待っています。依頼文はコピーできます。"
-        : state.aiPrompt.status === "error"
-          ? state.aiPrompt.errorSource === "input"
-            ? state.aiPrompt.errorMessage
-            : `${state.aiPrompt.errorMessage} 再試行するには「AIへ送信」を押してください。`
-          : state.aiPrompt.status === "success"
+        : aiPrompt.status === "error"
+          ? aiPrompt.errorSource === "input"
+            ? aiPrompt.errorMessage
+            : `${aiPrompt.errorMessage} 再試行するには「AIへ送信」を押してください。`
+          : aiPrompt.status === "success"
             ? "AIの回答を受け取りました。"
             : "";
   }
-  const success = state.aiPrompt.status === "success";
-  if (empty) empty.hidden = state.aiPrompt.status !== "idle";
+  const success = aiPrompt.status === "success";
+  if (empty) empty.hidden = aiPrompt.status !== "idle";
   if (reply) {
     reply.hidden = !success;
     if (!success) reply.replaceChildren();
   }
   if (notice) notice.hidden = !success;
-}
-
-export function resetAiPromptForInputChange(
-  state: AppState,
-  elements: AppElements,
-  prompt: string,
-): void {
-  if (state.aiPrompt.status === "idle" || state.aiPrompt.submittedPrompt === prompt) return;
-  state.aiPrompt.controller?.abort();
-  state.aiPrompt = {
-    status: "idle",
-    submittedPrompt: "",
-    recipe: "",
-    errorMessage: "",
-    errorSource: null,
-    requestId: state.aiPrompt.requestId + 1,
-    controller: null,
-  };
-  renderAiPromptPanel(state, elements);
+  return true;
 }
 
 export async function sendPromptToAi(
-  state: AppState,
   elements: AppElements,
   services: PromptPanelServices,
 ): Promise<void> {
-  if (state.aiPrompt.status === "loading") return;
+  if (services.application.getSnapshot().aiPrompt.status === "loading") return;
   services.flushPendingInputs();
-  refreshPromptPanel(state, elements, services);
-  const data = services.readConditions();
-  const prompt = buildPrompt(data);
-  const requestId = state.aiPrompt.requestId + 1;
-  const validAmounts = services.validateBeforeAiRecipe();
-  const errorMessage = !validAmounts
-    ? "使い切る材料の分量を入力してください。依頼文はコピーできます。"
-    : data.materials.length === 0
-      ? "まずは家にある食材を入れてください。"
-      : "";
-  const controller = new AbortController();
-  state.aiPrompt = {
-    status: errorMessage ? "error" : "loading",
-    submittedPrompt: prompt,
-    recipe: "",
-    errorMessage,
-    errorSource: errorMessage ? "input" : null,
-    requestId,
-    controller: errorMessage ? null : controller,
-  };
-  renderAiPromptPanel(state, elements);
-  if (errorMessage) {
-    if (!data.materials.length) {
-      setMaterialInputError(elements.form, true);
-      const input = elements.form.querySelector<HTMLInputElement>(
-        '[data-testid="combo-input-materials"]',
+  services.onChange();
+  services.validateBeforeAiRecipe();
+  const request = services.application.send();
+  const snapshot = services.application.getSnapshot();
+  if (!snapshot.materialRequests.length) {
+    setMaterialInputError(elements.form, true);
+    const input = elements.form.querySelector<HTMLInputElement>(
+      '[data-testid="combo-input-materials"]',
+    );
+    if (input)
+      focusInputWithFeedback(
+        input,
+        elements.form.querySelector<HTMLElement>('[data-testid="materials-error"]'),
+        elements.bottom,
       );
-      if (input)
-        focusInputWithFeedback(
-          input,
-          elements.form.querySelector<HTMLElement>('[data-testid="materials-error"]'),
-          elements.bottom,
-        );
-    }
-    return;
-  }
-  if (window.innerWidth < 1024) {
+  } else if (snapshot.aiPrompt.status === "loading" && window.innerWidth < 1024) {
     elements.aiPromptHeading.focus({ preventScroll: true });
     elements.aiPromptHeading.scrollIntoView({
       block: "start",
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
   }
-  const result = await generateRecipeFromPrompt(prompt, fetch, controller.signal);
-  if (state.aiPrompt.requestId !== requestId) return;
-  const currentPrompt = buildPrompt(services.readConditions());
-  if (currentPrompt !== prompt) {
-    resetAiPromptForInputChange(state, elements, currentPrompt);
-    return;
-  }
-  state.aiPrompt = {
-    ...state.aiPrompt,
-    status: result.ok ? "success" : "error",
-    recipe: result.ok ? result.recipe : "",
-    errorMessage: result.ok ? "" : result.error.message,
-    errorSource: result.ok ? null : "request",
-    controller: null,
-  };
-  renderAiPromptPanel(state, elements);
+  await request;
 }
