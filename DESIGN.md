@@ -72,6 +72,9 @@ application and domain modules, not this visual specification.
   time and preferences. Closed sections show their current specified values.
 - Use 44px minimum interactive targets, 46px ordinary controls, 52px primary
   and copy actions, 56px nested toggle rows and 80px top-level toggle rows.
+- AI model choice uses a labelled native select with a 46px target and the
+  current recipient described beside it. Keep model metadata separate from
+  recipe request output.
 - The bottom action bar stays available at all widths. Reserve 160px and the
   safe-area inset below normal-flow content. Its content is at most 860px wide.
 - Keep the bottom copy label on one line. Give its column enough intrinsic width

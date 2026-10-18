@@ -1,27 +1,35 @@
+import { aiMaxOutputTokens } from "../../server/ai-model-policy";
+import {
+  type AiProviderEnvironment,
+  generateWithModel,
+  modelAvailability,
+  reserveRecipeUsage,
+} from "../../server/ai-provider";
+import {
+  type AiModelId,
+  aiRequestLimits,
+  defaultAiModelId,
+  findAiModel,
+} from "../../src/ai-models";
 import {
   maxAiRecipeBodyBytes,
   maxAiRecipePromptLength,
   maxAiRecipeResponseLength,
 } from "../../src/ai-recipe-limits";
 
-type Ai = {
-  run: (model: string, input: unknown) => Promise<unknown>;
-};
-
 type PagesFunction<TEnv> = (context: {
   request: Request;
   env: TEnv;
 }) => Response | Promise<Response>;
 
-export interface Env {
-  AI: Ai;
-}
+export type Env = AiProviderEnvironment;
 
 type RecipeRequestBody = {
   prompt: string;
+  model?: unknown;
 };
 
-type RecipeParsedBody = RecipeRequestBody;
+type RecipeParsedBody = { prompt: string; model: AiModelId };
 
 type RecipeApiErrorCode =
   | "method_not_allowed"
@@ -32,7 +40,10 @@ type RecipeApiErrorCode =
   | "invalid_request"
   | "prompt_too_long"
   | "body_too_large"
-  | "ai_binding_unavailable"
+  | "invalid_model"
+  | "model_unavailable"
+  | "usage_limit_reached"
+  | "usage_unavailable"
   | "ai_generation_failed";
 
 type RecipeApiError = {
@@ -49,18 +60,11 @@ type WorkersAiTextResult = {
   usage?: unknown;
 };
 
-const MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
+const MODEL = defaultAiModelId;
 const MAX_PROMPT_LENGTH = maxAiRecipePromptLength;
 const MAX_BODY_BYTES = maxAiRecipeBodyBytes;
-const MAX_TOKENS = 1400;
+const MAX_TOKENS = aiMaxOutputTokens;
 const TEMPERATURE = 0.4;
-
-const SYSTEM_MESSAGE = [
-  "あなたは家庭料理に詳しい料理研究家です。",
-  "ユーザーのレシピ依頼文に従い、安全性、再現性、日本語での分かりやすさを重視して回答してください。",
-  "内部の推論や確認過程は出力しないでください。",
-  "Markdownの見出しと箇条書きを使い、日本語で読みやすく回答してください。",
-].join("\n");
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   const headers = new Headers(init.headers);
@@ -113,7 +117,12 @@ function parseRequestPayload(payload: unknown): RecipeParsedBody | Response {
     return errorResponse(413, "prompt_too_long", "promptが長すぎます。内容を短くしてください。");
   }
 
-  return { prompt };
+  const model = payload.model === undefined ? MODEL : payload.model;
+  const selected = typeof model === "string" ? findAiModel(model) : undefined;
+  if (!selected) {
+    return errorResponse(400, "invalid_model", "利用できるAIモデルを選択してください。");
+  }
+  return { prompt, model: selected.id };
 }
 
 async function readParsedRequestBody(request: Request): Promise<RecipeParsedBody | Response> {
@@ -192,6 +201,10 @@ function extractRecipeText(result: unknown): string {
     return "";
   }
 
+  const choices = result["choices"];
+  const first: unknown = Array.isArray(choices) ? choices[0] : null;
+  if (isRecord(first) && first["finish_reason"] === "length") return "";
+
   const output = result as WorkersAiTextResult;
   if (typeof output.response === "string") {
     return output.response;
@@ -203,6 +216,9 @@ function extractRecipeText(result: unknown): string {
     return output.result;
   }
 
+  const message = isRecord(first) ? first["message"] : null;
+  if (isRecord(message) && typeof message["content"] === "string") return message["content"];
+
   return "";
 }
 
@@ -211,10 +227,28 @@ function extractUsage(result: unknown): unknown | null {
     return null;
   }
 
-  return result["usage"] ?? null;
+  const usage = result["usage"];
+  if (!isRecord(usage)) return null;
+  const allowed = [
+    "input_tokens",
+    "output_tokens",
+    "prompt_tokens",
+    "completion_tokens",
+    "total_tokens",
+  ];
+  const entries = allowed.flatMap((key) => {
+    const value = usage[key];
+    return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+      ? [[key, value]]
+      : [];
+  });
+  return entries.length ? Object.fromEntries(entries) : null;
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
+  if (context.request.method === "GET" && new URL(context.request.url).searchParams.has("models")) {
+    return jsonResponse({ models: modelAvailability(context.env), limits: aiRequestLimits });
+  }
   if (context.request.method !== "POST") {
     return errorResponse(405, "method_not_allowed", "POSTでリクエストしてください。", {
       allow: "POST",
@@ -229,10 +263,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return errorResponse(415, "unsupported_media_type", "JSONでリクエストしてください。");
   }
 
-  if (!context.env.AI) {
-    return errorResponse(500, "ai_binding_unavailable", "AI設定を確認してください。");
-  }
-
   let body: RecipeParsedBody | Response;
   try {
     body = await readParsedRequestBody(context.request);
@@ -243,15 +273,36 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return body;
   }
 
+  const model = findAiModel(body.model);
+  if (!model || !modelAvailability(context.env).find((entry) => entry.id === model.id)?.enabled) {
+    return errorResponse(
+      503,
+      "model_unavailable",
+      "このAIは現在利用できません。別のモデルを選ぶか、依頼文をコピーしてください。",
+    );
+  }
   try {
-    const result = await context.env.AI.run(MODEL, {
-      messages: [
-        { role: "system", content: SYSTEM_MESSAGE },
-        { role: "user", content: body.prompt },
-      ],
-      max_tokens: MAX_TOKENS,
-      temperature: TEMPERATURE,
-    });
+    const reservation = await reserveRecipeUsage(context.request, context.env, model, body.prompt);
+    if (reservation === "prompt_limit")
+      return errorResponse(
+        413,
+        "prompt_too_long",
+        "このモデルの入力上限を超えています。条件を短くするか、別のモデルを選択してください。",
+      );
+    if (reservation === "limited")
+      return errorResponse(
+        429,
+        "usage_limit_reached",
+        "利用上限に達しました。時間をおくか、依頼文をコピーして普段使うAIへ貼り付けてください。",
+        { "retry-after": "60" },
+      );
+    if (reservation !== "reserved")
+      return errorResponse(
+        503,
+        "usage_unavailable",
+        "利用上限を確認できないため送信を停止しています。依頼文はコピーできます。",
+      );
+    const result = await generateWithModel(context.env, model, body.prompt);
 
     const rawRecipe = extractRecipeText(result);
     if (rawRecipe.length > maxAiRecipeResponseLength) {
@@ -269,7 +320,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
     return jsonResponse({
       recipe,
-      model: MODEL,
+      model: model.id,
       usage: extractUsage(result),
     });
   } catch {

@@ -33,6 +33,7 @@
   "include": [
     "src",
     "functions",
+    "server",
     "tests",
     "vite.config.ts",
     "vitest.config.ts",

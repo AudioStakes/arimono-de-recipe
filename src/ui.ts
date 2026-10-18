@@ -1,3 +1,4 @@
+import { initializeAiModelPicker, renderAiModelPicker } from "./ai-model-picker";
 import {
   renderAiPromptAnswer,
   renderAiPromptPanel,
@@ -335,7 +336,7 @@ export function initializeApp(root: HTMLElement): void {
   const elements = getAppElements();
   renderFields();
   const application = createRecipeApplication({
-    sendRecipe: (prompt, signal) => generateRecipeFromPrompt(prompt, fetch, signal),
+    sendRecipe: (prompt, signal, model) => generateRecipeFromPrompt(prompt, fetch, signal, model),
   });
   const comboRegistry = createComboRegistry(elements.form, { application });
   comboRegistry.bind(elements.form);
@@ -350,6 +351,7 @@ export function initializeApp(root: HTMLElement): void {
   updateServingSteppers(application.getSnapshot().servingCounts);
   refreshPromptPanelPanel(state, elements, outputPanel);
   renderAiPromptPanel(application.getSnapshot().aiPrompt, elements);
+  initializeAiModelPicker(application);
 }
 
 function renderCopyButton(id: string, testId: string, classes = ""): string {
@@ -375,7 +377,8 @@ function renderAppShell(): string {
         <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
         <section class="prompt-section" aria-labelledby="promptHeading">
           <div class="prompt-heading"><h2 id="promptHeading">ありもので、何を作る？</h2><p id="promptDescription">材料と要望をまとめた依頼文を送ります。</p></div>
-          <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span>Cloudflare AIへ送信</p>
+          ${renderAiModelPicker()}
+          <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
           <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
           <div class="prompt-main-actions" role="group" aria-label="実行方法">
             ${renderAiPromptSendButton()}
@@ -401,19 +404,22 @@ function renderAppShell(): string {
       </div>
       <div class="privacy-body">
         <h3>入力内容とAIへの送信</h3>
-        <p>このアプリは入力内容を保存しません。食材・要望・依頼文の作成とコピーはブラウザ内で行います。「AIへ送信」を押したときだけ、依頼文全文をCloudflare Workers AIへ送信します。</p>
+        <p>このアプリは入力内容を保存しません。食材・要望・依頼文の作成とコピーはブラウザ内で行います。「AIへ送信」を押したときだけ、依頼文全文を選択した送信先（Cloudflare Workers AIまたはGroq）へ送信します。モデル一覧の確認には入力内容を含めません。</p>
+        <p>Cloudflareは標準推論を学習に使わないと説明しています。Groqは障害・不正利用の調査のため、入力や回答を最大30日保持する場合があります。送信先のデータの扱いをご確認ください。</p>
+        <h3>AIの利用制限</h3>
+        <p>過剰利用と無料枠の超過を防ぐため、Cloudflareが処理する接続元IPから日替わりのハッシュを作り、回数と使用量の集計だけをCloudflare D1に一時保存します。元のIP・食材・依頼文・回答はこの集計に保存しません。期限切れの集計は次の送信時に削除します。同じネットワークの利用者は枠を共有する場合があります。</p>
         <h3>アクセス解析</h3>
         <p>改善のため、Cloudflare Web Analyticsで閲覧ページ・参照元・端末・ブラウザ・表示速度などを集計します。食材・要望・依頼文・AI回答はアクセス解析へ送信しません。</p>
         <h3>Cookieなどの利用</h3>
         <p>アクセス解析にCookieやlocalStorage、個人を識別するフィンガープリントを使いません。通信に伴うIPアドレスはCloudflareで処理されます。</p>
-        <p>詳しくは<a href="https://developers.cloudflare.com/web-analytics/data-metrics/core-web-vitals/#information-collected" target="_blank" rel="noopener noreferrer">解析データの説明<span class="visually-hidden">（別タブで開く）</span></a>と<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflareのプライバシーポリシー<span class="visually-hidden">（別タブで開く）</span></a>をご確認ください。</p>
+        <p>詳しくは<a href="https://developers.cloudflare.com/web-analytics/data-metrics/core-web-vitals/#information-collected" target="_blank" rel="noopener noreferrer">解析データの説明<span class="visually-hidden">（別タブで開く）</span></a>、<a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflareのプライバシーポリシー<span class="visually-hidden">（別タブで開く）</span></a>、<a href="https://console.groq.com/docs/your-data" target="_blank" rel="noopener noreferrer">Groqのデータの扱い<span class="visually-hidden">（別タブで開く）</span></a>をご確認ください。</p>
       </div>
     </dialog>
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-testid="mobile-action-footer" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
         <div class="sheet-summary-row">
-          <p id="footerTransmissionNotice" class="ai-transmission-notice" data-testid="mobile-ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span>Cloudflare AIへ送信</p>
+          <p id="footerTransmissionNotice" class="ai-transmission-notice" data-testid="mobile-ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
           <button id="sheetToggle" data-testid="mobile-prompt-preview-toggle" class="sheet-preview-button" type="button" aria-expanded="false" aria-controls="mobilePromptPanel">依頼文を見る</button>
         </div>
         <div class="sheet-actions">
@@ -718,10 +724,21 @@ function createOutputPanelServices(
     updateCookTimeDisplay(snapshot.cookTime);
     updateServingSteppers(snapshot.servingCounts);
     if (outputPanelServices) refreshPromptPanelPanel(state, elements, outputPanelServices);
-    const nextAiPresentation = JSON.stringify(snapshot.aiPrompt);
+    const nextAiPresentation = JSON.stringify([
+      snapshot.aiPrompt,
+      snapshot.selectedAiModel,
+      snapshot.availableAiModels,
+    ]);
     if (nextAiPresentation !== aiPresentation) {
       aiPresentation = nextAiPresentation;
-      if (!renderAiPromptPanel(snapshot.aiPrompt, elements)) application.reportRenderFailure();
+      if (
+        !renderAiPromptPanel(
+          snapshot.aiPrompt,
+          elements,
+          snapshot.availableAiModels.includes(snapshot.selectedAiModel),
+        )
+      )
+        application.reportRenderFailure();
     }
   };
   let roleMode = application.isSingle("recipeRoles");

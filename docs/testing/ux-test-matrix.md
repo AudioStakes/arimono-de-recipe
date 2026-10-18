@@ -81,6 +81,9 @@ The fixed send/copy bar is available at desktop widths as well as mobile widths.
 - `data-testid="mobile-prompt-panel"`
 - `data-state="open|closed"` for collapsible panels and the mobile prompt panel.
 - `data-testid="ai-prompt-send"`
+- `data-testid="ai-model-select"`
+- `data-testid="ai-model-info"`
+- `data-testid="ai-model-status"`
 - `data-testid="mobile-ai-prompt-send"`
 - `data-testid="ai-prompt-panel"`
 - `data-testid="ai-prompt-heading"`
