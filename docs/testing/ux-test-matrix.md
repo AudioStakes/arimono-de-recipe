@@ -14,7 +14,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
-| 材料名と量が揃い、未入力時の量例が見切れず、カードがコンパクト | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, placeholder width, normal card height <=180px, top-right delete target, rename | associated labels and error help |
+| 材料名と量が揃い、未入力時の量例が見切れず、カードがコンパクト | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, scrollbar gutter/card width273px, placeholder width, normal card height <=180px, top-right delete target, rename | associated labels and error help |
 | 文字拡大時に人数・モデル・主操作が欠けず、最終footerを固定操作が隠さない | no | required all 6 profiles, 320/360/1280px and 200% text | no |
 | 作りたい料理と単一役割の確定後に指定値の編集へfocusを渡す | no | required all 6 profiles, Enter then edit | no |
 | 作者リンクとプライバシーを狭い画面でも操作でき、モーダル内のTab循環・背景操作禁止・閉じた後のfocusと位置を保持する | no | required all 6 profiles, 320/390/1280px footer clearance | stable hooks |

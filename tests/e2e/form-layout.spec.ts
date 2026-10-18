@@ -1,6 +1,26 @@
 import { expect, test } from "@playwright/test";
 import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
 
+test("320pxでスクロールバー分の幅が減っても材料カードを低く保つ", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.goto("/");
+  const input = page.getByTestId("combo-input-materials");
+  await input.fill("豆腐");
+  await pressCommittedEnter(input);
+  // Match the card width on a 320px Linux viewport with a 15px scrollbar gutter.
+  await page.addStyleTag({
+    content: '[data-testid^="material-card-"] { inline-size: 273px; max-inline-size: 100%; }',
+  });
+  const card = page.getByTestId(/^material-card-/);
+  const bounds = await card.boundingBox();
+  if (!bounds) throw new Error("Material card must be visible");
+  expect(bounds.height).toBeLessThanOrEqual(180);
+  const tops = await card
+    .getByRole("radio")
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().y));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+});
+
 for (const [width, fontSize] of [
   [320, 16],
   [390, 16],

@@ -79,7 +79,9 @@ application and domain modules, not this visual specification.
   Long examples in other combo fields and supplemental notes use wrapping,
   described help text.
 - Usage radios wrap by their content width. Preserve native checked indicators
-  as well as sage. Preserve the amount error's described relationship when invalid.
+  as well as sage. Use 4px inner padding so ordinary labels fit one row even with
+  a desktop scrollbar at 320px; retain the 44px minimum target height. Preserve
+  the amount error's described relationship when invalid.
 - Request options are grouped in this order: servings; methods/tools; intent,
   time and preferences. Closed sections show their current specified values.
 - Use 44px minimum interactive targets, 46px ordinary controls, 52px primary

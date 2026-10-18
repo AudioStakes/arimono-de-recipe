@@ -25,6 +25,8 @@
 
 Firefoxのnative inputでは`clientWidth`からpaddingを引くと二重控除になるため、検査は実際のborder-box幅からborderとpaddingを一度ずつ引く。画像でも全文表示を確認し、この測定式で6構成の78件が成功した。
 
+Linux CIでは320pxのviewportから15pxのスクロールバー分が引かれ、カード幅が273pxになる。この幅では使い方の3択が2段になり、高さが214pxだった。Macでもカード幅273pxの回帰テストで同じ214pxの失敗を再現した。3択の左右paddingを8pxから4pxへ詰め、文字サイズと44px以上の操作高さを保って1段に収めた。修正後は高さ180px以下と3択が同じ行にある検査が成功した。再現ログは`/tmp/arimono-compact-gutter-before.log`、修正後は`/tmp/arimono-compact-gutter-after.log`。CIの失敗trace・contextは`/tmp/arimono-compact-ci-failed-artifact/`に保持する。
+
 ## 全体監査と修正
 
 別の読み取り専用担当が、材料以外の全入力・モデル・操作・回答・プレビュー・プライバシーを調べた。再現できた次の問題も修正した。
@@ -41,7 +43,7 @@ Firefoxのnative inputでは`clientWidth`からpaddingを引くと二重控除�
 
 ## 検証
 
-追加した`form-layout.spec.ts`は13ケースを6プロファイルで実行する。編集欄の整列・高さ、placeholderの全文表示、通常文字のカード高180px以下、右上×の位置と44px以上の操作領域、編集後の量保持、編集途中の削除、文字拡大、人数・モデル・操作、最後のフッターとfocusを検査する。既存テストは削除せず、Firefox・WebKit系の実行対象にも追加した。
+追加した`form-layout.spec.ts`は14ケースを6プロファイルで実行する。編集欄の整列・高さ、placeholderの全文表示、通常文字のカード高180px以下、スクロールバー相当の狭さでの3択の1段表示、右上×の位置と44px以上の操作領域、編集後の量保持、編集途中の削除、文字拡大、人数・モデル・操作、最後のフッターとfocusを検査する。既存テストは削除せず、Firefox・WebKit系の実行対象にも追加した。
 
 独立したコードレビューでは、新しい削除位置に合わせた既存Tab順テストの更新と、名前編集から前カードへShift+Tabした後のfocus消失を指摘された。後者はChromiumの録画で再現し、材料IDで削除ボタンのfocusを復元する修正を追加した。再レビューで指摘の解消を確認した。Safariがnative Tabでbuttonを飛ばす設定も扱い、実際に到達した前カード内のfocusを保持することと、明示的に削除ボタンへ移った場合の保持を検証する。
 
@@ -49,18 +51,18 @@ Firefoxのnative inputでは`clientWidth`からpaddingを引くと二重控除�
 
 | コマンド・確認 | 終了コード | 結果 |
 | --- | ---: | --- |
-| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run check` | 0 | format・lint・typecheck・build・unit・structure・E2E成功。682 passed、失敗・skip・flaky各0 |
-| 全体チェックのE2E結果JSON | 0 | Chromium/Pixel各131、Firefox/WebKit/iPhone/iPad各105。新しいフォーム13ケースを各構成で実行 |
+| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run check` | 0 | format・lint・typecheck・build・unit・structure・E2E成功。688 passed、失敗・skip・flaky各0 |
+| 全体チェックのE2E結果JSON | 0 | Chromium/Pixel各132、Firefox/WebKit/iPhone/iPad各106。新しいフォーム14ケースを各構成で実行 |
 | `ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- --grep '名前編集から前カード'` | 0 | focus回帰テスト6構成成功 |
-| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- tests/e2e/form-layout.spec.ts` | 0 | コンパクト化後の13ケース×6構成、78 passed、失敗・skip・flaky各0 |
+| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- tests/e2e/form-layout.spec.ts --project=chromium --grep 'スクロールバー分'` | 修正前1、修正後0 | 狭いカードで214pxを再現。修正後は180px以下・3択が1段 |
 | `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- tests/e2e/input.spec.ts --project=mobile-safari --grep '読み検索とIME変換中' --repeat-each=8` | 0 | 材料確定を待つ既存IMEテストが8回成功 |
 | 録画runner、390×900・1280×900 | 各0 | QA・recording・cleanup全てpassed。placeholder全文、1〜3材料が各180px以下、整列・量保持・右上×・実Clipboard APIの全文一致を確認。AIへのPOST・pageerror 0 |
 | 独立監査の再現・修正後の同じShift+Tab操作 | 修正前1、修正後0 | 修正前はfocusがBODYへ落ちる。修正後は前カードの削除ボタンを保持。録画検証成功 |
 | 動画検査 | 各0 | ffprobeの寸法・長さ検査、ffmpegのフレームdecode、画面・動画フレームの目視を確認 |
 
-コンパクト化後の最終全体チェックのログは`/tmp/arimono-compact-full-check-2.log`、結果は`playwright-report/results.json`に保存した。初回のフォーム見直しでFirefoxが44pxの削除ボタンを43.999969pxと計測したため、既存の44px以上という検査を維持し、右上の×も入力と同じ46px以上に揃えた。材料確定待機を加えた後の全体再実行が上表の結果である。
+コンパクト化後の最終全体チェックのログは`/tmp/arimono-compact-full-check-3.log`、結果は`playwright-report/results.json`に保存した。初回のフォーム見直しでFirefoxが44pxの削除ボタンを43.999969pxと計測したため、既存の44px以上という検査を維持し、右上の×も入力と同じ46px以上に揃えた。材料確定待機とスクロールバー相当の検査を加えた後の全体再実行が上表の結果である。
 
-最終の録画・画面・結果・短い報告は`/tmp/arimono-compact-verified-mobile/`と`/tmp/arimono-compact-verified-desktop/`の`README.md`・`result.json`にある。フローは`/tmp/arimono-compact-final-flow.mjs`。同じ録画実行の[スマートフォン画像](../media/form-ui-mobile.png)と[PC画像](../media/form-ui-desktop.png)をリポジトリに保存した。動画はローカルに保持する。
+最終の録画・画面・結果・短い報告は`/tmp/arimono-compact-final-mobile/`と`/tmp/arimono-compact-final-desktop/`の`README.md`・`result.json`にある。フローは`/tmp/arimono-compact-final-flow.mjs`。同じ録画実行の[スマートフォン画像](../media/form-ui-mobile.png)と[PC画像](../media/form-ui-desktop.png)をリポジトリに保存した。動画はローカルに保持する。
 
 コンパクト化後も設計担当が320px・390pxの画面を確認し、別のコードレビュー担当が削除・IME・blur・focusとARIAの接続を確認した。追加の修正必須指摘はなかった。
 
