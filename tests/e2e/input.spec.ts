@@ -159,6 +159,8 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   await page.getByLabel("一緒に出す料理に合わせたい").check();
   await pairingInput.fill("ぎょうざ");
   await expect(comboOption(page, "pairingTargets", "餃子")).toBeVisible();
+  // The previous material commits on blur; settle its layout before another tap.
+  await expect(comboPillLabels(page, "materials")).toHaveText("たまご");
 
   await pairingInput.fill("はんばーぐ");
   await expect(comboOption(page, "pairingTargets", "ハンバーグ")).toBeVisible();

@@ -4,9 +4,26 @@
 
 材料追加後の量欄は96〜152pxの固定幅で、長いplaceholderを表示しきれなかった。量だけに上部ラベルがあり、名前の編集面と高さ・上端も揃っていなかった。
 
-会話履歴を引き継がない設計担当が、既存HTML/CSSを読む前に利用者の操作から案を作成した。採用した順序は、ラベル付きの材料名と量、全幅の量の例、材料の使い方、右寄せの削除。以前の重なったGridを取り除き、名前と量は同じ46px以上の操作面とした。幅や文字サイズに応じて縦に並び、文字を縮めない。
+会話履歴を引き継がない設計担当が、既存HTML/CSSを読む前に利用者の操作から案を作成した。以前の重なったGridを取り除き、ラベル付きの名前と量を同じ46px以上の操作面とした。幅や文字サイズに応じて縦に並び、文字を縮めない。
 
-名前は既存の「値を押して編集する」動作を保つ。長い名前の入口は1行の省略表示と全文のaccessible name・titleを持ち、編集時はnative inputで全文を扱う。IME、Enter、Escape、blur、材料ID・量の保持は既存の入力処理を使う。量の例は入力中も読め、`aria-describedby`で関連付ける。使い切る場合の量必須という意味と、依頼文の出力規則は変更しない。
+名前は既存の「値を押して編集する」動作を保つ。長い名前の入口は1行の省略表示と全文のaccessible name・titleを持ち、編集時はnative inputで全文を扱う。IME、Enter、Escape、blur、材料ID・量の保持は既存の入力処理を使う。量の例は短い`150g、1/2個`をplaceholderに表示する。量には常設ラベルがあり、エラー時はその説明を`aria-describedby`で関連付ける。使い切る場合の量必須という意味と、依頼文の出力規則は変更しない。
+
+## 材料カードの高さ
+
+常設の量の例と下部の削除を置いた案は、通常文字で1材料が約269pxを占めた。所有者のコンパクト化の要望に合わせ、量の例をplaceholderへ移し、削除を右上の×に変更した。例の別行と削除の行を取り除き、カード内側を8px、ラベルと入力の間を4pxに詰めた。材料の使い方のグループ名は読み上げ用に保持する。
+
+×は名前・量のラベルと同じ46pxの帯へ置き、押せる範囲を46px四方に保つ。入力横の専用列は作らず、名前と量の幅を確保する。ラベルには×と重ならない余白を設ける。量欄の基準幅は8remとし、例が収まるだけの幅を残す。文字を拡大した場合は2欄を縦に並べる。
+
+| Chromiumの条件 | 変更前の1材料 | 変更後の1材料 |
+| --- | ---: | ---: |
+| 320px・文字16px | 268.7px | 166px |
+| 390px・文字16px | 268.7px | 166px |
+| 1280px・文字16px | 268.7px | 166px |
+| 360px・文字32px | 545.7px | 373.2px |
+
+通常のスマートフォン幅では約38%低くなった。320pxのplaceholderは必要幅88.9pxに対して内容幅109px以上で、全文表示できる。変更前後の実測・画面は`/tmp/arimono-compact-before/`と`/tmp/arimono-compact-after/`に保存した。
+
+Firefoxのnative inputでは`clientWidth`からpaddingを引くと二重控除になるため、検査は実際のborder-box幅からborderとpaddingを一度ずつ引く。画像でも全文表示を確認し、この測定式で6構成の78件が成功した。
 
 ## 全体監査と修正
 
@@ -24,22 +41,28 @@
 
 ## 検証
 
-追加した`form-layout.spec.ts`は13ケースを6プロファイルで実行する。編集欄の整列・高さ、例の表示と関連付け、編集後の量保持、編集途中の削除、文字拡大、人数・モデル・操作、最後のフッターとfocusを検査する。既存テストは削除せず、Firefox・WebKit系の実行対象にも追加した。
+追加した`form-layout.spec.ts`は13ケースを6プロファイルで実行する。編集欄の整列・高さ、placeholderの全文表示、通常文字のカード高180px以下、右上×の位置と44px以上の操作領域、編集後の量保持、編集途中の削除、文字拡大、人数・モデル・操作、最後のフッターとfocusを検査する。既存テストは削除せず、Firefox・WebKit系の実行対象にも追加した。
 
 独立したコードレビューでは、新しい削除位置に合わせた既存Tab順テストの更新と、名前編集から前カードへShift+Tabした後のfocus消失を指摘された。後者はChromiumの録画で再現し、材料IDで削除ボタンのfocusを復元する修正を追加した。再レビューで指摘の解消を確認した。Safariがnative Tabでbuttonを飛ばす設定も扱い、実際に到達した前カード内のfocusを保持することと、明示的に削除ボタンへ移った場合の保持を検証する。
+
+コンパクト化後の初回全体検証は681成功・1失敗だった。iPhone相当の読み検索・IMEテストで、未確定材料の120ms後のblur確定と、次の器具欄を開くタップが重なった。保存traceではタップのaction snapshotからafter snapshotまでの約19msの間に材料カードが追加され、器具欄は閉じたままだった。テストに材料ピルの確定確認を追加し、再描画が終わってから次へ進む。既存の操作・assertは保ち、sleep・強制クリック・retryは加えていない。変更後の同ケース8回連続実行は成功した。失敗時のtrace・context・全体結果は`/tmp/arimono-compact-full-failure/`、再検証ログは`/tmp/arimono-compact-ime-repeat-2.log`に保存した。
 
 | コマンド・確認 | 終了コード | 結果 |
 | --- | ---: | --- |
 | `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run check` | 0 | format・lint・typecheck・build・unit・structure・E2E成功。682 passed、失敗・skip・flaky各0 |
 | 全体チェックのE2E結果JSON | 0 | Chromium/Pixel各131、Firefox/WebKit/iPhone/iPad各105。新しいフォーム13ケースを各構成で実行 |
 | `ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- --grep '名前編集から前カード'` | 0 | focus回帰テスト6構成成功 |
-| 録画runner、390×900・1280×900 | 各0 | QA・recording・cleanup全てpassed。名前と量の整列、量の例、名前変更と量保持、実Clipboard APIの全文一致を確認。AIへのPOST・pageerror 0 |
+| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- tests/e2e/form-layout.spec.ts` | 0 | コンパクト化後の13ケース×6構成、78 passed、失敗・skip・flaky各0 |
+| `CI=1 ASDF_NODEJS_VERSION=26.4.0 npm run test:e2e -- tests/e2e/input.spec.ts --project=mobile-safari --grep '読み検索とIME変換中' --repeat-each=8` | 0 | 材料確定を待つ既存IMEテストが8回成功 |
+| 録画runner、390×900・1280×900 | 各0 | QA・recording・cleanup全てpassed。placeholder全文、1〜3材料が各180px以下、整列・量保持・右上×・実Clipboard APIの全文一致を確認。AIへのPOST・pageerror 0 |
 | 独立監査の再現・修正後の同じShift+Tab操作 | 修正前1、修正後0 | 修正前はfocusがBODYへ落ちる。修正後は前カードの削除ボタンを保持。録画検証成功 |
 | 動画検査 | 各0 | ffprobeの寸法・長さ検査、ffmpegのフレームdecode、画面・動画フレームの目視を確認 |
 
-全体チェックのログは`/tmp/arimono-form-final-check-4.log`、結果は`playwright-report/results.json`に保存した。途中の検査でFirefoxが削除ボタンを43.999969pxと計測したため、既存の44px以上という検査を維持し、削除ボタンも入力と同じ46px以上に揃えた。再実行が上表の結果である。
+コンパクト化後の最終全体チェックのログは`/tmp/arimono-compact-full-check-2.log`、結果は`playwright-report/results.json`に保存した。初回のフォーム見直しでFirefoxが44pxの削除ボタンを43.999969pxと計測したため、既存の44px以上という検査を維持し、右上の×も入力と同じ46px以上に揃えた。材料確定待機を加えた後の全体再実行が上表の結果である。
 
-最終の録画・画面・結果・短い報告は`/tmp/arimono-material-verified-mobile/`と`/tmp/arimono-material-verified-desktop/`の`README.md`・`result.json`にある。フローは`/tmp/arimono-material-final-flow.mjs`。同じ録画実行の[スマートフォン画像](../media/form-ui-mobile.png)と[PC画像](../media/form-ui-desktop.png)をリポジトリに保存した。動画はローカルに保持する。
+最終の録画・画面・結果・短い報告は`/tmp/arimono-compact-verified-mobile/`と`/tmp/arimono-compact-verified-desktop/`の`README.md`・`result.json`にある。フローは`/tmp/arimono-compact-final-flow.mjs`。同じ録画実行の[スマートフォン画像](../media/form-ui-mobile.png)と[PC画像](../media/form-ui-desktop.png)をリポジトリに保存した。動画はローカルに保持する。
+
+コンパクト化後も設計担当が320px・390pxの画面を確認し、別のコードレビュー担当が削除・IME・blur・focusとARIAの接続を確認した。追加の修正必須指摘はなかった。
 
 独立監査のShift+Tabの最終成功記録は`/tmp/arimono-ui-audit-20261018/run-005/`。設計担当・コードレビュー担当は読み取り専用で確認し、独自のテスト再実行はしていない。別のUI監査担当は実ブラウザーの録画と実測で修正を確認した。
 

@@ -115,13 +115,11 @@ function syncMaterialRequestValidationState(state: RecipeSnapshot): void {
 
     if (input) {
       input.required = request.usage === "use-up";
-      input.setAttribute(
-        "aria-describedby",
-        `materialAmountHint-${request.id}${message ? ` materialAmountError-${request.id}` : ""}`,
-      );
       if (message) {
+        input.setAttribute("aria-describedby", `materialAmountError-${request.id}`);
         input.setAttribute("aria-invalid", "true");
       } else {
+        input.removeAttribute("aria-describedby");
         input.removeAttribute("aria-invalid");
       }
     }
@@ -206,11 +204,10 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
         .map((request) => {
           const amountLabel = request.usage === "use-up" ? "量（必須）" : "量（任意）";
           const amountId = `materialAmount-${request.id}`;
-          const amountHintId = `materialAmountHint-${request.id}`;
           const errorId = `materialAmountError-${request.id}`;
           const errorMessage = errors.get(request.id) ?? "";
           const invalidAttributes = errorMessage ? ' aria-invalid="true"' : "";
-          const describedBy = ` aria-describedby="${amountHintId}${errorMessage ? ` ${errorId}` : ""}"`;
+          const describedBy = errorMessage ? ` aria-describedby="${errorId}"` : "";
 
           return `
             <fieldset class="material-request-row" data-material-request-id="${request.id}" data-testid="material-card-${request.id}">
@@ -229,6 +226,7 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                     value="${escapeHtml(request.useUpAmount)}"
                     data-material-amount-for="${request.id}"
                     data-testid="material-amount-${request.id}"
+                    placeholder="150g、1/2個"
                     autocomplete="off"
                     ${request.usage === "use-up" ? "required" : ""}
                     aria-errormessage="${errorId}"
@@ -237,9 +235,8 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                   />
                 </label>
               </div>
-              <p id="${amountHintId}" class="field-hint material-amount-hint" data-testid="material-example-${request.id}">量の例：150g、1/2個</p>
               <fieldset class="material-usage-fieldset">
-                <legend>材料の使い方</legend>
+                <legend class="visually-hidden">材料の使い方</legend>
                 ${renderRadioOptions(
                   `materialUsage-${request.id}`,
                   materialUsageOptions,
@@ -256,9 +253,7 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                   data-testid="material-use-up-error-${request.id}"
                   ${errorMessage ? 'role="alert"' : "hidden"}
                 >${escapeHtml(errorMessage || USE_UP_AMOUNT_REQUIRED_MESSAGE)}</p>
-              <div class="material-card-actions">
-                <button id="materialRemove-${request.id}" type="button" class="material-delete-button" data-testid="combo-pill-remove-materials" data-remove-material="${escapeHtml(request.name)}" aria-label="${escapeHtml(request.name)}を材料から削除">削除</button>
-              </div>
+              <button id="materialRemove-${request.id}" type="button" class="material-delete-button" data-testid="combo-pill-remove-materials" data-remove-material="${escapeHtml(request.name)}" aria-label="${escapeHtml(request.name)}を材料から削除"><span aria-hidden="true">×</span></button>
             </fieldset>
           `;
         })

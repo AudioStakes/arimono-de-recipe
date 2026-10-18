@@ -18,26 +18,47 @@ for (const [width, fontSize] of [
     const card = page.getByTestId(/^material-card-/);
     const name = card.getByTestId("combo-pill-label-materials");
     const amount = card.getByTestId(/^material-amount-/);
-    const hint = card.getByTestId(/^material-example-/);
-    await expect(hint).toHaveText("量の例：150g、1/2個");
-    await expect(amount).toHaveAccessibleDescription(/量の例：150g、1\/2個/);
-    await expect(amount).not.toHaveAttribute("placeholder");
+    await expect(amount).toHaveAttribute("placeholder", "150g、1/2個");
+    await expect(amount).toHaveAccessibleName("量（任意）");
+    expect(
+      await amount.evaluate((input) => {
+        const styles = getComputedStyle(input);
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas text measurement must be available");
+        context.font = styles.font;
+        // Native input clientWidth differs between engines; use its rendered border box.
+        const available =
+          input.getBoundingClientRect().width -
+          Number.parseFloat(styles.borderLeftWidth) -
+          Number.parseFloat(styles.borderRightWidth) -
+          Number.parseFloat(styles.paddingLeft) -
+          Number.parseFloat(styles.paddingRight);
+        return context.measureText(input.getAttribute("placeholder") ?? "").width <= available;
+      }),
+    ).toBe(true);
     const nameBox = await name.boundingBox();
     const amountBox = await amount.boundingBox();
     if (!nameBox || !amountBox) throw new Error("Both material fields must be visible");
     expect(Math.abs(nameBox.height - amountBox.height)).toBeLessThanOrEqual(1);
     expect(nameBox.height).toBeGreaterThanOrEqual(46);
+    const cardBox = await card.boundingBox();
+    const remove = card.getByRole("button", { name: "豆腐を材料から削除", exact: true });
+    const removeBox = await remove.boundingBox();
+    if (!cardBox || !removeBox) throw new Error("Card and delete target must be visible");
+    await expect(remove).toHaveText("×");
+    expect(removeBox.width).toBeGreaterThanOrEqual(44);
+    expect(removeBox.height).toBeGreaterThanOrEqual(44);
+    expect(removeBox.y - cardBox.y).toBeGreaterThanOrEqual(0);
+    expect(removeBox.y - cardBox.y).toBeLessThanOrEqual(12);
+    expect(cardBox.x + cardBox.width - removeBox.x - removeBox.width).toBeLessThanOrEqual(12);
+    expect(removeBox.y + removeBox.height).toBeLessThanOrEqual(nameBox.y);
+    if (fontSize === 16) expect(cardBox.height).toBeLessThanOrEqual(180);
     if (amountBox.x > nameBox.x + nameBox.width) {
       expect(Math.abs(nameBox.y - amountBox.y)).toBeLessThanOrEqual(1);
     } else {
       expect(amountBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
     }
-    expect(await hint.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(
-      true,
-    );
-    expect(await hint.evaluate((element) => element.scrollHeight <= element.clientHeight + 1)).toBe(
-      true,
-    );
     await amount.fill("150g");
     await name.click();
     const edit = page.getByTestId("combo-pill-edit-materials");
@@ -48,7 +69,7 @@ for (const [width, fontSize] of [
     await pressCommittedEnter(edit);
     await expect(amount).toHaveValue("150g");
     await expect(name).toHaveText("木綿豆腐");
-    await expect(hint).toBeVisible();
+    await expect(amount).toHaveAttribute("placeholder", "150g、1/2個");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

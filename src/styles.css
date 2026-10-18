@@ -384,9 +384,10 @@ h3 {
   border-radius: var(--radius-md);
 }
 .material-request-row {
+  position: relative;
   min-inline-size: 0;
   margin: 0;
-  padding: var(--space-3);
+  padding: var(--space-2);
   background: var(--surface-solid);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -401,7 +402,7 @@ h3 {
   display: grid;
   grid-template-rows: auto 1fr;
   align-content: start;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-inline-size: min(100%, 7rem);
   color: var(--muted);
   font-size: 0.8rem;
@@ -410,7 +411,15 @@ h3 {
   flex: 3 1 7rem;
 }
 .material-amount-field {
-  flex: 2 1 7rem;
+  flex: 2 1 8rem;
+  min-inline-size: min(100%, 8rem);
+}
+.material-name-field > label,
+.material-amount-field > span {
+  display: flex;
+  align-items: center;
+  min-block-size: 46px;
+  padding-inline-end: 46px;
 }
 .material-name-host {
   min-inline-size: 0;
@@ -447,9 +456,9 @@ h3 {
   text-align: start;
   font-weight: 700;
 }
-.material-amount-hint {
-  margin: var(--space-2) 0 var(--space-3);
-  overflow-wrap: anywhere;
+.material-amount-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 .material-usage-fieldset {
   min-inline-size: 0;
@@ -457,17 +466,14 @@ h3 {
   padding: 0;
   border: 0;
 }
-.material-usage-fieldset legend {
-  padding: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-.material-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-block-start: var(--space-2);
-}
 .material-delete-button {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  display: grid;
+  place-items: center;
+  inline-size: 46px;
+  block-size: 46px;
   min-inline-size: 46px;
   min-block-size: 46px;
   padding: var(--space-1) var(--space-2);
@@ -475,7 +481,7 @@ h3 {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 1.25rem;
 }
 .material-delete-button:hover {
   color: var(--error);

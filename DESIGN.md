@@ -63,17 +63,23 @@ application and domain modules, not this visual specification.
   1.16fr / 1fr columns with a 36px gap. Place the shared answer below them.
 - Keep material input and candidate button before specified values. Material
   cards display latest first; the domain order and prompt order remain unchanged.
-- Each material has two visibly labelled editing fields, a full-width amount
-  example, three native usage choices, and a separate bottom-right delete action.
+- Each material has two visibly labelled editing fields, the amount example
+  `150g、1/2個` as a placeholder, three native usage choices and a top-right ×.
   Name and amount controls share a 46px minimum height and aligned top edges.
-  Give the two fields a 7rem minimum basis, with 3:2 flexible growth, and let them
+  Give name and amount a 7rem and 8rem minimum basis with 3:2 flexible growth, and let them
   stack when text size or available width requires it. Never shrink their text.
+- Keep cards compact with 8px padding and a 4px label-to-input gap. Reserve a
+  46px label band and 46px end padding for the × target so it cannot overlap
+  labels or inputs, including when fields stack. The × glyph is 1.25rem; its
+  button retains a 46px touch target without a separate action row. Keep the
+  usage fieldset legend visually hidden while preserving its accessible name.
 - Name buttons keep a single line with ellipsis and the full accessible name and
   title; activating them opens the existing native text editor. All text inputs
-  remain at least 1rem. Long examples belong in wrapping, described help text,
-  including the other combo fields and supplemental notes, rather than placeholders.
+  remain at least 1rem. The short amount placeholder must fit in full at 320px.
+  Long examples in other combo fields and supplemental notes use wrapping,
+  described help text.
 - Usage radios wrap by their content width. Preserve native checked indicators
-  as well as sage. The separate delete action uses the same 46px minimum target.
+  as well as sage. Preserve the amount error's described relationship when invalid.
 - Request options are grouped in this order: servings; methods/tools; intent,
   time and preferences. Closed sections show their current specified values.
 - Use 44px minimum interactive targets, 46px ordinary controls, 52px primary
