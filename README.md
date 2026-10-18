@@ -21,7 +21,7 @@
 アプリ内AIには接続元ごとの回数と全体の無料枠の制限があります。モデル変更だけでは送信しません。
 提供元の無料契約と[利用制限の設定](docs/architecture/ai-provider-setup.md)が必要です。
 [無料API候補の調査](docs/research/free-ai-api-options.md)には、継続無料・試用限定・有料契約付属の違いを記録しています。
-接続中のProアカウントの62,500はCodex用クレジットと確認しました。通常のPlatform API key課金残高へ転用できないため、OpenAI連携は有効にしていません。[残高の確認結果と利用条件](docs/research/free-ai-api-options.md#chatgpt-proと62500クレジット)
+アプリ内の送信先はCloudflareと任意のGroqです。OpenAIのAPI・ChatGPTアカウント連携は対象外です。
 
 登録は不要です。入力・依頼文の生成・コピーはブラウザ内で行い、入力内容はAIへ送るボタンを押すまで自動送信しません。入力は保存せず、再読み込みすると消えます。本番はCloudflare Web Analyticsでアクセス状況を集計しますが、食材や依頼文を解析へ送りません。フッターの「プライバシー」でデータの扱いを確認できます。AIの回答は参考情報です。調理前に材料・アレルギー・加熱条件を確認してください。[入力上限とデータの扱い](docs/usage.md)
 
@@ -59,6 +59,8 @@ npm run build  # dist/ に静的ファイルを出力
 ```
 
 開発手順は[CONTRIBUTING.md](CONTRIBUTING.md)、検査の担当範囲は[品質ゲート](docs/quality-gates.md)に記載しています。
+
+[公開前レビューと改善記録](docs/release-readiness-2026-10-18.md)には、確認した範囲、修正内容、本番AIを有効にする前の残作業をまとめています。コードのマージだけでは本番のD1・secret・Free契約設定やデプロイは完了しません。
 
 ## 問い合わせ・利用条件
 

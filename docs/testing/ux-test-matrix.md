@@ -2,7 +2,7 @@
 
 ## Browser Coverage
 
-ChromiumとPixel 7相当では全E2Eを実行する。Firefox、WebKit、iPhone 13相当、iPad Pro 11相当では`app`、`input`、`assets`、`direct-ai-flow`、`browser-interaction-regressions`を実行する。入力、材料名・分量の保持、キーボード、コピーと失敗時の回復、依頼文全文送信とMarkdown回答をカバーする。全文送信・Markdown表示の `direct-ai-flow` も6構成で実行する。
+ChromiumとPixel 7相当では全E2Eを実行する。Firefox、WebKit、iPhone 13相当、iPad Pro 11相当では`ai-model-selection`、`app`、`input`、`assets`、`direct-ai-flow`、`browser-interaction-regressions`を実行する。入力、材料名・分量の保持、キーボード、コピーと失敗時の回復、依頼文全文送信とMarkdown回答をカバーする。全文送信・Markdown表示とモデル選択も6構成で実行する。実行対象の基準は`playwright.config.ts`とする。
 
 端末名はPlaywrightのエミュレーション設定で、実機OS・ソフトウェアキーボード・Safariアプリの動作保証ではない。モバイルWebKitの背景スクロールはCSSロックと開閉・Escape・resizeの解除を検証し、実際のwheel抑止はdesktopの3エンジンとmobile Chromiumで確認する。
 
@@ -18,6 +18,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | Cloudflare解析は本番originだけで一度読み込み、遮断時も入力とプライバシーを操作できる | no | required all 6 profiles, production CSP, local/Preview exclusion, stubbed beacon | existing application fetch restrictions retained |
 | 材料は未入力時に日常向け20件を表示し、検索時は一致する初期候補を優先して全候補から絞り込む | required priority, full catalog and no mutation | required initial order, selection exclusion and keyboard on all 6 profiles | no |
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
+| 条件サマリーの削除後、表示中の入力または最も近い開閉ボタンへfocusを戻す | no | required all 6 profiles, materials/time/closed NG/closed parent | no |
 | モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
 | 表示・コピーと同じ依頼文全文を明示操作だけで送信する | required for client contract | required desktop/mobile, pending input and native copy | no |
 | 全文送信の文字数・JSON全体UTF-8上限を超えてもコピー本文を保持する | required boundary cases | required with no API calls | no |
@@ -33,6 +34,8 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | empty/loading/error/retry/fallback states | validation required | required | stable hook guard |
 | UI selector stability | no | yes | required |
 | Approved `/api/recipe` transmission boundary | required | required with mock | required |
+| モデル変更だけでは送信せず、選択モデルと送信先を明示し、無効な提供元へ自動切替しない | required lifecycle and catalog | required all 6 profiles | fixed provider/endpoint guard |
+| 接続元・全体・提供元の制限をD1で原子的に予約し、全AI停止設定がGroqにも効く | required real SQLite, missing/false master flag, upstream calls zero | model disabled and copy retained | aggregate-only persistence boundary |
 
 ## Stable Hook Convention
 

@@ -88,7 +88,7 @@ GroqのLlama 3.3/3.1は2026-08-16にFree・Developer向け提供を終了して�
 | `openai/gpt-oss-20b` (Groq) | `max_completion_tokens`を固定。productionモデル。low reasoningとinclude_reasoning=false。推論を含む出力予算やTPMで失敗し得る | [モデル](https://console.groq.com/docs/model/openai/gpt-oss-20b)、[API](https://console.groq.com/docs/api-reference) |
 
 Cloudflareは標準推論の内容を保持・学習利用しないと説明する。保存・ログ・キャッシュの機能は別。
-Groqも通常推論は保持しないが、障害・不正利用の調査で最大30日保存する場合がありopt-outを案内する。
+Groqも通常推論は保持しないが、障害・不正利用の調査で通常最大30日保存する場合がありopt-outを案内する。法令でより長い保持が必要な場合は例外となる。
 送信先の変更は利用者へ表示する。
 [Cloudflareのデータ方針](https://developers.cloudflare.com/workers-ai/platform/data-usage/)、
 [Groqのデータ方針](https://console.groq.com/docs/your-data)。
@@ -117,8 +117,8 @@ remote-hosted appとして利用者へ提供するには事前のaccess申請が
 
 APIのorg/project hard spend limitも、公式に反映遅延と少額超過が明記されている。
 これだけで「62,500を絶対に超えない」と説明してはいけない。
-別のAPI用残高または承認済みのプラン共有経路が確定しない間、OpenAIへのアプリ内送信は無効のままとする。
-Codex残高62,500をAPI予算とみなした実装は追加しない。これは残高利用の実装完了を意味しない。
+2026-10-18に所有者がOpenAI連携を不要と決定した。OpenAIへのアプリ内送信は対象外として閉じ、API残高や本人認可の設定を進めない。
+Codex残高62,500をAPI予算とみなした実装は追加しない。ここまでの記録は過去の調査結果であり、残高利用の実装完了を意味しない。
 [公式spend limits](https://developers.openai.com/api/docs/guides/spend-limits)。
 
 ## 上限の設計
