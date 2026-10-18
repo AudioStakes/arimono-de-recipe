@@ -115,6 +115,10 @@ function syncMaterialRequestValidationState(state: RecipeSnapshot): void {
 
     if (input) {
       input.required = request.usage === "use-up";
+      input.setAttribute(
+        "aria-describedby",
+        `materialAmountHint-${request.id}${message ? ` materialAmountError-${request.id}` : ""}`,
+      );
       if (message) {
         input.setAttribute("aria-invalid", "true");
       } else {
@@ -168,6 +172,12 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
     panel.contains(activeElement)
       ? { name: activeElement.name, value: activeElement.value }
       : null;
+  const focusedRemove =
+    activeElement instanceof HTMLButtonElement &&
+    activeElement.hasAttribute("data-remove-material") &&
+    panel.contains(activeElement)
+      ? activeElement.id
+      : null;
   const focusedAmount =
     activeElement instanceof HTMLInputElement &&
     activeElement.dataset["materialAmountFor"] &&
@@ -196,17 +206,21 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
         .map((request) => {
           const amountLabel = request.usage === "use-up" ? "量（必須）" : "量（任意）";
           const amountId = `materialAmount-${request.id}`;
+          const amountHintId = `materialAmountHint-${request.id}`;
           const errorId = `materialAmountError-${request.id}`;
           const errorMessage = errors.get(request.id) ?? "";
           const invalidAttributes = errorMessage ? ' aria-invalid="true"' : "";
-          const describedBy = errorMessage ? ` aria-describedby="${errorId}"` : "";
+          const describedBy = ` aria-describedby="${amountHintId}${errorMessage ? ` ${errorId}` : ""}"`;
 
           return `
             <fieldset class="material-request-row" data-material-request-id="${request.id}" data-testid="material-card-${request.id}">
               <legend class="visually-hidden">${escapeHtml(request.name)}</legend>
-              <div class="material-card-top">
-                <div class="material-name-host" data-material-name-for="${request.id}"></div>
-                <label class="text-input-label material-amount-field underlined-field" for="${amountId}">
+              <div class="material-card-fields">
+                <div class="material-name-field">
+                  <label for="materialName-${request.id}">食材・材料</label>
+                  <div class="material-name-host" data-material-name-for="${request.id}"></div>
+                </div>
+                <label class="text-input-label material-amount-field" for="${amountId}">
                   <span>${amountLabel}</span>
                   <input
                     id="${amountId}"
@@ -215,7 +229,6 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                     value="${escapeHtml(request.useUpAmount)}"
                     data-material-amount-for="${request.id}"
                     data-testid="material-amount-${request.id}"
-                    placeholder="例: 150g、1/2個"
                     autocomplete="off"
                     ${request.usage === "use-up" ? "required" : ""}
                     aria-errormessage="${errorId}"
@@ -224,14 +237,18 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                   />
                 </label>
               </div>
-              ${renderRadioOptions(
-                `materialUsage-${request.id}`,
-                materialUsageOptions,
-                request.usage,
-                "segmented-control",
-                `material-usage-control-${request.id}`,
-                `material-usage-option-${request.id}`,
-              )}
+              <p id="${amountHintId}" class="field-hint material-amount-hint" data-testid="material-example-${request.id}">量の例：150g、1/2個</p>
+              <fieldset class="material-usage-fieldset">
+                <legend>材料の使い方</legend>
+                ${renderRadioOptions(
+                  `materialUsage-${request.id}`,
+                  materialUsageOptions,
+                  request.usage,
+                  "segmented-control",
+                  `material-usage-control-${request.id}`,
+                  `material-usage-option-${request.id}`,
+                )}
+              </fieldset>
                 <p
                   id="${errorId}"
                   class="field-error material-amount-error"
@@ -239,6 +256,9 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
                   data-testid="material-use-up-error-${request.id}"
                   ${errorMessage ? 'role="alert"' : "hidden"}
                 >${escapeHtml(errorMessage || USE_UP_AMOUNT_REQUIRED_MESSAGE)}</p>
+              <div class="material-card-actions">
+                <button id="materialRemove-${request.id}" type="button" class="material-delete-button" data-testid="combo-pill-remove-materials" data-remove-material="${escapeHtml(request.name)}" aria-label="${escapeHtml(request.name)}を材料から削除">削除</button>
+              </div>
             </fieldset>
           `;
         })
@@ -251,6 +271,9 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
         `input[name="${CSS.escape(focusedRadio.name)}"][value="${CSS.escape(focusedRadio.value)}"]`,
       )
       ?.focus({ preventScroll: true });
+  }
+  if (focusedRemove) {
+    document.getElementById(focusedRemove)?.focus({ preventScroll: true });
   }
   if (focusedAmount) {
     const input = panel.querySelector<HTMLInputElement>(`#${CSS.escape(focusedAmount.id)}`);
@@ -321,9 +344,9 @@ function syncServingModeVisibility(application: RecipeApplication): void {
 
 function syncRecipeRoleOrder(application: RecipeApplication): void {
   const intent = application.getSnapshot().requestIntent;
-  const input = queryMaybeElement<HTMLInputElement>("#recipeRolesInput");
-  if (input) {
-    input.placeholder = intent === "pairing" ? "例: 副菜・一品" : "例: 主菜・しっかり";
+  const hint = queryMaybeElement<HTMLElement>("#recipeRolesInputHint");
+  if (hint) {
+    hint.textContent = intent === "pairing" ? "例: 副菜・一品" : "例: 主菜・しっかり";
   }
 }
 
@@ -534,7 +557,8 @@ function renderComboFieldControl(
 ): string {
   const inputId = `${combo.id}Input`;
   const suggestionsId = `${combo.id}Suggestions`;
-  const describedByAttribute = describedBy ? ` aria-describedby="${describedBy}"` : "";
+  const hintId = `${combo.id}InputHint`;
+  const describedByAttribute = ` aria-describedby="${hintId}${describedBy ? ` ${describedBy}` : ""}"`;
   const accessibleLabelAttribute = hasVisibleLabel ? "" : ` aria-label="${combo.label}"`;
   return `
     <div class="combo" data-combo="${combo.id}" data-testid="combo-${combo.id}">
@@ -544,7 +568,6 @@ function renderComboFieldControl(
           class="combo-input"
           data-testid="combo-input-${combo.id}"
           type="text"
-          placeholder="${combo.placeholder}"
           autocomplete="off"
           autocapitalize="off"
           spellcheck="false"
@@ -559,6 +582,7 @@ function renderComboFieldControl(
         <button class="combo-picker" data-testid="combo-picker-${combo.id}" type="button" aria-label="${combo.label}の候補を表示" aria-controls="${suggestionsId}"></button>
         <div id="${suggestionsId}" class="suggestions" data-testid="combo-suggestions-${combo.id}" role="listbox" aria-label="${combo.label}の候補" aria-hidden="true"></div>
       </div>
+      <p id="${hintId}" class="field-hint combo-input-hint" data-testid="combo-input-hint-${combo.id}">${combo.placeholder}</p>
       <div class="floating-chip-row" aria-live="polite"></div>
       ${combo.id === "materials" ? '<div data-testid="recipe-item-materialUse"><span class="visually-hidden">材料の使い方</span><div id="materialUsePanel" class="material-use-panel" data-testid="material-use-panel"></div></div>' : ""}
     </div>
@@ -590,7 +614,8 @@ function renderCollapsibleNotesField(): string {
     "note",
     `
       <div class="textarea-field">
-        <textarea id="supplementalNotes" data-testid="supplemental-notes" aria-label="その他の要望" placeholder="例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。"></textarea>
+        <textarea id="supplementalNotes" data-testid="supplemental-notes" aria-label="その他の要望" aria-describedby="supplementalNotesHint"></textarea>
+        <p id="supplementalNotesHint" class="field-hint combo-input-hint">例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。</p>
       </div>
     `,
   );

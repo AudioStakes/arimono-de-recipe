@@ -120,7 +120,7 @@ function createComboController(
       const host = material
         ? root.querySelector<HTMLElement>(`[data-material-name-for="${material.id}"]`)
         : null;
-      (host ?? floatingChipRow).appendChild(createPill(value));
+      (host ?? floatingChipRow).appendChild(createPill(value, host ? material?.id : undefined));
     }
 
     root.classList.toggle("has-values", getValues().length > 0);
@@ -213,6 +213,7 @@ function createComboController(
     if (!text) {
       return;
     }
+    const hadFocus = root.contains(document.activeElement);
     application.commitInput(group, text);
     comboInput.value = "";
     renderPills();
@@ -221,11 +222,15 @@ function createComboController(
     } else {
       closeOthers(null);
     }
-    if (options.refocusInput && !(isSingle() && getValues().length > 0)) {
-      focusInputAtEnd(comboInput);
-    }
     if (options.notify !== false) {
       notifyChange();
+    }
+    if (isSingle() && getValues().length > 0 && (hadFocus || options.refocusInput)) {
+      safe$<HTMLButtonElement>(`[data-testid="combo-pill-label-${group}"]`, root)?.focus({
+        preventScroll: true,
+      });
+    } else if (options.refocusInput) {
+      focusInputAtEnd(comboInput);
     }
   }
 
@@ -296,7 +301,7 @@ function createComboController(
     focusComboValue(oldValue);
   }
 
-  function createPill(value: string): HTMLElement {
+  function createPill(value: string, materialId?: string): HTMLElement {
     const pill = document.createElement("span");
     pill.className = "pill";
     pill.tabIndex = -1;
@@ -309,6 +314,7 @@ function createComboController(
       editInput.className = "pill-edit-input";
       editInput.type = "text";
       editInput.value = value;
+      if (materialId) editInput.id = `materialName-${materialId}`;
       editInput.setAttribute("data-testid", `combo-pill-edit-${group}`);
       editInput.setAttribute("aria-label", `${value}を編集`);
       editInput.setAttribute("autocomplete", "off");
@@ -359,6 +365,10 @@ function createComboController(
       label.type = "button";
       label.className = "pill-label";
       label.textContent = value;
+      if (materialId) {
+        label.id = `materialName-${materialId}`;
+        label.title = value;
+      }
       label.setAttribute("data-testid", `combo-pill-label-${group}`);
       label.setAttribute("aria-label", `${value}を編集`);
       label.addEventListener("click", (event) => {
@@ -368,23 +378,19 @@ function createComboController(
       pill.appendChild(label);
     }
 
-    const remove = document.createElement("button");
-    remove.type = "button";
-    remove.className = "pill-remove";
-    remove.textContent = "×";
-    remove.setAttribute("data-testid", `combo-pill-remove-${group}`);
-    remove.setAttribute(
-      "aria-label",
-      group === "materials" && root.querySelector("#materialUsePanel")
-        ? `${value}を材料から削除`
-        : `${value}を削除`,
-    );
-    if (group === "materials" && root.querySelector("#materialUsePanel"))
-      remove.dataset["removeMaterial"] = value;
-    remove.addEventListener("click", (event) => {
-      event.stopPropagation();
-      removeStoredValue(value);
-    });
+    if (!materialId) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "pill-remove";
+      remove.textContent = "×";
+      remove.setAttribute("data-testid", `combo-pill-remove-${group}`);
+      remove.setAttribute("aria-label", `${value}を削除`);
+      remove.addEventListener("click", (event) => {
+        event.stopPropagation();
+        removeStoredValue(value);
+      });
+      pill.appendChild(remove);
+    }
 
     pill.addEventListener("keydown", (event) => {
       const keyboardEvent = event as KeyboardEvent;
@@ -407,7 +413,6 @@ function createComboController(
       removeStoredValue(value);
     });
 
-    pill.appendChild(remove);
     return pill;
   }
 

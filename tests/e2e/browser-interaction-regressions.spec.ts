@@ -617,7 +617,7 @@ for (const viewport of [
   });
 }
 
-test("分量から使い方、次の材料へTabで進み、入力を続けられる", async ({ page }) => {
+test("分量から使い方・削除・次の材料へTabで進み、入力を続けられる", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await addMaterial(page, "豆腐");
@@ -630,8 +630,16 @@ test("分量から使い方、次の材料へTabで進み、入力を続けら�
   await amount.fill("1/2玉");
   await page.keyboard.press("Tab");
   // Safari's native keyboard setting may skip the radio group; other profiles visit it.
+  const usage = cabbage.getByRole("radio", { name: "使い切る", exact: true });
+  if (await usage.evaluate((element) => element === document.activeElement)) {
+    await expect(usage).toBeFocused();
+    await page.keyboard.press("Tab");
+  }
+  // The separate delete action follows usage; native settings can also skip buttons.
   if (await cabbage.locator(":focus").count()) {
-    await expect(cabbage.getByRole("radio", { name: "使い切る", exact: true })).toBeFocused();
+    await expect(
+      cabbage.getByRole("button", { name: "キャベツを材料から削除", exact: true }),
+    ).toBeFocused();
     await page.keyboard.press("Tab");
   }
   await expect(tofu.locator(":focus")).toHaveCount(1);
