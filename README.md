@@ -6,9 +6,9 @@
 
 [アプリを使う](https://arimono-de-recipe.pages.dev/)
 
-![材料を入力して料理を相談するデスクトップ画面](docs/media/desktop.png)
+![材料を入力して料理を相談するデスクトップ画面](docs/media/form-ui-desktop.png)
 
-[スマートフォンの画面](docs/media/mobile.png) · [移行前の操作動画](docs/media/demo.mp4)
+[スマートフォンの画面](docs/media/form-ui-mobile.png) · [移行前の操作動画](docs/media/demo.mp4)
 
 ## 使い方
 
@@ -61,6 +61,8 @@ npm run build  # dist/ に静的ファイルを出力
 開発手順は[CONTRIBUTING.md](CONTRIBUTING.md)、検査の担当範囲は[品質ゲート](docs/quality-gates.md)に記載しています。
 
 [公開前レビューと改善記録](docs/release-readiness-2026-10-18.md)には、確認した範囲、修正内容、本番AIを有効にする前の残作業をまとめています。コードのマージだけでは本番のD1・secret・Free契約設定やデプロイは完了しません。
+
+[フォームの設計・画面と検証](docs/testing/form-ui-verification-2026-10-18.md)には、材料名と量の整列、常設の例、文字拡大時の操作とキーボード改善を記録しています。
 
 ## 問い合わせ・利用条件
 

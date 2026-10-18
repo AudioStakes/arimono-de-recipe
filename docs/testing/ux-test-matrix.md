@@ -2,7 +2,7 @@
 
 ## Browser Coverage
 
-ChromiumとPixel 7相当では全E2Eを実行する。Firefox、WebKit、iPhone 13相当、iPad Pro 11相当では`ai-model-selection`、`app`、`input`、`assets`、`direct-ai-flow`、`browser-interaction-regressions`を実行する。入力、材料名・分量の保持、キーボード、コピーと失敗時の回復、依頼文全文送信とMarkdown回答をカバーする。全文送信・Markdown表示とモデル選択も6構成で実行する。実行対象の基準は`playwright.config.ts`とする。
+ChromiumとPixel 7相当では全E2Eを実行する。Firefox、WebKit、iPhone 13相当、iPad Pro 11相当では`form-layout`、`ai-model-selection`、`app`、`input`、`assets`、`direct-ai-flow`、`browser-interaction-regressions`を実行する。入力、材料名・分量の保持、キーボード、コピーと失敗時の回復、依頼文全文送信とMarkdown回答をカバーする。全文送信・Markdown表示とモデル選択も6構成で実行する。実行対象の基準は`playwright.config.ts`とする。
 
 端末名はPlaywrightのエミュレーション設定で、実機OS・ソフトウェアキーボード・Safariアプリの動作保証ではない。モバイルWebKitの背景スクロールはCSSロックと開閉・Escape・resizeの解除を検証し、実際のwheel抑止はdesktopの3エンジンとmobile Chromiumで確認する。
 
@@ -14,6 +14,9 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
 | こだわり項目を開閉して入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
+| 材料名と量の編集欄が揃い、量の例が入力中も欠けずに読める | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, rename and separate delete | associated labels and help |
+| 文字拡大時に人数・モデル・主操作が欠けず、最終footerを固定操作が隠さない | no | required all 6 profiles, 320/360/1280px and 200% text | no |
+| 作りたい料理と単一役割の確定後に指定値の編集へfocusを渡す | no | required all 6 profiles, Enter then edit | no |
 | 作者リンクとプライバシーを狭い画面でも操作でき、モーダル内のTab循環・背景操作禁止・閉じた後のfocusと位置を保持する | no | required all 6 profiles, 320/390/1280px footer clearance | stable hooks |
 | Cloudflare解析は本番originだけで一度読み込み、遮断時も入力とプライバシーを操作できる | no | required all 6 profiles, production CSP, local/Preview exclusion, stubbed beacon | existing application fetch restrictions retained |
 | 材料は未入力時に日常向け20件を表示し、検索時は一致する初期候補を優先して全候補から絞り込む | required priority, full catalog and no mutation | required initial order, selection exclusion and keyboard on all 6 profiles | no |
