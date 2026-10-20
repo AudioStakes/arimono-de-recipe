@@ -17,6 +17,12 @@ export type AiProviderEnvironment = {
   GROQ_API_KEY?: string;
 };
 
+export class AiProviderLimitError extends Error {
+  constructor(readonly kind: "free_quota" | "rate_limit") {
+    super(kind);
+  }
+}
+
 export function modelAvailability(env: AiProviderEnvironment): AvailableAiModel[] {
   const usageReady = Boolean(
     env.AI_USAGE &&
@@ -111,7 +117,17 @@ export async function generateWithModel(
     ...(policy.chatTemplateKwargs ? { chat_template_kwargs: policy.chatTemplateKwargs } : {}),
     temperature: 0.4,
   };
-  if (model.provider === "cloudflare") return env.AI.run(model.id, input);
+  if (model.provider === "cloudflare") {
+    try {
+      return await env.AI.run(model.id, input);
+    } catch (error) {
+      // Workers AI bindings prefix upstream errors with their documented internal code.
+      if (error instanceof Error && /^3036:/.test(error.message)) {
+        throw new AiProviderLimitError("free_quota");
+      }
+      throw error;
+    }
+  }
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },
@@ -124,6 +140,7 @@ export async function generateWithModel(
     redirect: "error",
     signal: AbortSignal.timeout(25000),
   });
+  if (response.status === 429) throw new AiProviderLimitError("rate_limit");
   if (!response.ok) throw new Error("AI provider unavailable");
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Missing AI response");

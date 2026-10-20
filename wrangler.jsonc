@@ -5,5 +5,23 @@
   "compatibility_date": "2026-10-15",
   "ai": {
     "binding": "AI"
+  },
+  "env": {
+    "production": {
+      "ai": {
+        "binding": "AI"
+      },
+      "d1_databases": [
+        {
+          "binding": "AI_USAGE",
+          "database_name": "arimono-ai-usage",
+          "database_id": "7850b6ec-60b2-44bd-b7bf-ab25889d3ab7",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "vars": {
+        "CLOUDFLARE_FREE_ONLY": "true"
+      }
+    }
   }
 }

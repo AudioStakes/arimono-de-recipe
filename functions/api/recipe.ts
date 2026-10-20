@@ -1,6 +1,7 @@
 import { aiMaxOutputTokens } from "../../server/ai-model-policy";
 import {
   type AiProviderEnvironment,
+  AiProviderLimitError,
   generateWithModel,
   modelAvailability,
   reserveRecipeUsage,
@@ -44,6 +45,8 @@ type RecipeApiErrorCode =
   | "model_unavailable"
   | "usage_limit_reached"
   | "usage_unavailable"
+  | "provider_quota_exceeded"
+  | "provider_rate_limited"
   | "ai_generation_failed";
 
 type RecipeApiError = {
@@ -323,7 +326,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       model: model.id,
       usage: extractUsage(result),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof AiProviderLimitError) {
+      return errorResponse(
+        429,
+        error.kind === "free_quota" ? "provider_quota_exceeded" : "provider_rate_limited",
+        error.kind === "free_quota"
+          ? "Cloudflare AIの本日の無料枠の上限に達しました。無料枠が回復してから再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。"
+          : "Groqの利用上限に達しました。時間をおいて再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。",
+      );
+    }
     return errorResponse(500, "ai_generation_failed", "AIへの依頼に失敗しました。");
   }
 };
