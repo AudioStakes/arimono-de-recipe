@@ -53,30 +53,42 @@ test("モデル変更は送信せず、選択したAIへ依頼文を省略せず
   await expect(page.getByTestId("prompt-output")).toHaveValue(prompt);
 });
 
-test("利用上限では自動再送せずコピーを使い続けられる", async ({ page }) => {
-  let calls = 0;
-  await page.route("**/api/recipe", async (route) => {
-    calls += 1;
-    await route.fulfill({
-      status: 429,
-      json: {
-        error: {
-          code: "usage_limit_reached",
-          message: "利用上限に達しました。依頼文はコピーできます。",
+for (const limit of [
+  { code: "usage_limit_reached", message: "利用上限に達しました。依頼文はコピーできます。" },
+  {
+    code: "provider_quota_exceeded",
+    message:
+      "Cloudflare AIの本日の無料枠の上限に達しました。無料枠が回復してから再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。",
+  },
+  {
+    code: "provider_rate_limited",
+    message:
+      "Groqの利用上限に達しました。時間をおいて再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。",
+  },
+]) {
+  test(`${limit.code}では理由を表示し、自動再送せずコピーを使い続けられる`, async ({ page }) => {
+    let calls = 0;
+    await page.route("**/api/recipe", async (route) => {
+      calls += 1;
+      await route.fulfill({
+        status: 429,
+        json: {
+          error: limit,
         },
-      },
+      });
     });
+    await page.goto("/");
+    await page.getByTestId("combo-input-materials").fill("卵");
+    await pressCommittedEnter(page.getByTestId("combo-input-materials"));
+    await page.getByTestId("mobile-ai-prompt-send").click();
+    await expect(page.getByTestId("ai-prompt-status")).toContainText(limit.message);
+    await expect(page.getByTestId("ai-prompt-status")).toHaveAttribute("role", "alert");
+    const prompt = await page.getByTestId("prompt-output").inputValue();
+    await page.getByTestId("copy-prompt-sticky").click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
+    expect(calls).toBe(1);
   });
-  await page.goto("/");
-  await page.getByTestId("combo-input-materials").fill("卵");
-  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-  await page.getByTestId("mobile-ai-prompt-send").click();
-  await expect(page.getByTestId("ai-prompt-status")).toContainText("利用上限");
-  const prompt = await page.getByTestId("prompt-output").inputValue();
-  await page.getByTestId("copy-prompt-sticky").click();
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
-  expect(calls).toBe(1);
-});
+}
 
 test("利用できないモデルから別の提供元へ自動で切り替えない", async ({ page }) => {
   await page.route("**/api/recipe?models", async (route) => {

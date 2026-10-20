@@ -34,6 +34,67 @@ function request(model?: string): Request {
 }
 
 describe("model selection and enforced usage", () => {
+  test("Cloudflare's daily free allocation error is shown without upstream details", async () => {
+    const env = environment();
+    vi.mocked(env.AI.run).mockRejectedValue(
+      new Error("3036: You have used up your daily free allocation. private provider details"),
+    );
+
+    const response = await onRequest({ request: request(), env });
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "provider_quota_exceeded",
+        message:
+          "Cloudflare AIの本日の無料枠の上限に達しました。無料枠が回復してから再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。",
+      },
+    });
+    expect(env.AI.run).toHaveBeenCalledTimes(1);
+  });
+
+  test.each(["3040: Capacity temporarily exceeded", "13036: other error", "private error 3036"])(
+    "Cloudflare failure %s is not misreported as an exhausted free allocation",
+    async (message) => {
+      const env = environment();
+      vi.mocked(env.AI.run).mockRejectedValue(new Error(message));
+
+      const response = await onRequest({ request: request(), env });
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({
+        error: { code: "ai_generation_failed", message: "AIへの依頼に失敗しました。" },
+      });
+    },
+  );
+
+  test.each([429, 401, 503])(
+    "Groq HTTP %i is classified without exposing its body",
+    async (status) => {
+      const env = environment();
+      env.GROQ_API_KEY = "unit-test-key";
+      env.GROQ_FREE_ONLY = "true";
+      const fetcher = vi.fn(async () => new Response("private provider details", { status }));
+      vi.stubGlobal("fetch", fetcher);
+
+      const response = await onRequest({ request: request("openai/gpt-oss-20b"), env });
+
+      expect(response.status).toBe(status === 429 ? 429 : 500);
+      expect(await response.json()).toEqual({
+        error:
+          status === 429
+            ? {
+                code: "provider_rate_limited",
+                message:
+                  "Groqの利用上限に達しました。時間をおいて再度お試しください。依頼文をコピーして普段使うAIへ貼り付けることもできます。",
+              }
+            : { code: "ai_generation_failed", message: "AIへの依頼に失敗しました。" },
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(env.AI.run).not.toHaveBeenCalled();
+    },
+  );
+
   test("daily network limits survive minute changes and reset only at UTC midnight", async () => {
     const env = environment();
     const start = Date.parse("2026-10-17T01:00:00Z");
