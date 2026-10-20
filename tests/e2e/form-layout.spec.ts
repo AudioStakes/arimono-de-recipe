@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
 
 test("320pxでスクロールバー分の幅が減っても材料カードを低く保つ", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -164,21 +164,16 @@ for (const [width, fontSize] of [
   });
 }
 
-for (const id of ["targetDish", "recipeRoles"] as const) {
-  test(`${id}の入力確定後に指定値の編集へキーボードで移れる`, async ({ page }) => {
+for (const id of ["materials", "cookingTools"] as const) {
+  test(`${id}の指定値をキーボードで編集できる`, async ({ page }) => {
     await page.goto("/");
-    await openRequestOptions(page);
-    if (id === "targetDish") {
-      await page.getByRole("radio", { name: "作りたい料理がある", exact: true }).check();
-    } else {
-      await page.getByTestId("recipe-item-toggle-recipeCount").click();
-      await page.getByRole("radio", { name: "1品だけ", exact: true }).check();
-    }
+    if (id === "cookingTools") await page.getByTestId("recipe-item-toggle-cookingTools").click();
     const input = page.getByTestId(`combo-input-${id}`);
-    await input.fill(id === "targetDish" ? "カレー" : "副菜");
+    await input.fill(id === "materials" ? "豆腐" : "電子レンジ");
     await pressCommittedEnter(input);
+    await expect(input).toBeFocused();
     const value = page.getByTestId(`combo-pill-label-${id}`);
-    await expect(value).toBeFocused();
+    await value.focus();
     await value.press("Enter");
     await expect(page.getByTestId(`combo-pill-edit-${id}`)).toBeFocused();
   });

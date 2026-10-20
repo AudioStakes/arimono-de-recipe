@@ -7,18 +7,8 @@ import {
 import { generateRecipeFromPrompt } from "./ai-recipe-client";
 import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
-import { updateCookTimeDisplay } from "./combo-field";
 import { type ComboRegistry, createComboRegistry } from "./combo-registry";
-import {
-  advancedConditionOrder,
-  combos,
-  cookTimeOptions,
-  materialUsageOptions,
-  recipeCountOptions,
-  requestIntentOptions,
-  servingGroups,
-  servingsModeOptions,
-} from "./data";
+import { combos, materialUsageOptions, servingGroups, servingsModeOptions } from "./data";
 import { icon } from "./icons";
 import { focusInputWithFeedback, setMaterialInputError } from "./input-feedback";
 import type { PromptPanelServices } from "./output-panel";
@@ -279,69 +269,10 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
   }
 }
 
-function setCollapsibleStateForField(field: HTMLElement, expanded: boolean): void {
-  const button = field.querySelector<HTMLButtonElement>(".field-toggle");
-  if (!button) return;
-
-  button.setAttribute("aria-expanded", String(expanded));
-  const chevron = button.querySelector<HTMLElement>(".field-toggle-chevron");
-  if (chevron) {
-    chevron.textContent = expanded ? "⌃" : "⌄";
-  }
-
-  const panelId = button.getAttribute("aria-controls");
-  const panel = panelId ? document.getElementById(panelId) : null;
-  if (panel) {
-    panel.hidden = !expanded;
-    panel.setAttribute("data-state", expanded ? "open" : "closed");
-  }
-
-  field.classList.toggle("is-open", expanded);
-  field.setAttribute("data-state", expanded ? "open" : "closed");
-}
-
-function syncIntentSections(application: RecipeApplication): void {
-  const intent = application.getSnapshot().requestIntent;
-  const targetDishField = queryMaybeElement<HTMLElement>("#targetDishField");
-  const pairingField = queryMaybeElement<HTMLElement>("#pairingTargetsField");
-  const recipeCountField = queryMaybeElement<HTMLElement>('[data-collapsible="recipeCount"]');
-  const recipeRoleField = queryMaybeElement<HTMLElement>("#recipeRolesField");
-
-  if (targetDishField) {
-    targetDishField.hidden = intent !== "target-dish";
-  }
-
-  if (pairingField) {
-    pairingField.hidden = intent !== "pairing";
-  }
-
-  if (recipeCountField) {
-    recipeCountField.hidden = intent === "target-dish";
-    if (intent === "pairing") {
-      setCollapsibleStateForField(recipeCountField, true);
-    } else if (intent === "target-dish") {
-      setCollapsibleStateForField(recipeCountField, false);
-    }
-  }
-
-  const recipeCount = application.getSnapshot().effectiveRecipeCount;
-  if (recipeRoleField) {
-    recipeRoleField.hidden = intent === "target-dish" || recipeCount === "auto";
-  }
-}
-
 function syncServingModeVisibility(application: RecipeApplication): void {
   const customPanel = queryMaybeElement<HTMLElement>("#customServingsPanel");
   if (customPanel) {
     customPanel.hidden = application.getSnapshot().servingsMode !== "custom";
-  }
-}
-
-function syncRecipeRoleOrder(application: RecipeApplication): void {
-  const intent = application.getSnapshot().requestIntent;
-  const hint = queryMaybeElement<HTMLElement>("#recipeRolesInputHint");
-  if (hint) {
-    hint.textContent = intent === "pairing" ? "例: 副菜・一品" : "例: 主菜・しっかり";
   }
 }
 
@@ -365,7 +296,6 @@ export function initializeApp(root: HTMLElement): void {
   }
 
   bindAppEvents(state, elements, outputPanel);
-  updateCookTimeDisplay(application.getSnapshot().cookTime);
   updateServingSteppers(application.getSnapshot().servingCounts);
   refreshPromptPanelPanel(state, elements, outputPanel);
   renderAiPromptPanel(application.getSnapshot().aiPrompt, elements);
@@ -485,20 +415,7 @@ function renderFields(): void {
     <div class="request-settings">
       ${renderServingsField()}
       ${renderCollapsibleComboField(getCombo("cookingTools"))}
-      ${renderCollapsibleField(
-        "requestOptions",
-        "作りたいもの・時間・こだわり",
-        "heart",
-        [
-          renderRequestIntentField(),
-          `<div id="targetDishField" hidden>${renderComboField(getCombo("targetDish"), "targetDishHint")}<p id="targetDishHint" class="field-hint">作りたい料理名を自由に入力できます。候補は入力補助です。</p></div>`,
-          `<div id="pairingTargetsField" hidden>${renderComboField(getCombo("pairingTargets"))}</div>`,
-          renderRecipeCountField(),
-          renderCollapsibleCookTimeField(),
-          ...advancedConditionOrder.map((id) => renderCollapsibleComboField(getCombo(id))),
-          renderCollapsibleNotesField(),
-        ].join(""),
-      )}
+      ${renderCollapsibleNotesField()}
     </div>
   `;
 
@@ -506,33 +423,6 @@ function renderFields(): void {
     const iconName = (element.dataset as DOMStringMap & { icon?: ComboConfig["icon"] }).icon;
     if (iconName) element.innerHTML = icon(iconName as ComboConfig["icon"]);
   });
-}
-
-function renderRequestIntentField(): string {
-  return `
-    <fieldset class="field fieldset intent-field" data-testid="recipe-item-requestIntent">
-      <legend class="field-title">${fieldLabelHtml("今回やりたいこと", "heart")}</legend>
-      ${renderRadioOptions("requestIntent", requestIntentOptions, "auto")}
-    </fieldset>
-  `;
-}
-
-function renderRecipeCountField(): string {
-  return renderCollapsibleField(
-    "recipeCount",
-    "作りたい品数",
-    "bowl",
-    `
-      <fieldset class="panel-fieldset">
-        <legend class="visually-hidden">作りたい品数</legend>
-        ${renderRadioOptions("recipeCount", recipeCountOptions, "auto")}
-      </fieldset>
-      <div id="recipeRolesField" class="recipe-role-subfield" data-testid="recipe-item-recipeRoles" hidden>
-        <label class="subfield-label" for="recipeRolesInput">料理の役割・量感</label>
-        ${renderComboFieldControl(getCombo("recipeRoles"), "", true)}
-      </div>
-    `,
-  );
 }
 
 function renderComboField(combo: ComboConfig, describedBy = ""): string {
@@ -586,20 +476,6 @@ function renderComboFieldControl(
 
 function renderCollapsibleComboField(combo: ComboConfig): string {
   return renderCollapsibleField(combo.id, combo.label, combo.icon, renderComboFieldControl(combo));
-}
-
-function renderCollapsibleCookTimeField(): string {
-  return renderCollapsibleField(
-    "cookTime",
-    "調理時間",
-    "clock",
-    `
-      <div class="range-card">
-        <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
-        <input id="cookTimeRange" data-testid="cook-time-range" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
-      </div>
-    `,
-  );
 }
 
 function renderCollapsibleNotesField(): string {
@@ -703,45 +579,16 @@ function createOutputPanelServices(
     syncMaterialRequestValidationState(snapshot);
     queryElement("#materialCount").textContent = `${snapshot.materialRequests.length}件`;
     const effectiveData = application.readPromptData();
-    const countLabel =
-      recipeCountOptions.find((option) => option.value === snapshot.effectiveRecipeCount)?.label ??
-      "おまかせ";
-    const roleSummary = effectiveData.recipeRoles.join("、");
     const summaryValues: Record<string, string> = {
       servings: effectiveData.servings || "指定なし",
       cookingTools: snapshot.values.cookingTools.join("、") || "指定なし",
-      requestOptions: [
-        requestIntentOptions.find((option) => option.value === snapshot.requestIntent)?.label,
-        ...effectiveData.targetDish,
-        ...effectiveData.pairingTargets,
-        snapshot.effectiveRecipeCount !== "auto" ? countLabel : "",
-        roleSummary,
-        snapshot.cookTime,
-        snapshot.values.recipeDirections.length
-          ? `方向性 ${snapshot.values.recipeDirections.length}件`
-          : "",
-        snapshot.values.ngFoodsAndSeasonings.length
-          ? `NG ${snapshot.values.ngFoodsAndSeasonings.length}件`
-          : "",
-        snapshot.supplementalNotes.trim() ? "その他の要望あり" : "",
-      ]
-        .filter(Boolean)
-        .join("・"),
-      recipeCount: [countLabel, roleSummary].filter(Boolean).join("・"),
-      cookTime: snapshot.cookTime || "指定なし",
-      recipeDirections: snapshot.values.recipeDirections.join("、") || "指定なし",
-      ngFoodsAndSeasonings: snapshot.values.ngFoodsAndSeasonings.join("、") || "指定なし",
       supplementalNotes: snapshot.supplementalNotes.trim() ? "入力あり" : "指定なし",
     };
     for (const element of queryAllElements<HTMLElement>("[data-summary-for]")) {
       const text = summaryValues[element.dataset["summaryFor"] ?? ""] ?? "指定なし";
       if (element.textContent !== text) element.textContent = text;
     }
-    syncIntentSections(application);
     syncServingModeVisibility(application);
-    // Only role mode changes need to rebuild pills; leave active editors alone.
-    syncRecipeRoleOrder(application);
-    updateCookTimeDisplay(snapshot.cookTime);
     updateServingSteppers(snapshot.servingCounts);
     if (outputPanelServices) refreshPromptPanelPanel(state, elements, outputPanelServices);
     const nextAiPresentation = JSON.stringify([
@@ -789,25 +636,12 @@ function createOutputPanelServices(
       const usage = materialUsageOptions.find((option) => option.value === input.value)?.value;
       if (usage) application.updateMaterial(input.name.slice("materialUsage-".length), { usage });
     } else if (
-      input.name === "requestIntent" &&
-      input instanceof HTMLInputElement &&
-      input.checked
-    ) {
-      const value = requestIntentOptions.find((option) => option.value === input.value)?.value;
-      if (value) application.setRequestIntent(value);
-    } else if (input.name === "recipeCount" && input instanceof HTMLInputElement && input.checked) {
-      const value = recipeCountOptions.find((option) => option.value === input.value)?.value;
-      if (value) application.setRecipeCount(value);
-    } else if (
       input.name === "servingsMode" &&
       input instanceof HTMLInputElement &&
       input.checked
     ) {
       const value = servingsModeOptions.find((option) => option.value === input.value)?.value;
       if (value) application.setServingsMode(value);
-    } else if (input.id === "cookTimeRange") {
-      const value = cookTimeOptions[Number(input.value)] ?? "指定なし";
-      application.setCookTime(value === "指定なし" ? "" : value);
     } else if (input.id === "supplementalNotes") {
       application.setSupplementalNotes(input.value);
     }
@@ -830,7 +664,6 @@ function createOutputPanelServices(
     clearCombo: (group) => comboRegistry.clear(group),
     clearCookTime: () => {
       application.setCookTime("");
-      queryElement<HTMLInputElement>("#cookTimeRange").value = "0";
     },
     clearSupplementalNotes: () => {
       application.setSupplementalNotes("");

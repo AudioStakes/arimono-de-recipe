@@ -23,7 +23,6 @@ const requiredStableHooks = [
   "material-use-panel",
   "materials-error",
   "mobile-action-footer",
-  "cook-time-range",
   "supplemental-notes",
   "condition-chips",
   "ai-transmission-notice",

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
 
 function materialCard(page: Page, name: string): Locator {
   return page.getByTestId(/^material-card-/).filter({ hasText: name });
@@ -30,18 +30,33 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
 
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText(["家にある食材・材料"]);
-  await expect(page.getByTestId("recipe-item-targetDish")).toBeHidden();
-  await expect(page.getByTestId("recipe-item-pairingTargets")).toBeHidden();
-  await openRequestOptions(page);
-  await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
-  await expect(page.getByTestId("recipe-item-recipeCount")).toHaveAttribute("data-state", "closed");
+  for (const id of [
+    "requestOptions",
+    "requestIntent",
+    "targetDish",
+    "pairingTargets",
+    "recipeCount",
+    "recipeRoles",
+    "cookTime",
+    "recipeDirections",
+    "ngFoodsAndSeasonings",
+  ]) {
+    await expect(page.getByTestId(`recipe-item-${id}`)).toHaveCount(0);
+  }
   await expect(page.getByTestId("ai-prompt-send")).toContainText("AIへ送信");
 
+  const requestFields = page.getByTestId("advanced-fields");
+  await expect(requestFields.getByTestId(/^recipe-item-panel-/)).toHaveCount(3);
+  expect(
+    await requestFields
+      .getByTestId(/^recipe-item-(servings|cookingTools|supplementalNotes)$/)
+      .evaluateAll((fields) => new Set(fields.map((field) => field.parentElement)).size),
+  ).toBe(1);
   const visibleToggles = page.locator('[data-testid^="recipe-item-toggle-"]:visible');
-  await expect(visibleToggles).toHaveCount(8);
+  await expect(visibleToggles).toHaveCount(3);
   await expect(visibleToggles.nth(0)).toHaveText(/人数・分量/);
   await expect(visibleToggles.nth(1)).toHaveText(/調理方法・調理器具/);
-  await expect(visibleToggles.nth(7)).toHaveText(/その他の要望/);
+  await expect(visibleToggles.nth(2)).toHaveText(/その他の要望/);
   await expect(page.getByTestId("recipe-item-cookingTools")).toHaveAttribute(
     "data-state",
     "closed",
@@ -66,42 +81,16 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.getByTestId("recipe-item-panel-cookingTools")).toBeHidden();
 });
 
-test("intent 切り替えで主要フィールドが切り替わる", async ({ page }) => {
+test("料理名・時間・こだわりはその他の要望に自由に記入できる", async ({ page }) => {
   await page.goto("/");
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("作りたい料理がある").check();
-  await expect(page.getByTestId("recipe-item-targetDish")).toBeVisible();
-  await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
-    "家にある食材・材料",
-  ]);
-  await expect(page.getByTestId("recipe-item-recipeCount")).toBeHidden();
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 今回やりたいこと\n\n作りたい料理がある/,
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  const notes = "カレーを作りたい。20分以内。\n辛くせず、卵は使わない。";
+  await page.getByTestId("supplemental-notes").fill(notes);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(new RegExp(notes));
+  await expect(page.getByTestId("condition-chips")).toContainText("その他の要望あり");
+  await expect(page.getByTestId("prompt-output")).not.toHaveValue(
+    /### 作りたい料理|### 調理時間|### レシピの方向性/,
   );
-
-  await page.getByTestId("combo-input-targetDish").fill("カレー");
-  await pressCommittedEnter(page.getByTestId("combo-input-targetDish"));
-  await expect(page.getByTestId("combo-input-targetDish")).toBeHidden();
-  await page.getByTestId("combo-pill-label-targetDish").click();
-  await page.getByTestId("combo-pill-edit-targetDish").fill("オムライス");
-  await pressCommittedEnter(page.getByTestId("combo-pill-edit-targetDish"));
-  await expect(page.getByTestId("combo-pill-label-targetDish")).toHaveText("オムライス");
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- オムライス/);
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/- カレー/);
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("一緒に出す料理に合わせたい").check();
-  await expect(page.getByTestId("recipe-item-targetDish")).toBeHidden();
-  await expect(page.getByTestId("recipe-item-pairingTargets")).toBeVisible();
-  await expect(page.getByTestId("basic-fields").locator(".field-title:visible")).toHaveText([
-    "家にある食材・材料",
-  ]);
-  await expect(page.getByTestId("recipe-item-recipeCount")).toBeVisible();
-  await expect(page.getByTestId("recipe-item-recipeRoles")).toBeVisible();
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n1品だけ/);
 });
 
 test("モバイル初期表示は材料入力とAI送信CTAを優先する", async ({ page }) => {
@@ -123,47 +112,41 @@ test("モバイル初期表示は材料入力とAI送信CTAを優先する", asy
   await expect(page.getByTestId("copy-prompt")).toBeVisible();
 });
 
-test("intent 往復で対象外の値が依頼文とチップに残らない", async ({ page }) => {
+test("その他の要望を編集・消去すると依頼文とチップも更新される", async ({ page }) => {
   await page.goto("/");
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("一緒に出す料理に合わせたい").check();
-  await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 一緒に出す料理/);
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("作りたい料理がある").check();
-  await page.getByTestId("combo-input-targetDish").fill("カレー");
-  await pressCommittedEnter(page.getByTestId("combo-input-targetDish"));
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい料理\n\n- カレー/);
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 一緒に出す料理/);
-  await expect(page.getByTestId("condition-chips")).not.toContainText("餃子");
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("ありものでおまかせ").check();
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 作りたい料理/);
-  await expect(page.getByTestId("condition-chips")).not.toContainText("カレー");
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  const notes = page.getByTestId("supplemental-notes");
+  await notes.fill("カレーを作りたい");
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/カレーを作りたい/);
+  await notes.fill("餃子に合う副菜を作りたい");
+  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/カレーを作りたい/);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/餃子に合う副菜を作りたい/);
+  await notes.fill("  \n  ");
+  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### その他の要望/);
+  await expect(page.getByTestId("condition-chips")).not.toContainText("その他の要望あり");
+  await expect(page.getByTestId("recipe-item-toggle-supplementalNotes")).toContainText("指定なし");
 });
 
-test("おまかせでもこだわり条件から品数と役割を指定できる", async ({ page }) => {
+test("3項目を独立して開閉し、入力内容を保持できる", async ({ page }) => {
   await page.goto("/");
-
-  await openRequestOptions(page);
-
-  await page.getByTestId("recipe-item-toggle-recipeCount").click();
-  await page.getByLabel("複数品を指定").check();
-  await expect(page.getByTestId("recipe-item-recipeRoles")).toBeVisible();
-
-  await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
-  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n複数品を指定/);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 料理の役割・量感\n\n- 副菜・一品/,
-  );
+  const ids = ["servings", "cookingTools", "supplementalNotes"];
+  for (const id of ids) {
+    await expect(page.getByTestId(`recipe-item-toggle-${id}`)).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    await page.getByTestId(`recipe-item-toggle-${id}`).click();
+    await expect(page.getByTestId(`recipe-item-panel-${id}`)).toBeVisible();
+  }
+  await page.getByTestId("supplemental-notes").fill("副菜を作りたい");
+  await page.getByTestId("recipe-item-toggle-servings").click();
+  await expect(page.getByTestId("recipe-item-panel-servings")).toBeHidden();
+  await expect(page.getByTestId("recipe-item-panel-cookingTools")).toBeVisible();
+  await expect(page.getByTestId("supplemental-notes")).toHaveValue("副菜を作りたい");
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  await expect(page.getByTestId("recipe-item-toggle-supplementalNotes")).toContainText("入力あり");
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  await expect(page.getByTestId("supplemental-notes")).toHaveValue("副菜を作りたい");
 });
 
 test("材料の使い方は食材・材料の同じリストに紐づく", async ({ page }) => {
@@ -258,62 +241,36 @@ test("複数材料の使い方と分量は材料名を編集しても元の材�
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 必ず使う食材・材料/);
 });
 
-test("一緒に出す料理と複数品指定はブラウザ上で反映される", async ({ page }) => {
+test("調理方法・調理器具を複数指定して個別に削除できる", async ({ page }) => {
   await page.goto("/");
-
-  await openRequestOptions(page);
-
-  await page.getByLabel("一緒に出す料理に合わせたい").check();
-  await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
-  await page.getByTestId("combo-input-pairingTargets").fill("焼き魚");
-  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
+  await page.getByTestId("recipe-item-toggle-cookingTools").click();
+  const input = page.getByTestId("combo-input-cookingTools");
+  for (const value of ["電子レンジ", "フライパン"]) {
+    await input.fill(value);
+    await pressCommittedEnter(input);
+  }
   await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 一緒に出す料理\n\n- 餃子\n- 焼き魚/,
+    /### 調理方法・調理器具\n\n- 電子レンジ\n- フライパン/,
   );
-
-  await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
-  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
-  await expect(page.getByTestId("combo-input-recipeRoles")).toBeHidden();
-  await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText("副菜・一品");
-
-  await page.getByLabel("複数品を指定").check();
-  await expect(page.getByTestId("combo-input-recipeRoles")).toBeVisible();
-  await page.getByTestId("combo-input-recipeRoles").fill("汁物");
-  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
-  await expect(page.getByTestId("combo-pill-label-recipeRoles")).toHaveText(["副菜・一品", "汁物"]);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 作りたい品数\n\n複数品を指定/);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /指定された料理の役割・量感ごとに、1品ずつ作り方を書いてください。/,
-  );
+  await page.getByTestId("combo-pill-remove-cookingTools").first().click();
+  await expect(page.getByTestId("combo-pill-label-cookingTools")).toHaveText("フライパン");
+  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/- 電子レンジ/);
 });
 
-test("折りたたみ項目は開いた中で入力できる", async ({ page }) => {
+test("人数・分量と器具とその他の要望が依頼文へ反映される", async ({ page }) => {
   await page.goto("/");
-
-  await openRequestOptions(page);
-
-  await page.getByTestId("recipe-item-toggle-cookTime").click();
-  await page.getByTestId("cook-time-range").evaluate((input) => {
-    const range = input as HTMLInputElement;
-    range.value = "2";
-    range.dispatchEvent(new Event("input", { bubbles: true }));
-    range.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  await openRequestOptions(page);
-  await page.getByTestId("recipe-item-toggle-recipeDirections").click();
-  await page.getByTestId("combo-input-recipeDirections").fill("あっさり");
-  await pressCommittedEnter(page.getByTestId("combo-input-recipeDirections"));
-
-  await openRequestOptions(page);
-
+  await page.getByTestId("recipe-item-toggle-servings").click();
+  await page.getByRole("radio", { name: "詳しく指定", exact: true }).check();
+  await page.getByTestId("serving-plus-adultCount").click();
+  await page.getByTestId("recipe-item-toggle-cookingTools").click();
+  await page.getByTestId("combo-input-cookingTools").fill("電子レンジ");
+  await pressCommittedEnter(page.getByTestId("combo-input-cookingTools"));
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("子ども用に辛くしない。");
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### 調理時間\n\n20分以内/);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/### レシピの方向性\n\n- あっさり/);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### その他の要望\n\n子ども用に辛くしない。/,
-  );
+  const output = page.getByTestId("prompt-output");
+  await expect(output).toHaveValue(/### 人数・分量\n\n.*大人1人/);
+  await expect(output).toHaveValue(/### 調理方法・調理器具\n\n- 電子レンジ/);
+  await expect(output).toHaveValue(/### その他の要望\n\n子ども用に辛くしない。/);
 });
 
 test("基本項目の DOM 順序がフォーム定義と一致する", async ({ page }) => {

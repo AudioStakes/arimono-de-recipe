@@ -1,18 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
-import { cookTimeOptions } from "../../src/data";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
 
 async function addMaterial(page: Page, name: string): Promise<void> {
   await page.getByTestId("combo-input-materials").fill(name);
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
 }
 
-for (const item of [
-  "materials",
-  "cookTime",
-  "ngFoodsAndSeasonings",
-  "supplementalNotes",
-] as const) {
+for (const item of ["materials", "cookingTools", "closedNotes", "supplementalNotes"] as const) {
   test(`条件サマリーの${item}をキーボードで削除しても編集位置を保持する`, async ({ page }) => {
     let sends = 0;
     page.on("request", (request) => {
@@ -24,29 +18,26 @@ for (const item of [
     let target = page.getByTestId("combo-input-materials");
     let label = /家にある食材・材料.*を削除/;
     let removedText = "### 家にある食材・材料";
-    if (item !== "materials") await openRequestOptions(page);
-    if (item === "cookTime") {
-      await page.getByTestId("recipe-item-toggle-cookTime").click();
-      target = page.getByTestId("cook-time-range");
-      await target.focus();
-      await target.press("ArrowRight");
-      label = /調理時間.*を削除/;
-      removedText = "### 調理時間";
-    } else if (item === "ngFoodsAndSeasonings") {
-      const toggle = page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings");
+    if (item === "cookingTools") {
+      const toggle = page.getByTestId("recipe-item-toggle-cookingTools");
       await toggle.click();
-      const input = page.getByTestId("combo-input-ngFoodsAndSeasonings");
-      await input.fill("卵");
+      const input = page.getByTestId("combo-input-cookingTools");
+      await input.fill("電子レンジ");
       await pressCommittedEnter(input);
       await toggle.click();
       target = toggle;
-      label = /使えない・持っていない.*を削除/;
-      removedText = "### 使えない・持っていない食材・調味料";
-    } else if (item === "supplementalNotes") {
-      await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
-      await page.getByTestId("supplemental-notes").fill("洗い物を減らす");
-      target = page.getByTestId("recipe-item-toggle-requestOptions");
-      await target.click();
+      label = /調理方法・調理器具.*を削除/;
+      removedText = "### 調理方法・調理器具";
+    } else if (item === "supplementalNotes" || item === "closedNotes") {
+      const toggle = page.getByTestId("recipe-item-toggle-supplementalNotes");
+      await toggle.click();
+      const notes = page.getByTestId("supplemental-notes");
+      await notes.fill("洗い物を減らす");
+      target = notes;
+      if (item === "closedNotes") {
+        await toggle.click();
+        target = toggle;
+      }
       label = /その他の要望ありを削除/;
       removedText = "洗い物を減らす";
     }
@@ -125,19 +116,15 @@ test("カードの量入力と使い方のキー操作を材料追加として�
   expect(requests).toBe(0);
 });
 
-test("要望を閉じても品数と役割の指定が入口に表示される", async ({ page }) => {
+test("その他の要望を閉じても入力済みの表示と内容を保持する", async ({ page }) => {
   await page.goto("/");
-  await openRequestOptions(page);
-  await page.getByLabel("一緒に出す料理に合わせたい").check();
-  await page.getByTestId("combo-input-recipeRoles").fill("副菜・一品");
-  await pressCommittedEnter(page.getByTestId("combo-input-recipeRoles"));
-  const toggle = page.getByTestId("recipe-item-toggle-requestOptions");
+  const toggle = page.getByTestId("recipe-item-toggle-supplementalNotes");
   await toggle.click();
-  await expect(toggle).toContainText("1品だけ・副菜・一品");
-  await expect(page.getByTestId("combo-input-recipeRoles")).toBeHidden();
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 料理の役割・量感\n\n- 副菜・一品/,
-  );
+  await page.getByTestId("supplemental-notes").fill("洗い物を減らす");
+  await toggle.click();
+  await expect(toggle).toContainText("入力あり");
+  await expect(page.getByTestId("supplemental-notes")).toBeHidden();
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/### その他の要望\n\n洗い物を減らす/);
 });
 
 test("矢印で候補へ進んでTabで退出すると通常の候補パネルを閉じる", async ({ page }) => {
@@ -515,19 +502,27 @@ test("320pxでも長い材料名が画面幅からはみ出さない", async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
-test("調理時間の読み上げに現在の候補ラベルを使う", async ({ page }) => {
+test("その他の要望は説明付きで読み上げられ、Enterで改行しても送信しない", async ({ page }) => {
+  let sends = 0;
+  await page.route("**/api/recipe", async (route) => {
+    sends += 1;
+    await route.abort();
+  });
   await page.goto("/");
-  await openRequestOptions(page);
-  await page.getByTestId("recipe-item-toggle-cookTime").click();
-  const range = page.getByTestId("cook-time-range");
-  await expect(range).toHaveAttribute("aria-valuetext", "指定なし");
-  await range.focus();
-  await range.press("ArrowRight");
-  await expect(range).toHaveAttribute("aria-valuetext", cookTimeOptions[1] ?? "");
-  await range.press("End");
-  await expect(range).toHaveAttribute("aria-valuetext", cookTimeOptions.at(-1) ?? "");
-  await range.press("Home");
-  await expect(range).toHaveAttribute("aria-valuetext", "指定なし");
+  const toggle = page.getByTestId("recipe-item-toggle-supplementalNotes");
+  await toggle.focus();
+  await toggle.press("Enter");
+  const notes = page.getByRole("textbox", { name: "その他の要望", exact: true });
+  await expect(notes).toHaveAccessibleDescription(
+    "例: 子ども用に辛くしない。冷蔵庫で3日間保存したい。",
+  );
+  await notes.fill("20分以内");
+  await notes.press("End");
+  await notes.press("Enter");
+  await notes.pressSequentially("副菜を作りたい");
+  await expect(notes).toHaveValue("20分以内\n副菜を作りたい");
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/20分以内\n副菜を作りたい/);
+  expect(sends).toBe(0);
 });
 
 test("材料名を置き換えても使い方と分量を保持し、既存名への統合は統合先を残す", async ({ page }) => {
@@ -684,7 +679,6 @@ for (const width of [320, 390, 1280]) {
         expect(bounds?.height).toBeGreaterThanOrEqual(44);
       }
     }
-    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = page.getByTestId("supplemental-notes");
     await notes.fill("最後の項目まで操作する");

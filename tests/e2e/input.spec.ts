@@ -1,6 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { combos } from "../../src/data";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const exactText = (value: string): RegExp => new RegExp(`^${escapeRegExp(value)}$`);
@@ -29,10 +28,10 @@ const comboPillRemoveButtons = (page: Page, comboId: string): Locator =>
 test("候補入力UIは独自候補リストで、候補選択とフィルタが動く", async ({ page }) => {
   await page.goto("/");
 
-  for (const combo of combos) {
-    await expect(comboField(page, combo.id)).toHaveCount(1);
-    await expect(comboPicker(page, combo.id)).toHaveCount(1);
-    await expect(comboSuggestions(page, combo.id)).toHaveCount(1);
+  for (const id of ["materials", "cookingTools"]) {
+    await expect(comboField(page, id)).toHaveCount(1);
+    await expect(comboPicker(page, id)).toHaveCount(1);
+    await expect(comboSuggestions(page, id)).toHaveCount(1);
   }
   await expect(page.locator("input[list]")).toHaveCount(0);
   await expect(page.locator("datalist")).toHaveCount(0);
@@ -148,24 +147,13 @@ test("読み検索とIME変換中の絞り込みが更新される", async ({ pa
   await page.goto("/");
 
   const materialInput = comboInput(page, "materials");
-  const pairingInput = comboInput(page, "pairingTargets");
   const toolsInput = comboInput(page, "cookingTools");
 
   await materialInput.fill("たまご");
   await expect(comboOption(page, "materials", "卵")).toBeVisible();
 
-  await openRequestOptions(page);
-
-  await page.getByLabel("一緒に出す料理に合わせたい").check();
-  await pairingInput.fill("ぎょうざ");
-  await expect(comboOption(page, "pairingTargets", "餃子")).toBeVisible();
-  // The previous material commits on blur; settle its layout before another tap.
-  await expect(comboPillLabels(page, "materials")).toHaveText("たまご");
-
-  await pairingInput.fill("はんばーぐ");
-  await expect(comboOption(page, "pairingTargets", "ハンバーグ")).toBeVisible();
-
   await page.getByTestId("recipe-item-toggle-cookingTools").click();
+  await expect(comboPillLabels(page, "materials")).toHaveText("たまご");
   await toolsInput.fill("でんしれんじ");
   await toolsInput.evaluate((element) => {
     const target = element as HTMLInputElement;
@@ -429,73 +417,19 @@ test("編集中のEscape、重複統合、IME Enter、×削除が動く", async 
 });
 
 const freeInputCases = [
-  {
-    comboId: "materials",
-    toggle: null,
-    setup: null,
-    value: "自由入力の食材",
-    heading: "家にある食材・材料",
-  },
-  {
-    comboId: "targetDish",
-    toggle: null,
-    setup: async (page: Page) => {
-      await openRequestOptions(page);
-      await page.getByLabel("作りたい料理がある").check();
-    },
-    value: "自由入力の作りたい料理",
-    heading: "作りたい料理",
-  },
-  {
-    comboId: "recipeRoles",
-    toggle: null,
-    setup: async (page: Page) => {
-      await openRequestOptions(page);
-      await page.getByLabel("一緒に出す料理に合わせたい").check();
-      await page.getByLabel("複数品を指定").check();
-    },
-    value: "自由入力の役割",
-    heading: "料理の役割・量感",
-  },
+  { comboId: "materials", toggle: null, value: "自由入力の食材", heading: "家にある食材・材料" },
   {
     comboId: "cookingTools",
     toggle: "cookingTools",
-    setup: null,
     value: "自由入力の調理方法",
     heading: "調理方法・調理器具",
   },
-  {
-    comboId: "pairingTargets",
-    toggle: null,
-    setup: async (page: Page) => {
-      await openRequestOptions(page);
-      await page.getByLabel("一緒に出す料理に合わせたい").check();
-    },
-    value: "自由入力の合わせ料理",
-    heading: "一緒に出す料理",
-  },
-  {
-    comboId: "recipeDirections",
-    toggle: "recipeDirections",
-    setup: null,
-    value: "自由入力の方向性",
-    heading: "レシピの方向性",
-  },
-  {
-    comboId: "ngFoodsAndSeasonings",
-    toggle: "ngFoodsAndSeasonings",
-    setup: null,
-    value: "自由入力のNG条件",
-    heading: "使えない・持っていない食材・調味料",
-  },
 ] as const;
 
-for (const { comboId, toggle, setup, value, heading } of freeInputCases) {
+for (const { comboId, toggle, value, heading } of freeInputCases) {
   test(`自由入力した値の追加と削除が依頼文へ反映される: ${comboId}`, async ({ page }) => {
     await page.goto("/");
     const output = page.getByTestId("prompt-output");
-    await openRequestOptions(page);
-    await setup?.(page);
     if (toggle) {
       const toggleButton = page.getByTestId(`recipe-item-toggle-${toggle}`);
       if ((await toggleButton.getAttribute("aria-expanded")) !== "true") {

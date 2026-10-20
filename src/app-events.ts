@@ -281,6 +281,27 @@ export function bindAppEvents(
     wrapFocusAtBoundary(event, elements.bottom);
   });
 
+  for (const button of [
+    $<HTMLButtonElement>("#copyPrompt"),
+    elements.copyPromptSticky,
+    elements.copyPromptMobile,
+    elements.sendPrompt,
+    elements.sendPromptMobile,
+  ]) {
+    button.addEventListener("pointerdown", (event) => {
+      const input = document.activeElement;
+      if (
+        event.button === 0 &&
+        input instanceof HTMLInputElement &&
+        input.closest(".combo") &&
+        input.dataset["composing"] !== "true"
+      ) {
+        // Keep the button still until click commits the draft; let active IME composition finish normally.
+        event.preventDefault();
+      }
+    });
+  }
+
   $("#copyPrompt").addEventListener(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),

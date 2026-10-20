@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
 
 const answer = "# 豆腐の料理\n\n- 豆腐を温めます。";
 const response = (recipe = answer) => JSON.stringify({ recipe, model: "test-model", usage: null });
@@ -83,7 +83,6 @@ for (const width of [1280, 390]) {
     await page.getByTestId(copyId).click();
     expect(calls).toBe(0);
     if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
-    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = `改行と"引用符"を残す\n${"あ".repeat(250)}`;
     await page.getByTestId("supplemental-notes").fill(notes);
@@ -162,7 +161,6 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = "あ".repeat(11000);
     await page.getByTestId("supplemental-notes").fill(notes);
@@ -277,18 +275,13 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
     .filter({ hasText: "豆腐" })
     .getByTestId(/^material-amount-/)
     .fill("１丁");
-  await openRequestOptions(page);
-  await page.getByRole("radio", { name: "一緒に出す料理に合わせたい", exact: true }).check();
-  await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
-  await page.getByRole("radio", { name: "複数品を指定", exact: true }).check();
-  await openRequestOptions(page);
-  await page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings").click();
-  await page.getByTestId("combo-input-ngFoodsAndSeasonings").fill("にんにく");
-  await pressCommittedEnter(page.getByTestId("combo-input-ngFoodsAndSeasonings"));
-  await openRequestOptions(page);
+  await page.getByTestId("recipe-item-toggle-cookingTools").click();
+  await page.getByTestId("combo-input-cookingTools").fill("電子レンジ");
+  await pressCommittedEnter(page.getByTestId("combo-input-cookingTools"));
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
-  await page.getByTestId("supplemental-notes").fill("家族用に薄味で。");
+  await page
+    .getByTestId("supplemental-notes")
+    .fill("餃子に合う副菜を作りたい。にんにくは使わず、家族用に薄味で。");
   await openPreview(page, false);
   await page.getByTestId("ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
@@ -299,8 +292,9 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
     "１丁",
     "使い切",
     "必ず使",
+    "電子レンジ",
     "餃子",
-    "複数品",
+    "副菜を作りたい",
     "にんにく",
     "家族用に薄味で。",
   ])
@@ -582,7 +576,8 @@ for (const width of [1280, 390]) {
     await expect.poll(() => posted.length).toBe(1);
     await input.fill("キャベツ");
     await input.press("Escape");
-    await copy.click();
+    // Hold beyond the delayed blur commit: the copy button must not move away before click.
+    await copy.click({ delay: 200 });
     const prompt = await page.getByTestId("prompt-output").inputValue();
     expect(prompt).toContain("キャベツ");
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);

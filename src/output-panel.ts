@@ -157,7 +157,6 @@ function focusConditionControl(id: ComboId | "cookTime" | "supplementalNotes"): 
   const controls = [
     document.getElementById(inputId),
     document.querySelector(`[data-testid="recipe-item-toggle-${id}"]`),
-    document.querySelector('[data-testid="recipe-item-toggle-requestOptions"]'),
   ];
   const target = controls.find(
     (control): control is HTMLElement =>
