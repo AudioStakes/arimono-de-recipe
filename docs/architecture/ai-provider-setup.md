@@ -1,7 +1,7 @@
 # AIモデルと利用制限の設定
 
 コードの実装・検証と、本番アカウントの設定は別である。
-この作業ではCloudflare/Groqのアカウント、契約、secret、DBを変更していない。
+本番を有効にするには、以下のDB・secret・Free確認設定をProductionへ登録する。
 設定不足の場合は推論を止め、依頼文の作成とコピーを使える状態にする。
 
 ## 有効化前の確認
@@ -19,31 +19,37 @@
 npx wrangler d1 create arimono-ai-usage
 ```
 
-返された実際のIDを`wrangler.jsonc`へ追加する。以下のプレースホルダーのまま配信しない。
+返された実際のIDを`wrangler.jsonc`の`env.production`へ追加する。D1とFree設定を本番に限定し、Previewへ本番DBを継承させない。以下のプレースホルダーのまま配信しない。
 
 ```jsonc
-"d1_databases": [
-  {
-    "binding": "AI_USAGE",
-    "database_name": "arimono-ai-usage",
-    "database_id": "<実際のdatabase_id>",
-    "migrations_dir": "migrations"
+"env": {
+  "production": {
+    "ai": { "binding": "AI" },
+    "d1_databases": [
+      {
+        "binding": "AI_USAGE",
+        "database_name": "arimono-ai-usage",
+        "database_id": "<実際のdatabase_id>",
+        "migrations_dir": "migrations"
+      }
+    ],
+    "vars": { "CLOUDFLARE_FREE_ONLY": "true" }
   }
-]
+}
 ```
 
 ```bash
-npx wrangler d1 migrations apply AI_USAGE --remote
+npx wrangler d1 migrations apply AI_USAGE --remote --env production
 npx wrangler pages secret put AI_USAGE_SECRET --project-name arimono-de-recipe
 ```
 
 `AI_USAGE_SECRET`は32文字以上のランダム値を設定する。チャット、Git、ブラウザコードへ値を貼らない。
-Cloudflare Pagesのサーバー環境へ`CLOUDFLARE_FREE_ONLY=true`を設定するのは、Free契約を確認した後だけにする。
+`env.production.vars`へ`CLOUDFLARE_FREE_ONLY=true`を設定するのは、Free契約を確認した後だけにする。`ai`も環境ごとの再指定が必要なため、本番環境へ再掲する。
 Groqを有効にする場合も、Pagesのsecretへ`GROQ_API_KEY`を登録し、確認後に`GROQ_FREE_ONLY=true`を設定する。
 `VITE_`付きの環境変数へ秘密情報を入れない。
 
 新しいWorker、課金プラン変更、ユーザーのログイン、recipeの保存は必要ない。
-秘密の更新・アカウント設定・配信は、このコード作業では実行していない。
+本番用secretはProductionだけへ登録する。Previewに本番DBや本番のFree確認設定を渡さない。
 
 ## 上限と保存範囲
 

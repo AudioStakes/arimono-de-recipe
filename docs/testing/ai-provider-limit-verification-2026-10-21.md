@@ -48,4 +48,22 @@ Nodeは既存のasdfインストールから `ASDF_NODEJS_VERSION=26.4.0` を指
 
 最初のE2E起動失敗は制限外で解消した。アプリのテスト・品質チェックに未実行項目はない。調査記録の追加後は `npm run lint:markdown` もexit 0で確認した。
 
-独立したread-onlyレビューで実装と回帰テストを確認し、指摘はなかった。本番へのデプロイ、クラウド設定、契約、利用上限は変更していない。
+独立したread-onlyレビューで実装と回帰テストを確認し、指摘はなかった。初回検証時点では本番へのデプロイ、クラウド設定、契約、利用上限を変更していない。
+
+## 本番反映の承認と準備
+
+所有者が今回に限るPR #57のmerge・専用D1・サーバー秘密情報設定を明示的に許可し、Workers Freeのままであることを確認した。D1操作権限は所有者のブラウザ承認で追加した。
+
+- 本番専用D1 `arimono-ai-usage` を作成し、既存 `0001_ai_usage.sql` を適用した。保存対象は既定の利用集計だけで、入力・回答は保存しない。
+- `AI_USAGE_SECRET` をランダム生成し、長さ32文字以上を生成時に確認してProductionへ登録した。値は画面やGitへ出していない。
+- `wrangler.jsonc` の `env.production` にだけD1・AI・`CLOUDFLARE_FREE_ONLY=true` を設定した。Groqは有効化しない。
+- インストール済みWranglerの `unstable_readConfig()` とassertで、ProductionはD1が1個・Freeフラグtrue、local/PreviewはD1が0個・Freeフラグなしと確認した（exit 0）。
+
+| コマンド | exit code | 結果 |
+| --- | --- | --- |
+| `wrangler d1 list --json` | 0 | 作成前のDBが0個であることを確認 |
+| `wrangler d1 create arimono-ai-usage --location=apac --update-config=false` | 0 | 専用DB作成成功 |
+| `wrangler d1 migrations apply AI_USAGE --remote --env production` | 0 | `0001_ai_usage.sql` が成功 |
+| `wrangler pages secret put AI_USAGE_SECRET --project-name arimono-de-recipe` | 0 | Productionのsecret登録成功をAPIでも確認 |
+
+秘密値やOAuth tokenは記録しない。Free契約は所有者による確認であり、利用制限の推定値だけで無課金を保証するものではない。
