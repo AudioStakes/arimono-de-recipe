@@ -54,7 +54,7 @@ export async function generateRecipeFromPrompt(
   signal?: AbortSignal,
   model: AiModelId = defaultAiModelId,
 ): Promise<GeneratePromptRecipeResult> {
-  const body = JSON.stringify(model === defaultAiModelId ? { prompt } : { prompt, model });
+  const body = JSON.stringify({ prompt, model });
   if (!prompt.trim()) {
     return {
       ok: false,

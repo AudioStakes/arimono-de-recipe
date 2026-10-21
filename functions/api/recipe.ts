@@ -6,12 +6,7 @@ import {
   modelAvailability,
   reserveRecipeUsage,
 } from "../../server/ai-provider";
-import {
-  type AiModelId,
-  aiRequestLimits,
-  defaultAiModelId,
-  findAiModel,
-} from "../../src/ai-models";
+import { type AiModelId, aiRequestLimits, findAiModel } from "../../src/ai-models";
 import {
   maxAiRecipeBodyBytes,
   maxAiRecipePromptLength,
@@ -63,7 +58,8 @@ type WorkersAiTextResult = {
   usage?: unknown;
 };
 
-const MODEL = defaultAiModelId;
+// Keep model-less requests from older clients on their original model.
+const MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8";
 const MAX_PROMPT_LENGTH = maxAiRecipePromptLength;
 const MAX_BODY_BYTES = maxAiRecipeBodyBytes;
 const MAX_TOKENS = aiMaxOutputTokens;

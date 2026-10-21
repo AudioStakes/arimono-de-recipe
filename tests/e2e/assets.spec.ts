@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
+import { pressCommittedEnter } from "./helpers/combo";
 
 async function serveBuiltAppAt(
   page: Page,
@@ -52,7 +53,7 @@ for (const blocked of [false, true]) {
       await expect(page.locator("html")).toHaveAttribute("data-test-beacon-loaded", "true");
     }
     await page.getByTestId("combo-input-materials").fill("豆腐");
-    await page.getByTestId("combo-input-materials").press("Enter");
+    await pressCommittedEnter(page.getByTestId("combo-input-materials"));
     await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐/);
     const config = await beacon.getAttribute("data-cf-beacon");
     expect(JSON.parse(config ?? "null")).toEqual({ token: "cbfdc0af97dc410f89024a9de8ecc87b" });

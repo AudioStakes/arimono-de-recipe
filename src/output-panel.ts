@@ -117,19 +117,6 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
       };
     }
 
-    if (spec.kind === "cookTime") {
-      return {
-        label: spec.label,
-        tone,
-        removable: spec.removable,
-        action: () => {
-          services.clearCookTime();
-          services.onChange();
-          focusConditionControl("cookTime");
-        },
-      };
-    }
-
     if (spec.kind === "supplementalNotes") {
       return {
         label: spec.label,
@@ -151,13 +138,11 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
   });
 }
 
-function focusConditionControl(id: ComboId | "cookTime" | "supplementalNotes"): void {
-  const inputId =
-    id === "cookTime" ? "cookTimeRange" : id === "supplementalNotes" ? id : `${id}Input`;
+function focusConditionControl(id: ComboId | "supplementalNotes"): void {
+  const inputId = id === "supplementalNotes" ? id : `${id}Input`;
   const controls = [
     document.getElementById(inputId),
     document.querySelector(`[data-testid="recipe-item-toggle-${id}"]`),
-    document.querySelector('[data-testid="recipe-item-toggle-requestOptions"]'),
   ];
   const target = controls.find(
     (control): control is HTMLElement =>
@@ -245,6 +230,7 @@ export async function copyPrompt(
   let feedbackButton = button;
   services.flushPendingInputs();
   services.onChange();
+  if (!services.application.getSnapshot().materialRequests.length) return;
   refreshPromptPanel(state, elements, services);
   let copied = false;
   try {
@@ -252,8 +238,9 @@ export async function copyPrompt(
     copied = true;
   } catch {
     const useMobileFallback =
-      button === elements.copyPromptMobile || button === elements.copyPromptSticky;
-    if (button === elements.copyPromptSticky) {
+      window.innerWidth < 1024 &&
+      (button === elements.copyPromptMobile || button === elements.copyPromptSticky);
+    if (useMobileFallback && button === elements.copyPromptSticky) {
       services.openMobilePromptForCopy?.(elements.copyPromptSticky);
       feedbackButton = elements.copyPromptMobile;
     }
@@ -265,6 +252,7 @@ export async function copyPrompt(
     try {
       fallbackTarget.focus({ preventScroll: true });
       fallbackTarget.select();
+      if (!useMobileFallback) fallbackTarget.scrollIntoView({ block: "nearest" });
       copied = document.execCommand("copy");
     } catch {
       copied = false;

@@ -2,22 +2,54 @@ import type { AppElements } from "./app-elements";
 import { icon } from "./icons";
 import { focusInputWithFeedback, setMaterialInputError } from "./input-feedback";
 import type { PromptPanelServices } from "./output-panel";
-import type { RecipeSnapshot } from "./recipe-application";
+import type { RecipeApplication, RecipeSnapshot } from "./recipe-application";
 import { renderRecipeMarkdown } from "./recipe-markdown";
 
-export function renderAiPromptSendButton(sticky = false): string {
+export function renderAiPromptSendButton(): string {
   return `
-    <button id="${sticky ? "sendPromptMobile" : "sendPrompt"}" class="action-button button-primary" type="button" data-testid="${sticky ? "mobile-ai-prompt-send" : "ai-prompt-send"}" aria-label="この依頼文をAIへ送信" aria-describedby="aiPrivacyNotice">
+    <button id="sendPromptMobile" class="action-button button-primary" type="button" disabled data-testid="mobile-ai-prompt-send" aria-label="この依頼文をAIへ送信" aria-describedby="aiPrivacyNotice">
       <span class="action-button-icon" aria-hidden="true" data-icon="send"></span>
       <span data-send-label>AIへ送信</span>
     </button>
   `;
 }
 
+export function createAiPromptControls(
+  application: RecipeApplication,
+  elements: AppElements,
+): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return function refresh(): void {
+    clearTimeout(timer);
+    const snapshot = application.getSnapshot();
+    const hasMaterials = snapshot.materialRequests.length > 0;
+    const seconds = snapshot.sendCooldownSeconds;
+    const loading = snapshot.aiPrompt.status === "loading";
+    const button = elements.sendPromptMobile;
+    button.disabled =
+      !hasMaterials ||
+      loading ||
+      seconds > 0 ||
+      !snapshot.availableAiModels.includes(snapshot.selectedAiModel);
+    const label = button.querySelector<HTMLElement>("[data-send-label]");
+    if (label)
+      label.textContent = loading ? "送信中…" : seconds > 0 ? `あと${seconds}秒` : "AIへ送信";
+    button.setAttribute(
+      "aria-label",
+      seconds > 0 && !loading ? `この依頼文をAIへ送信（あと${seconds}秒）` : "この依頼文をAIへ送信",
+    );
+    elements.copyPromptSticky.disabled = !hasMaterials;
+    elements.copyPromptMobile.disabled = !hasMaterials;
+    // Countdown ticks update controls only, preserving answer selection and input focus.
+    if (seconds > 0) timer = setTimeout(refresh, 1000);
+  };
+}
+
 export function renderAiPromptAnswer(): string {
   return `
     <article id="aiPromptPanel" class="ai-prompt-panel" data-testid="ai-prompt-panel" data-state="idle" aria-labelledby="ai-prompt-reply-heading">
-      <h3 id="ai-prompt-reply-heading" data-testid="ai-prompt-heading" tabindex="-1">AIの回答</h3>
+      <h2 id="ai-prompt-reply-heading" data-testid="ai-prompt-heading" tabindex="-1">AIの回答</h2>
+      <p class="field-hint visually-hidden" id="aiModelUnavailable" data-testid="ai-model-unavailable" role="status" aria-live="polite"></p>
       <p class="ai-prompt-empty" data-testid="ai-prompt-empty"><span aria-hidden="true">${icon("send")}</span>材料を入れて、AIへ送信してください。</p>
       <p data-testid="ai-prompt-status" role="status" aria-live="polite"></p>
       <div class="ai-recipe-answer" data-testid="ai-prompt-reply" hidden></div>
@@ -31,11 +63,6 @@ export function renderAiPromptPanel(
   elements: AppElements,
   enabled = true,
 ): boolean {
-  for (const button of [elements.sendPrompt, elements.sendPromptMobile]) {
-    button.disabled = aiPrompt.status === "loading" || !enabled;
-    const label = button.querySelector<HTMLElement>("[data-send-label]");
-    if (label) label.textContent = aiPrompt.status === "loading" ? "送信中…" : "AIへ送信";
-  }
   const panel = elements.aiPromptPanel;
   const status = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-status"]');
   const reply = panel.querySelector<HTMLElement>('[data-testid="ai-prompt-reply"]');
@@ -69,7 +96,7 @@ export function renderAiPromptPanel(
             : "";
   }
   const success = aiPrompt.status === "success";
-  if (empty) empty.hidden = aiPrompt.status !== "idle";
+  if (empty) empty.hidden = aiPrompt.status !== "idle" || !enabled;
   if (reply) {
     reply.hidden = !success;
     if (!success) reply.replaceChildren();
@@ -82,7 +109,8 @@ export async function sendPromptToAi(
   elements: AppElements,
   services: PromptPanelServices,
 ): Promise<void> {
-  if (services.application.getSnapshot().aiPrompt.status === "loading") return;
+  const before = services.application.getSnapshot();
+  if (before.aiPrompt.status === "loading" || before.sendCooldownSeconds > 0) return;
   services.flushPendingInputs();
   services.onChange();
   services.validateBeforeAiRecipe();

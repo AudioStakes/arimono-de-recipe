@@ -323,14 +323,35 @@ describe("POST /api/recipe", () => {
     });
   });
 
-  test("fake env.AI.run の結果を返す", async () => {
+  test("モデルを省略した旧画面は従来のLlamaを使い続ける", async () => {
+    const run = vi.fn().mockResolvedValue({ response: "豆腐のレシピ" });
+    const response = await onRequest(
+      createContext(createRequest({ prompt: "豆腐で作ってください。" }), { AI: { run } }),
+    );
+    expect(response.status).toBe(200);
+    expect(await readJson(response)).toMatchObject({
+      recipe: "豆腐のレシピ",
+      model: "@cf/meta/llama-3.1-8b-instruct-fp8",
+    });
+    expect(run).toHaveBeenCalledWith(
+      "@cf/meta/llama-3.1-8b-instruct-fp8",
+      expect.objectContaining({ max_tokens: recipeFunctionLimits.maxTokens }),
+    );
+  });
+
+  test("既定Gemmaの応答を返し、thinkingなしで依頼文全体を送る", async () => {
     const run = vi.fn<Env["AI"]["run"]>(async () => ({
-      response: "豆腐のあんかけ\n\n1. 豆腐を温める。",
+      choices: [
+        {
+          finish_reason: "stop",
+          message: { content: "豆腐のあんかけ\n\n1. 豆腐を温める。" },
+        },
+      ],
       usage: { input_tokens: 12, output_tokens: 34 },
     }));
 
     const response = await onRequest(
-      createContext(createRequest({ prompt: "豆腐で作ってください。" }), {
+      createContext(createRequest({ prompt: "豆腐で作ってください。", model: defaultAiModelId }), {
         AI: { run },
       }),
     );
@@ -347,10 +368,12 @@ describe("POST /api/recipe", () => {
     expect(call).toBeDefined();
     if (!call) throw new Error("AI.run was not called.");
     const [model, input] = call;
-    expect(model).toBe(defaultAiModelId);
+    expect(model).toBe("@cf/google/gemma-4-26b-a4b-it");
     expect(isRecord(input)).toBe(true);
     if (!isRecord(input)) throw new Error("AI input was not an object.");
-    expect(input["max_tokens"]).toBe(recipeFunctionLimits.maxTokens);
+    expect(input["max_completion_tokens"]).toBe(recipeFunctionLimits.maxTokens);
+    expect(input["max_tokens"]).toBeUndefined();
+    expect(input["chat_template_kwargs"]).toEqual({ enable_thinking: false });
     expect(input["temperature"]).toBe(recipeFunctionLimits.temperature);
     expect(input["messages"]).toEqual([
       expect.objectContaining({ role: "system" }),

@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { defaultAiModelId } from "../../src/ai-models";
+import { pressCommittedEnter } from "./helpers/combo";
+import { openAiSettings } from "./helpers/settings";
 
 const answer = "# 豆腐の料理\n\n- 豆腐を温めます。";
 const response = (recipe = answer) => JSON.stringify({ recipe, model: "test-model", usage: null });
@@ -29,11 +31,12 @@ test("編集中の材料名もコピー・送信の直前に確定し、量とID
   await page.getByTestId("mobile-ai-prompt-send").click();
   prompt = await page.getByTestId("prompt-output").inputValue();
   expect(prompt).toContain("冷凍豆腐（量: 150g）");
-  await expect.poll(() => posted).toEqual({ prompt });
+  await expect.poll(() => posted).toEqual({ prompt, model: defaultAiModelId });
   await expect(page.getByTestId(id ?? "").getByTestId(/^material-amount-/)).toHaveValue("150g");
 });
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => {
     let text = "";
     Object.defineProperty(navigator, "clipboard", {
@@ -48,19 +51,14 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-async function openPreview(page: Page, mobile: boolean): Promise<void> {
-  if (mobile) {
-    await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
-  } else {
-    await page.getByTestId("prompt-preview-toggle").click();
-  }
+async function openPreview(page: Page): Promise<void> {
+  await page.getByTestId("prompt-preview-toggle").click();
 }
 
 for (const width of [1280, 390]) {
   const mobile = width < 1024;
-  const sendId = mobile ? "mobile-ai-prompt-send" : "ai-prompt-send";
-  const otherSendId = mobile ? "ai-prompt-send" : "mobile-ai-prompt-send";
-  const copyId = mobile ? "copy-prompt-sticky" : "copy-prompt";
+  const sendId = "mobile-ai-prompt-send";
+  const copyId = "copy-prompt-sticky";
 
   test(`${width}pxでコピー本文全文を明示送信し、待機中と回答後もコピーできる`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -79,17 +77,16 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("キャベツ");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(copyId).click();
     expect(calls).toBe(0);
-    if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
-    await openRequestOptions(page);
+    if (mobile) await openPreview(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = `改行と"引用符"を残す\n${"あ".repeat(250)}`;
     await page.getByTestId("supplemental-notes").fill(notes);
     // Do not press Enter: submitting must commit the pending material too.
     await page.getByTestId("combo-input-materials").fill("豆腐（１丁）");
-    if (mobile) await openPreview(page, mobile);
+    if (mobile) await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "loading");
     await expect(page.getByTestId(sendId)).toBeDisabled();
@@ -98,10 +95,9 @@ for (const width of [1280, 390]) {
       await expect(page.getByTestId("ai-prompt-heading")).toBeFocused();
       await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");
     }
-    await expect(page.getByTestId(otherSendId)).toBeDisabled();
     await expect.poll(() => calls).toBe(1);
     const prompt = await page.getByTestId("prompt-output").inputValue();
-    expect(posted).toEqual({ prompt });
+    expect(posted).toEqual({ prompt, model: defaultAiModelId });
     expect(prompt).toContain("豆腐（１丁）");
     expect(prompt).toContain(notes);
     await expect(page.getByTestId("mobile-prompt-output")).toHaveValue(prompt);
@@ -110,10 +106,12 @@ for (const width of [1280, 390]) {
     expect(calls).toBe(1);
     finish();
     await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
-    await expect(page.getByRole("heading", { name: "豆腐の料理", level: 4 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "豆腐の料理", level: 3 })).toBeVisible();
     await expect(page.getByTestId("ai-prompt-status")).toHaveAttribute("role", "status");
     await expect(page.getByTestId("ai-prompt-panel")).toHaveCount(1);
     await expect(page.locator('img[src="x"]')).toHaveCount(0);
+    await expect(page.getByTestId(sendId)).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(page.getByTestId(sendId)).toBeEnabled();
     await page.getByTestId(copyId).click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
@@ -139,7 +137,7 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText("AI設定がありません。");
     await expect(page.getByTestId("ai-prompt-status")).toHaveAttribute("role", "alert");
@@ -147,6 +145,7 @@ for (const width of [1280, 390]) {
     await expect
       .poll(() => page.evaluate(() => navigator.clipboard.readText()))
       .toBe(await page.getByTestId("prompt-output").inputValue());
+    await page.clock.runFor(10_000);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
     expect(calls).toBe(2);
@@ -162,11 +161,10 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openRequestOptions(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = "あ".repeat(11000);
     await page.getByTestId("supplemental-notes").fill(notes);
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText("送信上限を超えています");
     const prompt = await page.getByTestId("prompt-output").inputValue();
@@ -193,16 +191,16 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect.poll(() => calls).toBe(1);
-    if (!mobile) await openPreview(page, mobile);
+    if (!mobile) await openPreview(page);
     await page.getByTestId("combo-input-materials").focus();
     finish();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "success");
     await expect(page.getByTestId("combo-input-materials")).toBeFocused();
-    await openPreview(page, mobile);
-    if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
+    await openPreview(page);
+    if (mobile) await openPreview(page);
     await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
     expect(calls).toBe(1);
   });
@@ -233,13 +231,15 @@ test("入力変更で旧通信を中断し、新しい依頼への回答だけ�
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-  await openPreview(page, false);
-  await page.getByTestId("ai-prompt-send").click();
+  await openPreview(page);
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect.poll(() => calls).toBe(1);
   await page.getByTestId("combo-input-materials").fill("キャベツ");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
   await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
-  await page.getByTestId("ai-prompt-send").click();
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeDisabled();
+  await page.clock.runFor(10_000);
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい回答");
   finishOld();
   await completed;
@@ -277,30 +277,26 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
     .filter({ hasText: "豆腐" })
     .getByTestId(/^material-amount-/)
     .fill("１丁");
-  await openRequestOptions(page);
-  await page.getByRole("radio", { name: "一緒に出す料理に合わせたい", exact: true }).check();
-  await page.getByTestId("combo-input-pairingTargets").fill("餃子");
-  await pressCommittedEnter(page.getByTestId("combo-input-pairingTargets"));
-  await page.getByRole("radio", { name: "複数品を指定", exact: true }).check();
-  await openRequestOptions(page);
-  await page.getByTestId("recipe-item-toggle-ngFoodsAndSeasonings").click();
-  await page.getByTestId("combo-input-ngFoodsAndSeasonings").fill("にんにく");
-  await pressCommittedEnter(page.getByTestId("combo-input-ngFoodsAndSeasonings"));
-  await openRequestOptions(page);
+  await page.getByTestId("recipe-item-toggle-cookingTools").click();
+  await page.getByTestId("combo-input-cookingTools").fill("電子レンジ");
+  await pressCommittedEnter(page.getByTestId("combo-input-cookingTools"));
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
-  await page.getByTestId("supplemental-notes").fill("家族用に薄味で。");
-  await openPreview(page, false);
-  await page.getByTestId("ai-prompt-send").click();
+  await page
+    .getByTestId("supplemental-notes")
+    .fill("餃子に合う副菜を作りたい。にんにくは使わず、家族用に薄味で。");
+  await openPreview(page);
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
   const prompt = await page.getByTestId("prompt-output").inputValue();
-  expect(posted).toEqual({ prompt });
+  expect(posted).toEqual({ prompt, model: defaultAiModelId });
   for (const value of [
     ...names,
     "１丁",
     "使い切",
     "必ず使",
+    "電子レンジ",
     "餃子",
-    "複数品",
+    "副菜を作りたい",
     "にんにく",
     "家族用に薄味で。",
   ])
@@ -339,10 +335,9 @@ test("Markdownの構造だけを表示し、生HTML・画像・危険URLから�
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-  const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
-  await page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   const reply = page.getByTestId("ai-prompt-reply");
-  await expect(reply.getByRole("heading", { name: "豆腐の献立", level: 4 })).toBeVisible();
+  await expect(reply.getByRole("heading", { name: "豆腐の献立", level: 3 })).toBeVisible();
   await expect(reply.locator("strong")).toHaveText("分量");
   await expect(reply.getByRole("list")).toHaveCount(2);
   await expect(reply.getByRole("table")).toBeVisible();
@@ -375,14 +370,14 @@ test("材料と使い切り量の不足は送信せず入力へ誘導し、入�
   });
   await page.goto("/");
   const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
-  const send = page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send");
+  const send = page.getByTestId("mobile-ai-prompt-send");
   const input = page.getByTestId("combo-input-materials");
-  await send.click();
-  await expect(input).toBeFocused();
-  await expect(input).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByTestId("materials-error")).toBeVisible();
-  await expect(page.getByTestId("ai-prompt-status")).toContainText("家にある食材");
-  await expect(page.getByTestId("ai-prompt-status")).not.toContainText("再試行");
+  await expect(send).toBeDisabled();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeDisabled();
+  await expect(
+    page.getByText("家にある食材・材料を追加してください。", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("materials-error")).toBeHidden();
   expect(calls).toBe(0);
   await input.fill("キャベツ");
   await pressCommittedEnter(input);
@@ -390,7 +385,7 @@ test("材料と使い切り量の不足は送信せず入力へ誘導し、入�
   await expect(page.getByTestId("materials-error")).toBeHidden();
   const card = page.getByTestId(/^material-card-/);
   await card.getByRole("radio", { name: "使い切る", exact: true }).check();
-  if (mobile) await openPreview(page, true);
+  if (mobile) await openPreview(page);
   await send.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");
@@ -416,13 +411,14 @@ for (const [length, message] of [
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
-    const send = page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send");
+    const send = page.getByTestId("mobile-ai-prompt-send");
     await send.click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText(message);
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
-    await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
+    await page.getByTestId("copy-prompt-sticky").click();
     await expect
       .poll(() => page.evaluate(() => navigator.clipboard.readText()))
       .toBe(await page.getByTestId("prompt-output").inputValue());
@@ -443,14 +439,13 @@ test("AI失敗後も同じ依頼文をコピーでき、入力変更で古いエ
     });
   });
   await page.goto("/");
-  const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
   const input = page.getByTestId("combo-input-materials");
   await input.fill("豆腐");
   await pressCommittedEnter(input);
-  await page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("AIを利用できません。");
   const prompt = await page.getByTestId("prompt-output").inputValue();
-  await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
+  await page.getByTestId("copy-prompt-sticky").click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
   expect(calls).toBe(1);
   await input.fill("キャベツ");
@@ -475,15 +470,15 @@ test("過大なMarkdown表を表示せず、定型エラーからコピーと再
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-  const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
-  const send = page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send");
+  const send = page.getByTestId("mobile-ai-prompt-send");
   await send.click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("回答を表示できませんでした");
   await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
-  await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
+  await page.getByTestId("copy-prompt-sticky").click();
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe(await page.getByTestId("prompt-output").inputValue());
+  await page.clock.runFor(10_000);
   await send.click();
   await expect(page.getByTestId("ai-prompt-reply")).toBeVisible();
   expect(calls).toBe(2);
@@ -504,7 +499,7 @@ for (const width of [1280, 320]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await page.getByTestId(width < 1024 ? "mobile-ai-prompt-send" : "ai-prompt-send").click();
+    await page.getByTestId("mobile-ai-prompt-send").click();
     const reply = page.getByTestId("ai-prompt-reply");
     const quantity = reply.getByRole("cell", { name: "150g", exact: true });
     await expect(quantity).toBeVisible();
@@ -544,16 +539,17 @@ for (const width of [1280, 390]) {
     await page.addInitScript(() => {
       const originalFetch = window.fetch.bind(window);
       window.fetch = (input, init) => {
-        init?.signal?.addEventListener(
-          "abort",
-          () => {
-            const browserWindow = window as typeof window & {
-              recordCopyRequestAbort: () => Promise<void>;
-            };
-            void browserWindow.recordCopyRequestAbort();
-          },
-          { once: true },
-        );
+        if (init?.method === "POST")
+          init.signal?.addEventListener(
+            "abort",
+            () => {
+              const browserWindow = window as typeof window & {
+                recordCopyRequestAbort: () => Promise<void>;
+              };
+              void browserWindow.recordCopyRequestAbort();
+            },
+            { once: true },
+          );
         return originalFetch(input, init);
       };
     });
@@ -575,29 +571,30 @@ for (const width of [1280, 390]) {
     const input = page.getByTestId("combo-input-materials");
     await input.fill("豆腐");
     await pressCommittedEnter(input);
-    const send = page.getByTestId(width < 1024 ? "mobile-ai-prompt-send" : "ai-prompt-send");
-    const copy = page.getByTestId(width < 1024 ? "copy-prompt-sticky" : "copy-prompt");
+    const send = page.getByTestId("mobile-ai-prompt-send");
+    const copy = page.getByTestId("copy-prompt-sticky");
     await send.click();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "loading");
     await expect.poll(() => posted.length).toBe(1);
     await input.fill("キャベツ");
     await input.press("Escape");
-    await copy.click();
+    // Hold beyond the delayed blur commit: the copy button must not move away before click.
+    await copy.click({ delay: 200 });
     const prompt = await page.getByTestId("prompt-output").inputValue();
     expect(prompt).toContain("キャベツ");
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     finishOld();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
-    await expect(page.getByTestId("ai-prompt-send")).toBeEnabled();
-    await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
     await expect.poll(() => aborts).toBe(1);
     await send.click();
     await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい回答");
     expect(posted).toEqual([
       expect.objectContaining({ prompt: expect.not.stringContaining("キャベツ") }),
-      { prompt },
+      { prompt, model: defaultAiModelId },
     ]);
   });
 
@@ -612,17 +609,19 @@ for (const width of [1280, 390]) {
     const input = page.getByTestId("combo-input-materials");
     await input.fill("豆腐");
     await pressCommittedEnter(input);
-    const send = page.getByTestId(width < 1024 ? "mobile-ai-prompt-send" : "ai-prompt-send");
+    const send = page.getByTestId("mobile-ai-prompt-send");
     await send.click();
     await expect(page.getByTestId("ai-prompt-reply")).toHaveText("以前の回答");
     await input.fill("キャベツ");
     await input.press("Escape");
-    await page.getByTestId(width < 1024 ? "copy-prompt-sticky" : "copy-prompt").click();
+    await page.getByTestId("copy-prompt-sticky").click();
     const prompt = await page.getByTestId("prompt-output").inputValue();
     expect(prompt).toContain("キャベツ");
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
     expect(requests).toBe(1);
   });
@@ -637,16 +636,17 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   await page.addInitScript(() => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
-      init?.signal?.addEventListener(
-        "abort",
-        () => {
-          const browserWindow = window as typeof window & {
-            recordAmountRequestAbort: () => Promise<void>;
-          };
-          void browserWindow.recordAmountRequestAbort();
-        },
-        { once: true },
-      );
+      if (init?.method === "POST")
+        init.signal?.addEventListener(
+          "abort",
+          () => {
+            const browserWindow = window as typeof window & {
+              recordAmountRequestAbort: () => Promise<void>;
+            };
+            void browserWindow.recordAmountRequestAbort();
+          },
+          { once: true },
+        );
       return originalFetch(input, init);
     };
   });
@@ -677,26 +677,71 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   const amount = card.getByTestId(/^material-amount-/);
   const error = card.getByTestId(/^material-use-up-error-/);
   await amount.fill("1丁");
-  await page.getByTestId("ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "loading");
   await expect.poll(() => posted.length).toBe(1);
   await amount.fill("");
   await expect(amount).toHaveAttribute("required", "");
   await expect(amount).toHaveAttribute("aria-invalid", "true");
   await expect(error).toBeVisible();
-  await expect(page.getByTestId("copy-prompt")).toBeEnabled();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeEnabled();
   await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
   await expect.poll(() => aborts).toBe(1);
   await amount.fill("2丁");
   await expect(amount).not.toHaveAttribute("aria-invalid", "true");
   await expect(error).toBeHidden();
   const prompt = await page.getByTestId("prompt-output").inputValue();
-  expect(prompt).toContain("豆腐（使い切りたい量: 2丁）");
+  expect(prompt).toContain("豆腐（使い切る量: 2丁）");
   finishOld();
   await completed;
   await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
-  await expect(page.getByTestId("ai-prompt-send")).toBeEnabled();
-  await page.getByTestId("ai-prompt-send").click();
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeDisabled();
+  await page.clock.runFor(10_000);
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい分量の回答");
-  expect(posted[1]).toEqual({ prompt });
+  expect(posted[1]).toEqual({ prompt, model: defaultAiModelId });
+});
+
+test("送信後10秒は成功や入力・AI変更後も再送せず、コピーは利用できる", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    calls += 1;
+    await route.fulfill({ contentType: "application/json", body: response() });
+  });
+  await page.goto("/");
+  const input = page.getByTestId("combo-input-materials");
+  await input.fill("豆腐");
+  await pressCommittedEnter(input);
+  await page.clock.pauseAt(new Date(Date.now() + 3_600_000));
+  const send = page.getByTestId("mobile-ai-prompt-send");
+  const copy = page.getByTestId("copy-prompt-sticky");
+  await send.click();
+  await expect(page.getByTestId("ai-prompt-reply")).toBeVisible();
+  await expect(send).toBeDisabled();
+  await expect(send).toHaveText("あと10秒");
+  await expect(copy).toBeEnabled();
+  await copy.click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(await page.getByTestId("prompt-output").inputValue());
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  await page.getByTestId("supplemental-notes").fill("温かい料理");
+  await openAiSettings(page);
+  await page
+    .getByTestId("ai-model-select")
+    .selectOption("@cf/meta/llama-3.3-70b-instruct-fp8-fast");
+  await page.getByTestId("privacy-close").click();
+  await send.dispatchEvent("click");
+  expect(calls).toBe(1);
+  await page.clock.runFor(9_999);
+  await expect(send).toBeDisabled();
+  await expect(send).toHaveText("あと1秒");
+  await send.dispatchEvent("click");
+  expect(calls).toBe(1);
+  await page.clock.runFor(1);
+  await expect(send).toBeEnabled();
+  await expect(send).toHaveText("AIへ送信");
+  await send.click();
+  await expect.poll(() => calls).toBe(2);
 });

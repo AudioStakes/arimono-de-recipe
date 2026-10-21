@@ -24,6 +24,7 @@ application and domain modules, not this visual specification.
   --ink: #373b2f;
   --ink-strong: #303b29;
   --muted: #515645;
+  --placeholder: #737866;
   --line: #e3e0cc;
   --line-strong: #8f947e;
   --primary: #f6e5a6;
@@ -82,11 +83,14 @@ application and domain modules, not this visual specification.
   as well as sage. Use 4px inner padding so ordinary labels fit one row even with
   a desktop scrollbar at 320px; retain the 44px minimum target height. Preserve
   the amount error's described relationship when invalid.
-- Request options are grouped in this order: servings; methods/tools; intent,
-  time and preferences. Closed sections show their current specified values.
+- Request options have three peer sections: servings; methods/tools;
+  supplemental notes. Do not add a heading above the group. Closed sections
+  show their current specified values.
 - Use 44px minimum interactive targets, 46px ordinary controls, 52px primary
-  and copy actions, 56px nested toggle rows and 80px top-level toggle rows.
-- AI model choice uses a labelled native select with a 46px minimum target and
+  and copy actions, and 80px top-level toggle rows.
+  Reserve 56px inline-end padding in combo inputs for their disclosure button.
+- AI model choice stays inside privacy settings and uses a labelled native
+  select with a 46px minimum target and
   a font-relative explicit height, retaining Safari's native-control sizing. Keep
   the current recipient described beside it. Keep model metadata separate from
   recipe request output.
@@ -94,10 +98,10 @@ application and domain modules, not this visual specification.
   padding and 2px of border, with the ordinary minimum target retained.
 - The bottom action bar stays available at all widths. Reserve at least 160px,
   increasing with text size, and the safe-area inset below normal-flow content.
-  Its content is at most 860px wide. Main and fixed action rows use the same
-  intrinsic-width wrapping: keep ordinary labels on one line, and stack actions
-  when both do not fit. Long copy-error feedback can wrap. Recipient and preview
-  controls also wrap instead of compressing the send button.
+  Its content is at most 860px wide. The fixed row is the sole send/copy action
+  pair: keep ordinary labels on one line and stack actions when both do not fit.
+  Long copy-error feedback can wrap. Creator and privacy links sit below it.
+  Recipient details stay in settings and the send button description/title.
 - Serving steppers use a 9.5rem minimum card basis and adapt their column count.
   Keep the count on one line, including 10 people and enlarged text.
 - Only opened preview sheets/dialogs scroll internally. Preview text is between
@@ -106,6 +110,10 @@ application and domain modules, not this visual specification.
   combobox lists. Modal preview and privacy retain background inertness, focus
   loops, Escape and opener restoration.
 - Privacy is at most 680px wide and fits within 100dvh minus outer spacing.
+- The answer card begins with its h2, without a preamble or duplicate action
+  row. Generated recipe headings start at h3; the inline request preview stays
+  below the answer. Keep an empty availability live region accessible and show
+  its message only when the selected AI cannot be used.
 - A long answer table scrolls within its own container. Table cells have a 96px
   reading width. Generated Markdown uses existing safe rendering.
 

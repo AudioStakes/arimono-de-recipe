@@ -77,6 +77,9 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
   let aiPrompt = idle();
   let generation = 0;
   let controller: AbortController | null = null;
+  let nextSendAt = 0;
+  const sendCooldownSeconds = (): number =>
+    Math.max(0, Math.ceil((nextSendAt - performance.now()) / 1000));
   const listeners = new Set<() => void>();
   const emit = (): void => {
     for (const listener of listeners) listener();
@@ -266,7 +269,7 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
       };
     },
     async send(): Promise<void> {
-      if (aiPrompt.status === "loading") return;
+      if (aiPrompt.status === "loading" || sendCooldownSeconds() > 0) return;
       const submittedPrompt = getPrompt();
       const amountErrors = validateMaterialRequestAmounts(materialRequests);
       const errorMessage = amountErrors.length
@@ -288,6 +291,7 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
         emit();
         return;
       }
+      nextSendAt = performance.now() + 10_000;
       controller = new AbortController();
       const signal = controller.signal;
       aiPrompt = { ...idle(), status: "loading", submittedPrompt };
@@ -358,6 +362,7 @@ export function createRecipeApplication(dependencies: RecipeApplicationDependenc
         materialErrors: validateMaterialRequestAmounts(materialRequests),
         aiPrompt: { ...aiPrompt } as Readonly<AiState>,
         selectedAiModel,
+        sendCooldownSeconds: sendCooldownSeconds(),
         availableAiModels: [...availableAiModels] as readonly AiModelId[],
         requestIntent,
         recipeCount,

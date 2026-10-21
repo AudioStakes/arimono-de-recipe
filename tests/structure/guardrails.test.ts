@@ -23,14 +23,10 @@ const requiredStableHooks = [
   "material-use-panel",
   "materials-error",
   "mobile-action-footer",
-  "cook-time-range",
   "supplemental-notes",
   "condition-chips",
-  "ai-transmission-notice",
-  "mobile-ai-transmission-notice",
   "prompt-output",
   "mobile-prompt-output",
-  "copy-prompt",
   "copy-prompt-sticky",
   "copy-prompt-mobile-panel",
   "material-card-${",
@@ -38,8 +34,8 @@ const requiredStableHooks = [
   "material-usage-option-${",
   "material-amount-${",
   "material-use-up-error-${",
-  "ai-prompt-send",
   "mobile-ai-prompt-send",
+  "ai-model-unavailable",
   "ai-prompt-panel",
   "ai-prompt-heading",
   "ai-prompt-status",
@@ -263,7 +259,7 @@ function assertApprovedFunctionBoundary(files: readonly TextFile[]): void {
 function assertPromptRulesStayOutOfUi(files: readonly TextFile[]): void {
   const allowedFiles = new Set(["src/prompt.ts", "src/data.ts"]);
   const promptRulePatterns = [
-    /##\s+役割/,
+    /##\s+(?:役割|出力テンプレート|守る条件)/,
     /###\s+(?:家にある食材・材料|食材・材料|使う材料|使い切りたい食材・材料|使えない・持っていない食材・調味料|調理時間|人数・分量)/,
     /買い足し前提/,
   ] as const;
@@ -319,7 +315,7 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
   }
 
-  for (const hook of ["ai-prompt-send", "mobile-ai-prompt-send", "ai-prompt-reply"]) {
+  for (const hook of ["mobile-ai-prompt-send", "ai-prompt-reply"]) {
     if (!e2eText.includes(hook)) {
       throw new Error(`Missing direct AI flow E2E hook usage: ${hook}`);
     }

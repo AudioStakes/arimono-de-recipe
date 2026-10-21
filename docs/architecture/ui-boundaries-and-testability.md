@@ -25,7 +25,8 @@ Stable hooks live near behavior and are independent from styling. CSS classes ar
 This repo is a public single Vite app. It uses source-module boundaries instead of package exports:
 
 - `src/data.ts` defines current recipe item and candidate relationships.
-- `src/prompt.ts` owns prompt output rules.
+- `src/conditions.ts` projects only materials and their usage/amount, servings, cooking tools and supplemental notes into current output. Retained legacy state never enters prompt text or condition chips.
+- `src/prompt.ts` owns prompt output rules. It puts the response template before inputs and constraints, lists each material once with its usage/amount, and omits unspecified fields and their rules. Repeated interpretation and internal checklists are omitted. Free text remains under その他の要望 without automatic classification into legacy fields; explicit recipe counts and requested explanations take precedence over defaults. Quantities apply across all dishes, prohibited ingredients take precedence over seasoning additions, and incompatible inputs request reasons and conflicting conditions instead of a recipe. These are request instructions, not automatic validation of AI answers.
 - `src/ui.ts` owns rendering structure and stable hooks.
 - `src/recipe-application.ts` owns committed recipe requests and the AI lifecycle. Its
   typed operations, detached snapshots and subscriptions work in Node without a DOM.
@@ -37,7 +38,8 @@ This repo is a public single Vite app. It uses source-module boundaries instead 
 - `src/app-events.ts` owns presentation interactions, dialogs and action adapters.
 - `src/ai-recipe-client.ts` owns the browser call to the same-origin `/api/recipe` endpoint.
 - `src/web-analytics.ts` owns the approved production-only Cloudflare Web Analytics script installation; it does not read form state.
-- `src/ai-prompt-panel.ts` renders answer state and handles explicit send focus. It
+- `src/recipe-application.ts` owns the monotonic 10-second deadline from accepted send attempts. Prompt/model changes and cancellation retain that in-memory deadline; validation failures do not start it.
+- `src/ai-prompt-panel.ts` keeps send/copy disabled with no materials and renders the send countdown through a controls-only timer. It does not repaint answer content or input controls on timer ticks. It renders answer state and handles explicit send focus. It
   reports Markdown rendering failures back to the application without mutating its
   snapshot. Async completion does not move focus or scroll. Unchanged answer state
   is not repainted while native input/change/click events are in progress.

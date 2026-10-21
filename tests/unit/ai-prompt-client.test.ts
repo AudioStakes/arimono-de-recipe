@@ -5,6 +5,13 @@ import {
   generateRecipeFromPrompt,
   loadAiModelCatalog,
 } from "../../src/ai-recipe-client";
+import { maxAiRecipeBodyBytes } from "../../src/ai-recipe-limits";
+
+const maxJapanesePromptLength = Math.floor(
+  (maxAiRecipeBodyBytes -
+    new TextEncoder().encode(JSON.stringify({ prompt: "", model: defaultAiModelId })).byteLength) /
+    3,
+);
 
 const success = { recipe: "豆腐を温めます。", model: "test-model", usage: null };
 const jsonResponse = (payload: unknown, status = 200): Response =>
@@ -58,7 +65,7 @@ describe("generateRecipeFromPrompt", () => {
       expect(input).toBe("/api/recipe");
       expect(init?.method).toBe("POST");
       expect(init?.headers).toEqual({ "content-type": "application/json" });
-      expect(JSON.parse(String(init?.body))).toEqual({ prompt });
+      expect(JSON.parse(String(init?.body))).toEqual({ prompt, model: defaultAiModelId });
       return jsonResponse(success);
     });
     await expect(generateRecipeFromPrompt(prompt, fetcher)).resolves.toEqual({
@@ -72,7 +79,7 @@ describe("generateRecipeFromPrompt", () => {
     "",
     " \n ",
     "a".repeat(12001),
-    "あ".repeat(10663),
+    "あ".repeat(maxJapanesePromptLength + 1),
     "あ".repeat(8000) + '"'.repeat(4000),
   ])("空または文字数・UTF-8本文サイズ超過は送信せず拒否する", async (prompt) => {
     const fetcher = vi.fn<typeof fetch>();
@@ -80,11 +87,11 @@ describe("generateRecipeFromPrompt", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  test.each(["a".repeat(12000), "あ".repeat(10662), '"'.repeat(12000)])(
+  test.each(["a".repeat(12000), "あ".repeat(maxJapanesePromptLength), '"'.repeat(12000)])(
     "文字数とJSON全体のバイト数の上限内は省略せず送る",
     async (prompt) => {
       const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
-        expect(JSON.parse(String(init?.body))).toEqual({ prompt });
+        expect(JSON.parse(String(init?.body))).toEqual({ prompt, model: defaultAiModelId });
         return jsonResponse(success);
       });
       expect((await generateRecipeFromPrompt(prompt, fetcher)).ok).toBe(true);

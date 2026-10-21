@@ -63,14 +63,18 @@ describe("createPromptDataReader", () => {
 
     expect(reader.read()).toEqual({
       ...comboValues,
+      ngFoodsAndSeasonings: [],
+      recipeDirections: [],
+      recipeRoles: [],
+      pairingTargets: [],
       targetDish: [],
-      requestIntent: "pairing",
+      requestIntent: "auto",
       materialUseMode: "specified",
       materialRequests,
       servings: "大人2人",
       servingsMode: "two",
-      recipeCount: "one",
-      cookTime: "20分以内",
+      recipeCount: "auto",
+      cookTime: "",
       supplementalNotes: "子ども用に辛くしない。",
     });
   });
@@ -89,9 +93,11 @@ describe("createPromptDataReader", () => {
 
     expect(reader.read()).toEqual({
       ...comboValues,
-      targetDish: [],
-      pairingTargets: [],
+      ngFoodsAndSeasonings: [],
+      recipeDirections: [],
       recipeRoles: [],
+      pairingTargets: [],
+      targetDish: [],
       requestIntent: "auto",
       materialUseMode: "auto",
       materialRequests: [],
@@ -112,7 +118,7 @@ describe("createPromptDataReader", () => {
     ]);
   });
 
-  test("作りたい料理は対象 intent の場合だけ読む", () => {
+  test("旧intentの作りたい料理を出力から除外する", () => {
     const reader = createPromptDataReader({
       getComboValues: (group) => [...comboValues[group]],
       getRequestIntent: () => "target-dish",
@@ -121,11 +127,11 @@ describe("createPromptDataReader", () => {
       getSupplementalNotes: () => "",
     });
 
-    expect(reader.read().targetDish).toEqual(["カレー"]);
+    expect(reader.read().targetDish).toEqual([]);
     expect(reader.read().pairingTargets).toEqual([]);
   });
 
-  test("一緒に出す料理は対象 intent の場合だけ読み、品数未指定なら1品扱いにする", () => {
+  test("旧intent・品数・役割は出力モデルへ引き継がない", () => {
     const reader = createPromptDataReader({
       getComboValues: (group) => [...comboValues[group]],
       getRequestIntent: () => "pairing",
@@ -136,11 +142,11 @@ describe("createPromptDataReader", () => {
     });
 
     expect(reader.read()).toMatchObject({
-      requestIntent: "pairing",
-      recipeCount: "one",
+      requestIntent: "auto",
+      recipeCount: "auto",
       targetDish: [],
-      pairingTargets: ["餃子"],
-      recipeRoles: ["副菜・一品"],
+      pairingTargets: [],
+      recipeRoles: [],
     });
   });
 
@@ -160,7 +166,7 @@ describe("createPromptDataReader", () => {
     });
   });
 
-  test("おまかせでも詳細条件で品数を指定した場合は役割を読む", () => {
+  test("旧品数を指定しても役割を現在の出力へ含めない", () => {
     const reader = createPromptDataReader({
       getComboValues: (group) => [...comboValues[group]],
       getRequestIntent: () => "auto",
@@ -172,14 +178,14 @@ describe("createPromptDataReader", () => {
 
     expect(reader.read()).toMatchObject({
       requestIntent: "auto",
-      recipeCount: "multiple",
-      recipeRoles: ["副菜・一品"],
+      recipeCount: "auto",
+      recipeRoles: [],
       targetDish: [],
       pairingTargets: [],
     });
   });
 
-  test("作りたい料理 intent では品数と役割を読まない", () => {
+  test("旧作りたい料理 intent は現在の出力を変更しない", () => {
     const reader = createPromptDataReader({
       getComboValues: (group) => [...comboValues[group]],
       getRequestIntent: () => "target-dish",
@@ -190,10 +196,10 @@ describe("createPromptDataReader", () => {
     });
 
     expect(reader.read()).toMatchObject({
-      requestIntent: "target-dish",
+      requestIntent: "auto",
       recipeCount: "auto",
       recipeRoles: [],
-      targetDish: ["カレー"],
+      targetDish: [],
       pairingTargets: [],
     });
   });
@@ -250,14 +256,18 @@ describe("createPromptDataReaderFromInputs", () => {
 
     expect(reader.read()).toEqual({
       ...comboValues,
+      ngFoodsAndSeasonings: [],
+      recipeDirections: [],
+      recipeRoles: [],
+      pairingTargets: [],
       targetDish: [],
-      requestIntent: "pairing",
+      requestIntent: "auto",
       materialUseMode: "specified",
       materialRequests,
       servings: "大人2人",
       servingsMode: "two",
-      recipeCount: "multiple",
-      cookTime: "20分以内",
+      recipeCount: "auto",
+      cookTime: "",
       supplementalNotes: "辛くしない。",
     });
   });

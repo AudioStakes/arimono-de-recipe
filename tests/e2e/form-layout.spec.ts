@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { openRequestOptions, pressCommittedEnter } from "./helpers/combo";
+import { pressCommittedEnter } from "./helpers/combo";
+import { openAiSettings } from "./helpers/settings";
 
 test("320pxでスクロールバー分の幅が減っても材料カードを低く保つ", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -118,6 +119,7 @@ for (const [width, fontSize] of [
           Number.parseFloat(getComputedStyle(element).lineHeight) + 1,
       ),
     ).toBe(true);
+    await openAiSettings(page);
     const select = page.getByTestId("ai-model-select");
     expect(
       await select.evaluate((element) => {
@@ -129,12 +131,8 @@ for (const [width, fontSize] of [
         return contentHeight >= Number.parseFloat(styles.fontSize) * 1.5 - 1;
       }),
     ).toBe(true);
-    for (const id of [
-      "ai-prompt-send",
-      "copy-prompt",
-      "mobile-ai-prompt-send",
-      "copy-prompt-sticky",
-    ]) {
+    await page.getByTestId("privacy-close").click();
+    for (const id of ["mobile-ai-prompt-send", "copy-prompt-sticky"]) {
       const button = page.getByTestId(id);
       const label = button.getByText(id.includes("copy") ? "依頼文をコピー" : "AIへ送信", {
         exact: true,
@@ -157,28 +155,24 @@ for (const [width, fontSize] of [
     const footerBox = await footer.boundingBox();
     const actionsBox = await page.getByTestId("mobile-action-footer").boundingBox();
     if (!footerBox || !actionsBox) throw new Error("Both footers must be visible");
-    expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(actionsBox.y);
+    expect(footerBox.y).toBeGreaterThanOrEqual(actionsBox.y);
+    expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(actionsBox.y + actionsBox.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
   });
 }
 
-for (const id of ["targetDish", "recipeRoles"] as const) {
-  test(`${id}の入力確定後に指定値の編集へキーボードで移れる`, async ({ page }) => {
+for (const id of ["materials", "cookingTools"] as const) {
+  test(`${id}の指定値をキーボードで編集できる`, async ({ page }) => {
     await page.goto("/");
-    await openRequestOptions(page);
-    if (id === "targetDish") {
-      await page.getByRole("radio", { name: "作りたい料理がある", exact: true }).check();
-    } else {
-      await page.getByTestId("recipe-item-toggle-recipeCount").click();
-      await page.getByRole("radio", { name: "1品だけ", exact: true }).check();
-    }
+    if (id === "cookingTools") await page.getByTestId("recipe-item-toggle-cookingTools").click();
     const input = page.getByTestId(`combo-input-${id}`);
-    await input.fill(id === "targetDish" ? "カレー" : "副菜");
+    await input.fill(id === "materials" ? "豆腐" : "電子レンジ");
     await pressCommittedEnter(input);
+    await expect(input).toBeFocused();
     const value = page.getByTestId(`combo-pill-label-${id}`);
-    await expect(value).toBeFocused();
+    await value.focus();
     await value.press("Enter");
     await expect(page.getByTestId(`combo-pill-edit-${id}`)).toBeFocused();
   });

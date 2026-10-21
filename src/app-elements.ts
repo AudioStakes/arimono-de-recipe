@@ -5,12 +5,10 @@ export type AppElements = {
   bottom: HTMLElement;
   bottomInner: HTMLElement;
   bottomBackdrop: HTMLElement;
-  sheetToggle: HTMLButtonElement;
   sheetClose: HTMLButtonElement;
   chips: HTMLElement;
   copyPromptSticky: HTMLButtonElement;
   copyPromptMobile: HTMLButtonElement;
-  sendPrompt: HTMLButtonElement;
   sendPromptMobile: HTMLButtonElement;
   aiPromptPanel: HTMLElement;
   aiPromptHeading: HTMLElement;

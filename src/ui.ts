@@ -1,5 +1,6 @@
 import { initializeAiModelPicker, renderAiModelPicker } from "./ai-model-picker";
 import {
+  createAiPromptControls,
   renderAiPromptAnswer,
   renderAiPromptPanel,
   renderAiPromptSendButton,
@@ -7,18 +8,8 @@ import {
 import { generateRecipeFromPrompt } from "./ai-recipe-client";
 import type { AppElements } from "./app-elements";
 import { bindAppEvents } from "./app-events";
-import { updateCookTimeDisplay } from "./combo-field";
 import { type ComboRegistry, createComboRegistry } from "./combo-registry";
-import {
-  advancedConditionOrder,
-  combos,
-  cookTimeOptions,
-  materialUsageOptions,
-  recipeCountOptions,
-  requestIntentOptions,
-  servingGroups,
-  servingsModeOptions,
-} from "./data";
+import { combos, materialUsageOptions, servingGroups, servingsModeOptions } from "./data";
 import { icon } from "./icons";
 import { focusInputWithFeedback, setMaterialInputError } from "./input-feedback";
 import type { PromptPanelServices } from "./output-panel";
@@ -190,8 +181,7 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
   panel.hidden = false;
 
   if (state.materialRequests.length === 0) {
-    panel.innerHTML =
-      '<p class="field-hint">先に「家にある食材・材料」を追加すると、材料ごとの使い方を選べます。</p>';
+    panel.innerHTML = '<p class="field-hint">家にある食材・材料を追加してください。</p>';
     return;
   }
 
@@ -279,69 +269,10 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
   }
 }
 
-function setCollapsibleStateForField(field: HTMLElement, expanded: boolean): void {
-  const button = field.querySelector<HTMLButtonElement>(".field-toggle");
-  if (!button) return;
-
-  button.setAttribute("aria-expanded", String(expanded));
-  const chevron = button.querySelector<HTMLElement>(".field-toggle-chevron");
-  if (chevron) {
-    chevron.textContent = expanded ? "⌃" : "⌄";
-  }
-
-  const panelId = button.getAttribute("aria-controls");
-  const panel = panelId ? document.getElementById(panelId) : null;
-  if (panel) {
-    panel.hidden = !expanded;
-    panel.setAttribute("data-state", expanded ? "open" : "closed");
-  }
-
-  field.classList.toggle("is-open", expanded);
-  field.setAttribute("data-state", expanded ? "open" : "closed");
-}
-
-function syncIntentSections(application: RecipeApplication): void {
-  const intent = application.getSnapshot().requestIntent;
-  const targetDishField = queryMaybeElement<HTMLElement>("#targetDishField");
-  const pairingField = queryMaybeElement<HTMLElement>("#pairingTargetsField");
-  const recipeCountField = queryMaybeElement<HTMLElement>('[data-collapsible="recipeCount"]');
-  const recipeRoleField = queryMaybeElement<HTMLElement>("#recipeRolesField");
-
-  if (targetDishField) {
-    targetDishField.hidden = intent !== "target-dish";
-  }
-
-  if (pairingField) {
-    pairingField.hidden = intent !== "pairing";
-  }
-
-  if (recipeCountField) {
-    recipeCountField.hidden = intent === "target-dish";
-    if (intent === "pairing") {
-      setCollapsibleStateForField(recipeCountField, true);
-    } else if (intent === "target-dish") {
-      setCollapsibleStateForField(recipeCountField, false);
-    }
-  }
-
-  const recipeCount = application.getSnapshot().effectiveRecipeCount;
-  if (recipeRoleField) {
-    recipeRoleField.hidden = intent === "target-dish" || recipeCount === "auto";
-  }
-}
-
 function syncServingModeVisibility(application: RecipeApplication): void {
   const customPanel = queryMaybeElement<HTMLElement>("#customServingsPanel");
   if (customPanel) {
     customPanel.hidden = application.getSnapshot().servingsMode !== "custom";
-  }
-}
-
-function syncRecipeRoleOrder(application: RecipeApplication): void {
-  const intent = application.getSnapshot().requestIntent;
-  const hint = queryMaybeElement<HTMLElement>("#recipeRolesInputHint");
-  if (hint) {
-    hint.textContent = intent === "pairing" ? "例: 副菜・一品" : "例: 主菜・しっかり";
   }
 }
 
@@ -365,7 +296,6 @@ export function initializeApp(root: HTMLElement): void {
   }
 
   bindAppEvents(state, elements, outputPanel);
-  updateCookTimeDisplay(application.getSnapshot().cookTime);
   updateServingSteppers(application.getSnapshot().servingCounts);
   refreshPromptPanelPanel(state, elements, outputPanel);
   renderAiPromptPanel(application.getSnapshot().aiPrompt, elements);
@@ -374,7 +304,7 @@ export function initializeApp(root: HTMLElement): void {
 
 function renderCopyButton(id: string, testId: string, classes = ""): string {
   return `
-    <button id="${id}" class="copy-icon-button copy-button button-secondary ${classes}" type="button" aria-label="AI向けレシピ依頼文をコピー" data-testid="${testId}" data-default-label="依頼文をコピー" data-success-label="コピーしました。普段使っているAIに貼り付けてください。">
+    <button id="${id}" class="copy-icon-button copy-button button-secondary ${classes}" type="button" disabled aria-label="AI向けレシピ依頼文をコピー" data-testid="${testId}" data-default-label="依頼文をコピー" data-success-label="コピーしました。普段使っているAIに貼り付けてください。">
       <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
       <span class="copy-label">依頼文をコピー</span>
       <span class="copy-status" aria-live="polite"></span>
@@ -391,36 +321,25 @@ function renderAppShell(): string {
     <div class="workspace">
       <form id="recipeForm" class="form" data-testid="recipe-form" autocomplete="off">
         <div id="basicFields" class="basic-fields" data-testid="basic-fields"></div>
-        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
+        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields" role="group" aria-label="レシピの要望"></div>
         <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
-        <section class="prompt-section" aria-labelledby="promptHeading">
-          <div class="prompt-heading"><h2 id="promptHeading">ありもので、何を作る？</h2><p id="promptDescription">材料と要望をまとめた依頼文を送ります。</p></div>
-          ${renderAiModelPicker()}
-          <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
-          <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
-          <div class="prompt-main-actions" role="group" aria-label="実行方法">
-            ${renderAiPromptSendButton()}
-            ${renderCopyButton("copyPrompt", "copy-prompt")}
-          </div>
+        <div class="prompt-section">
           ${renderAiPromptAnswer()}
           <details class="prompt-preview-details">
             <summary data-testid="prompt-preview-toggle">依頼文を見る</summary>
-            <div class="output-shell"><textarea id="output" class="output" data-testid="prompt-output" aria-label="コピーするレシピ依頼文" aria-describedby="promptDescription" readonly></textarea></div>
+            <div class="output-shell"><textarea id="output" class="output" data-testid="prompt-output" aria-label="コピーするレシピ依頼文" readonly></textarea></div>
           </details>
-        </section>
+        </div>
       </form>
     </div>
-    <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
-      <span>created by <a href="https://x.com/AudioStakes" target="_blank" rel="noopener noreferrer" data-testid="creator-link">@AudioStakes<span class="visually-hidden">（X・別タブで開く）</span></a></span>
-      <span aria-hidden="true">·</span>
-      <button id="privacyOpen" type="button" aria-haspopup="dialog" aria-controls="privacyDialog" data-testid="privacy-open">プライバシー</button>
-    </footer>
     <dialog id="privacyDialog" class="privacy-dialog" aria-labelledby="privacyHeading" data-testid="privacy-dialog">
       <div class="privacy-heading">
         <h2 id="privacyHeading">プライバシー</h2>
         <button id="privacyClose" type="button" class="privacy-close" aria-label="プライバシーを閉じる" data-testid="privacy-close">×</button>
       </div>
       <div class="privacy-body">
+        <h3>AIの設定</h3>
+        ${renderAiModelPicker()}
         <h3>入力内容とAIへの送信</h3>
         <p>このアプリは入力内容を保存しません。食材・要望・依頼文の作成とコピーはブラウザ内で行います。「AIへ送信」を押したときだけ、依頼文全文を選択した送信先（Cloudflare Workers AIまたはGroq）へ送信します。モデル一覧の確認には入力内容を含めません。</p>
         <p>Cloudflareは標準推論を学習に使わないと説明しています。Groqは障害・不正利用の調査のため、入力や回答を通常最大30日保持する場合があります（法令でより長い保持が必要な場合を除きます）。送信先のデータの扱いをご確認ください。</p>
@@ -436,14 +355,16 @@ function renderAppShell(): string {
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-testid="mobile-action-footer" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
-        <div class="sheet-summary-row">
-          <p id="footerTransmissionNotice" class="ai-transmission-notice" data-testid="mobile-ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
-          <button id="sheetToggle" data-testid="mobile-prompt-preview-toggle" class="sheet-preview-button" type="button" aria-expanded="false" aria-controls="mobilePromptPanel">依頼文を見る</button>
-        </div>
-        <div class="sheet-actions">
-          ${renderAiPromptSendButton(true)}
+        <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
+        <div class="sheet-actions" role="group" aria-label="実行方法">
+          ${renderAiPromptSendButton()}
           ${renderCopyButton("copyPromptSticky", "copy-prompt-sticky", "copy-request-button")}
         </div>
+    <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
+      <span>Created by <a href="https://x.com/AudioStakes" target="_blank" rel="noopener noreferrer" data-testid="creator-link">AudioStakes<span class="visually-hidden">（X・別タブで開く）</span></a></span>
+      <span aria-hidden="true">·</span>
+      <button id="privacyOpen" type="button" aria-haspopup="dialog" aria-controls="privacyDialog" data-testid="privacy-open">プライバシー</button>
+    </footer>
         <div id="mobilePromptPanel" class="mobile-prompt-panel" data-testid="mobile-prompt-panel" data-state="closed" role="region" aria-labelledby="mobilePromptHeading" aria-hidden="true" tabindex="-1">
           <div class="mobile-prompt-head"><h2 id="mobilePromptHeading">AIに渡す依頼文</h2><button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button></div>
           ${renderCopyButton("copyPromptMobile", "copy-prompt-mobile-panel")}
@@ -462,12 +383,10 @@ function getAppElements(): AppElements {
     bottom: queryElement("#bottomActions"),
     bottomInner: queryElement("#bottomActionsInner"),
     bottomBackdrop: queryElement("#bottomSheetBackdrop"),
-    sheetToggle: queryElement("#sheetToggle"),
     sheetClose: queryElement("#sheetClose"),
     chips: queryElement("#conditionChips"),
     copyPromptSticky: queryElement("#copyPromptSticky"),
     copyPromptMobile: queryElement("#copyPromptMobile"),
-    sendPrompt: queryElement("#sendPrompt"),
     sendPromptMobile: queryElement("#sendPromptMobile"),
     aiPromptPanel: queryElement("#aiPromptPanel"),
     aiPromptHeading: queryElement("#ai-prompt-reply-heading"),
@@ -481,24 +400,10 @@ function renderFields(): void {
   queryElement("#basicFields").innerHTML = [renderComboField(getCombo("materials"))].join("");
 
   queryElement("#advancedFields").innerHTML = `
-    <h2 class="section-title">今日のリクエスト<span class="section-hint">必要なところだけ</span></h2>
     <div class="request-settings">
       ${renderServingsField()}
       ${renderCollapsibleComboField(getCombo("cookingTools"))}
-      ${renderCollapsibleField(
-        "requestOptions",
-        "作りたいもの・時間・こだわり",
-        "heart",
-        [
-          renderRequestIntentField(),
-          `<div id="targetDishField" hidden>${renderComboField(getCombo("targetDish"), "targetDishHint")}<p id="targetDishHint" class="field-hint">作りたい料理名を自由に入力できます。候補は入力補助です。</p></div>`,
-          `<div id="pairingTargetsField" hidden>${renderComboField(getCombo("pairingTargets"))}</div>`,
-          renderRecipeCountField(),
-          renderCollapsibleCookTimeField(),
-          ...advancedConditionOrder.map((id) => renderCollapsibleComboField(getCombo(id))),
-          renderCollapsibleNotesField(),
-        ].join(""),
-      )}
+      ${renderCollapsibleNotesField()}
     </div>
   `;
 
@@ -506,33 +411,6 @@ function renderFields(): void {
     const iconName = (element.dataset as DOMStringMap & { icon?: ComboConfig["icon"] }).icon;
     if (iconName) element.innerHTML = icon(iconName as ComboConfig["icon"]);
   });
-}
-
-function renderRequestIntentField(): string {
-  return `
-    <fieldset class="field fieldset intent-field" data-testid="recipe-item-requestIntent">
-      <legend class="field-title">${fieldLabelHtml("今回やりたいこと", "heart")}</legend>
-      ${renderRadioOptions("requestIntent", requestIntentOptions, "auto")}
-    </fieldset>
-  `;
-}
-
-function renderRecipeCountField(): string {
-  return renderCollapsibleField(
-    "recipeCount",
-    "作りたい品数",
-    "bowl",
-    `
-      <fieldset class="panel-fieldset">
-        <legend class="visually-hidden">作りたい品数</legend>
-        ${renderRadioOptions("recipeCount", recipeCountOptions, "auto")}
-      </fieldset>
-      <div id="recipeRolesField" class="recipe-role-subfield" data-testid="recipe-item-recipeRoles" hidden>
-        <label class="subfield-label" for="recipeRolesInput">料理の役割・量感</label>
-        ${renderComboFieldControl(getCombo("recipeRoles"), "", true)}
-      </div>
-    `,
-  );
 }
 
 function renderComboField(combo: ComboConfig, describedBy = ""): string {
@@ -586,20 +464,6 @@ function renderComboFieldControl(
 
 function renderCollapsibleComboField(combo: ComboConfig): string {
   return renderCollapsibleField(combo.id, combo.label, combo.icon, renderComboFieldControl(combo));
-}
-
-function renderCollapsibleCookTimeField(): string {
-  return renderCollapsibleField(
-    "cookTime",
-    "調理時間",
-    "clock",
-    `
-      <div class="range-card">
-        <div class="range-meta"><span>指定なし</span><span id="cookTimeLabel" class="range-value">指定なし</span><span>60分以内</span></div>
-        <input id="cookTimeRange" data-testid="cook-time-range" type="range" min="0" max="${cookTimeOptions.length - 1}" step="1" value="0" aria-label="調理時間" />
-      </div>
-    `,
-  );
 }
 
 function renderCollapsibleNotesField(): string {
@@ -689,8 +553,10 @@ function createOutputPanelServices(
 ): PromptPanelServices {
   let materialControlsStructure = "";
   let aiPresentation = "";
+  const refreshAiControls = createAiPromptControls(application, elements);
   const refresh = (): void => {
     const snapshot = application.getSnapshot();
+    refreshAiControls();
     if (snapshot.materialRequests.length) setMaterialInputError(elements.form, false);
     const structure = JSON.stringify(
       snapshot.materialRequests.map(({ id, name, usage }) => [id, name, usage]),
@@ -703,45 +569,16 @@ function createOutputPanelServices(
     syncMaterialRequestValidationState(snapshot);
     queryElement("#materialCount").textContent = `${snapshot.materialRequests.length}件`;
     const effectiveData = application.readPromptData();
-    const countLabel =
-      recipeCountOptions.find((option) => option.value === snapshot.effectiveRecipeCount)?.label ??
-      "おまかせ";
-    const roleSummary = effectiveData.recipeRoles.join("、");
     const summaryValues: Record<string, string> = {
       servings: effectiveData.servings || "指定なし",
       cookingTools: snapshot.values.cookingTools.join("、") || "指定なし",
-      requestOptions: [
-        requestIntentOptions.find((option) => option.value === snapshot.requestIntent)?.label,
-        ...effectiveData.targetDish,
-        ...effectiveData.pairingTargets,
-        snapshot.effectiveRecipeCount !== "auto" ? countLabel : "",
-        roleSummary,
-        snapshot.cookTime,
-        snapshot.values.recipeDirections.length
-          ? `方向性 ${snapshot.values.recipeDirections.length}件`
-          : "",
-        snapshot.values.ngFoodsAndSeasonings.length
-          ? `NG ${snapshot.values.ngFoodsAndSeasonings.length}件`
-          : "",
-        snapshot.supplementalNotes.trim() ? "その他の要望あり" : "",
-      ]
-        .filter(Boolean)
-        .join("・"),
-      recipeCount: [countLabel, roleSummary].filter(Boolean).join("・"),
-      cookTime: snapshot.cookTime || "指定なし",
-      recipeDirections: snapshot.values.recipeDirections.join("、") || "指定なし",
-      ngFoodsAndSeasonings: snapshot.values.ngFoodsAndSeasonings.join("、") || "指定なし",
       supplementalNotes: snapshot.supplementalNotes.trim() ? "入力あり" : "指定なし",
     };
     for (const element of queryAllElements<HTMLElement>("[data-summary-for]")) {
       const text = summaryValues[element.dataset["summaryFor"] ?? ""] ?? "指定なし";
       if (element.textContent !== text) element.textContent = text;
     }
-    syncIntentSections(application);
     syncServingModeVisibility(application);
-    // Only role mode changes need to rebuild pills; leave active editors alone.
-    syncRecipeRoleOrder(application);
-    updateCookTimeDisplay(snapshot.cookTime);
     updateServingSteppers(snapshot.servingCounts);
     if (outputPanelServices) refreshPromptPanelPanel(state, elements, outputPanelServices);
     const nextAiPresentation = JSON.stringify([
@@ -789,25 +626,12 @@ function createOutputPanelServices(
       const usage = materialUsageOptions.find((option) => option.value === input.value)?.value;
       if (usage) application.updateMaterial(input.name.slice("materialUsage-".length), { usage });
     } else if (
-      input.name === "requestIntent" &&
-      input instanceof HTMLInputElement &&
-      input.checked
-    ) {
-      const value = requestIntentOptions.find((option) => option.value === input.value)?.value;
-      if (value) application.setRequestIntent(value);
-    } else if (input.name === "recipeCount" && input instanceof HTMLInputElement && input.checked) {
-      const value = recipeCountOptions.find((option) => option.value === input.value)?.value;
-      if (value) application.setRecipeCount(value);
-    } else if (
       input.name === "servingsMode" &&
       input instanceof HTMLInputElement &&
       input.checked
     ) {
       const value = servingsModeOptions.find((option) => option.value === input.value)?.value;
       if (value) application.setServingsMode(value);
-    } else if (input.id === "cookTimeRange") {
-      const value = cookTimeOptions[Number(input.value)] ?? "指定なし";
-      application.setCookTime(value === "指定なし" ? "" : value);
     } else if (input.id === "supplementalNotes") {
       application.setSupplementalNotes(input.value);
     }
@@ -830,7 +654,6 @@ function createOutputPanelServices(
     clearCombo: (group) => comboRegistry.clear(group),
     clearCookTime: () => {
       application.setCookTime("");
-      queryElement<HTMLInputElement>("#cookTimeRange").value = "0";
     },
     clearSupplementalNotes: () => {
       application.setSupplementalNotes("");

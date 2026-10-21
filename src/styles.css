@@ -8,6 +8,7 @@
   --ink: #373b2f;
   --ink-strong: #303b29;
   --muted: #515645;
+  --placeholder: #737866;
   --line: #e3e0cc;
   --line-strong: #8f947e;
   --primary: #f6e5a6;
@@ -97,7 +98,7 @@ textarea {
   display: none;
 }
 :where(input, textarea, select, button, summary, a):focus-visible,
-.ai-prompt-panel h3:focus {
+.ai-prompt-panel > h2:focus {
   outline: 3px solid var(--ingredient);
   outline-offset: 3px;
 }
@@ -158,29 +159,21 @@ h3 {
   gap: var(--space-3);
 }
 .field,
-.fieldset,
 .field-collapsible {
   min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
-.section-heading,
-.section-title {
+.section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
-.section-heading h2,
-.section-title {
+.section-heading h2 {
   font-size: 1.125rem;
   line-height: 1.5;
-}
-.section-hint {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 400;
 }
 .material-count {
   padding: 0 var(--space-3);
@@ -190,7 +183,6 @@ h3 {
   font-weight: 700;
 }
 .field-title,
-.subfield-label,
 .serving-label {
   display: inline-flex;
   align-items: center;
@@ -457,7 +449,7 @@ h3 {
   font-weight: 700;
 }
 .material-amount-input::placeholder {
-  color: var(--muted);
+  color: var(--placeholder);
   opacity: 1;
 }
 .material-usage-fieldset {
@@ -593,13 +585,6 @@ input[aria-invalid="true"] {
   padding: var(--space-4);
   border-block-start: 1px solid var(--line);
 }
-.field-panel .field-toggle {
-  min-block-size: 56px;
-  padding-inline: 0;
-}
-.field-panel .field-panel {
-  padding-inline: 0;
-}
 .field-collapsible.is-open > .field-toggle {
   background: var(--surface-soft);
 }
@@ -609,7 +594,6 @@ input[aria-invalid="true"] {
   padding: 0;
   border: 0;
 }
-.recipe-role-subfield,
 .custom-servings-panel {
   margin-block-start: var(--space-3);
 }
@@ -645,27 +629,6 @@ input[aria-invalid="true"] {
   font-size: 0.85rem;
   white-space: nowrap;
 }
-.range-card {
-  display: grid;
-  gap: var(--space-3);
-}
-.range-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.range-value {
-  color: var(--primary-deep);
-  font-weight: 700;
-}
-input[type="range"] {
-  inline-size: 100%;
-  min-block-size: 44px;
-  margin: 0;
-}
 .textarea-field textarea {
   min-block-size: 96px;
 }
@@ -677,26 +640,18 @@ input[type="range"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
 }
-.prompt-heading {
-  display: grid;
-  gap: var(--space-1);
-}
-.prompt-heading h2,
 .mobile-prompt-head h2 {
   font-size: 1.125rem;
 }
-.prompt-heading p,
 .ai-prompt-panel > p {
   color: var(--muted);
   font-size: 0.85rem;
 }
-.prompt-main-actions,
 .sheet-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.prompt-main-actions > button,
 .sheet-actions > button {
   flex: 1 1 auto;
   inline-size: auto;
@@ -783,14 +738,12 @@ input[type="range"] {
   display: grid;
   gap: var(--space-3);
   min-inline-size: 0;
-  padding-block-start: var(--space-3);
-  border-block-start: 1px solid var(--line);
 }
-.ai-prompt-panel h3 {
-  font-size: 1rem;
+.ai-prompt-panel > h2 {
+  font-size: 1.125rem;
   scroll-margin-block-start: var(--space-5);
 }
-.ai-prompt-panel[data-state="error"] {
+.prompt-section:has(> .ai-prompt-panel[data-state="error"]) {
   border-color: var(--error);
 }
 .ai-prompt-empty,
@@ -815,7 +768,7 @@ input[type="range"] {
 .ai-recipe-answer > :last-child {
   margin-block-end: 0;
 }
-.ai-recipe-answer :is(h4, h5, h6) {
+.ai-recipe-answer :is(h3, h4, h5, h6) {
   margin-block: var(--space-5) var(--space-2);
   color: var(--primary-deep);
   font-size: 1rem;
@@ -972,32 +925,6 @@ input[type="range"] {
   gap: var(--space-1);
   white-space: nowrap;
 }
-.sheet-summary-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-}
-.sheet-preview-button {
-  flex: none;
-  min-block-size: 44px;
-  padding: var(--space-1);
-  background: transparent;
-  color: var(--primary-deep);
-  border: 0;
-  font-size: 0.75rem;
-}
-.ai-transmission-notice {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.ai-transmission-notice .icon {
-  flex: none;
-}
 .mobile-prompt-panel {
   display: none;
   gap: var(--space-3);
@@ -1049,9 +976,6 @@ input[type="range"] {
   }
   .material-request-row {
     padding-inline: var(--space-2);
-  }
-  .sheet-summary-row {
-    gap: var(--space-2);
   }
 }
 @media (prefers-reduced-motion: reduce) {
