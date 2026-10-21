@@ -181,26 +181,20 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
   await expect(materialUsageOption(tofuRow, "auto")).toBeChecked();
   await materialUsageOption(tofuRow, "required").check();
   await expect(materialAmountInput(tofuRow)).toBeVisible();
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 必ず使う食材・材料\n\n- 豆腐（家にある食材・材料に書いた量を使う）/,
-  );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（必ず使う・記載量を使う）/);
 
   await page.getByTestId("combo-pill-label-materials").click();
   const editInput = page.getByTestId("combo-pill-edit-materials");
   await editInput.fill("豆腐150g");
   await pressCommittedEnter(editInput);
   await expect(page.getByTestId("material-use-panel")).toContainText("豆腐150g");
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
-  );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐150g（必ず使う・記載量を使う）/);
 
   await materialUsageOption(tofuRow, "use-up").check();
   await expect(materialAmountInput(tofuRow)).toBeVisible();
   await expect(materialUseUpError(tofuRow)).toBeVisible();
   await materialAmountInput(tofuRow).fill("120g");
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 使い切りたい食材・材料\n\n- 豆腐150g（使い切りたい量: 120g）/,
-  );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐150g（使い切る量: 120g）/);
 
   await tofuRow.getByRole("button", { name: "豆腐150gを材料から削除" }).click();
   await expect(page.getByTestId("material-use-panel")).toContainText(
@@ -224,30 +218,22 @@ test("複数材料の使い方と分量は材料名を編集しても元の材�
   await materialUsageOption(cabbageRow, "use-up").check();
   await materialAmountInput(cabbageRow).fill("1/4玉");
 
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 必ず使う食材・材料\n\n- 豆腐（家にある食材・材料に書いた量を使う）/,
-  );
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 使い切りたい食材・材料\n\n- キャベツ（使い切りたい量: 1\/4玉）/,
-  );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（必ず使う・記載量を使う）/);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（使い切る量: 1\/4玉）/);
 
   await page.getByTestId("combo-pill-label-materials").filter({ hasText: "豆腐" }).click();
   const tofuEditInput = page.getByTestId("combo-pill-edit-materials");
   await tofuEditInput.fill("豆腐150g");
   await pressCommittedEnter(tofuEditInput);
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 必ず使う食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）/,
-  );
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐150g（必ず使う・記載量を使う）/);
 
   await page.getByTestId("combo-pill-label-materials").filter({ hasText: "キャベツ" }).click();
   const cabbageEditInput = page.getByTestId("combo-pill-edit-materials");
   await cabbageEditInput.fill("春キャベツ");
   await pressCommittedEnter(cabbageEditInput);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/春キャベツ（使い切る量: 1\/4玉）/);
   await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 使い切りたい食材・材料\n\n- 春キャベツ（使い切りたい量: 1\/4玉）/,
-  );
-  await expect(page.getByTestId("prompt-output")).toHaveValue(
-    /### 家にある食材・材料\n\n- 豆腐150g\n- 春キャベツ/,
+    /### 家にある食材・材料\n\n- 豆腐150g（必ず使う・記載量を使う）\n- 春キャベツ（使い切る量: 1\/4玉）/,
   );
   const editedCabbageRow = materialCard(page, "春キャベツ");
   await expect(materialUsageOption(editedCabbageRow, "use-up")).toBeChecked();
@@ -255,7 +241,7 @@ test("複数材料の使い方と分量は材料名を編集しても元の材�
 
   const editedTofuRow = materialCard(page, "豆腐150g");
   await materialUsageOption(editedTofuRow, "auto").check();
-  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/### 必ず使う食材・材料/);
+  await expect(page.getByTestId("prompt-output")).not.toHaveValue(/必ず使う・/);
 });
 
 test("調理方法・調理器具を複数指定して個別に削除できる", async ({ page }) => {

@@ -33,7 +33,7 @@ describe("current request output", () => {
     const prompt = buildPrompt(makeEmptyPromptData());
     expect(prompt).not.toContain("使えない・持っていない食材・調味料");
     expect(prompt).not.toContain("その他の要望");
-    expect(prompt).toContain("レシピを1つ提案");
+    expect(prompt).toContain("1品分だけを出力してください。");
   });
 
   test("free text requests can specify multiple recipes and optional explanation", () => {
@@ -44,8 +44,8 @@ describe("current request output", () => {
     expect(prompt).toContain(`### その他の要望\n\n${notes}`);
     expect(prompt).not.toContain("レシピを1つ提案");
     expect(prompt).not.toContain("料理名を1つ書いて");
-    expect(prompt).toContain("その他の要望で求められていない");
-    expect(prompt).toContain("品数の指定がなければ1品");
+    expect(prompt).toContain("求められた追加説明だけ末尾へ付けてください。");
+    expect(prompt).toContain("品数の希望に従い、希望がなければ1品");
     for (const heading of [
       "作りたい料理",
       "作りたい品数",

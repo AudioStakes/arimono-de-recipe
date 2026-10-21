@@ -22,7 +22,7 @@ export const aiModels = [
 
 export type AiModel = (typeof aiModels)[number];
 export type AiModelId = AiModel["id"];
-export const defaultAiModelId: AiModelId = "@cf/meta/llama-3.1-8b-instruct-fp8";
+export const defaultAiModelId: AiModelId = "@cf/google/gemma-4-26b-a4b-it";
 
 export function findAiModel(id: string): AiModel | undefined {
   return aiModels.find((model) => model.id === id);

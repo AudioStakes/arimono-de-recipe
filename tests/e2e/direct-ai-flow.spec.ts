@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { defaultAiModelId } from "../../src/ai-models";
 import { pressCommittedEnter } from "./helpers/combo";
 import { openAiSettings } from "./helpers/settings";
 
@@ -30,7 +31,7 @@ test("編集中の材料名もコピー・送信の直前に確定し、量とID
   await page.getByTestId("mobile-ai-prompt-send").click();
   prompt = await page.getByTestId("prompt-output").inputValue();
   expect(prompt).toContain("冷凍豆腐（量: 150g）");
-  await expect.poll(() => posted).toEqual({ prompt });
+  await expect.poll(() => posted).toEqual({ prompt, model: defaultAiModelId });
   await expect(page.getByTestId(id ?? "").getByTestId(/^material-amount-/)).toHaveValue("150g");
 });
 
@@ -96,7 +97,7 @@ for (const width of [1280, 390]) {
     }
     await expect.poll(() => calls).toBe(1);
     const prompt = await page.getByTestId("prompt-output").inputValue();
-    expect(posted).toEqual({ prompt });
+    expect(posted).toEqual({ prompt, model: defaultAiModelId });
     expect(prompt).toContain("豆腐（１丁）");
     expect(prompt).toContain(notes);
     await expect(page.getByTestId("mobile-prompt-output")).toHaveValue(prompt);
@@ -287,7 +288,7 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
   const prompt = await page.getByTestId("prompt-output").inputValue();
-  expect(posted).toEqual({ prompt });
+  expect(posted).toEqual({ prompt, model: defaultAiModelId });
   for (const value of [
     ...names,
     "１丁",
@@ -593,7 +594,7 @@ for (const width of [1280, 390]) {
     await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい回答");
     expect(posted).toEqual([
       expect.objectContaining({ prompt: expect.not.stringContaining("キャベツ") }),
-      { prompt },
+      { prompt, model: defaultAiModelId },
     ]);
   });
 
@@ -690,7 +691,7 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   await expect(amount).not.toHaveAttribute("aria-invalid", "true");
   await expect(error).toBeHidden();
   const prompt = await page.getByTestId("prompt-output").inputValue();
-  expect(prompt).toContain("豆腐（使い切りたい量: 2丁）");
+  expect(prompt).toContain("豆腐（使い切る量: 2丁）");
   finishOld();
   await completed;
   await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
@@ -699,7 +700,7 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい分量の回答");
-  expect(posted[1]).toEqual({ prompt });
+  expect(posted[1]).toEqual({ prompt, model: defaultAiModelId });
 });
 
 test("送信後10秒は成功や入力・AI変更後も再送せず、コピーは利用できる", async ({ page }) => {

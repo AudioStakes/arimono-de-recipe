@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { defaultAiModelId } from "../../src/ai-models";
 import { pressCommittedEnter } from "./helpers/combo";
 import { openCopyFallback } from "./helpers/settings";
 
@@ -480,7 +481,7 @@ for (const width of [1280, 390]) {
     }
     await page.getByTestId("mobile-ai-prompt-send").click();
     await expect.poll(() => requests.length).toBe(1);
-    expect(requests[0]).toEqual({ prompt });
+    expect(requests[0]).toEqual({ prompt, model: defaultAiModelId });
   });
 }
 
@@ -655,7 +656,7 @@ test("分量から使い方・削除・次の材料へTabで進み、入力を�
   await expect(page.getByTestId("prompt-output")).toHaveValue(/豆腐（量: 1丁）/);
   await expect(amount).not.toHaveAttribute("aria-invalid", "true");
   await expect(cabbage.getByTestId(/^material-use-up-error-/)).toBeHidden();
-  await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（使い切りたい量: 1\/2玉）/);
+  await expect(page.getByTestId("prompt-output")).toHaveValue(/キャベツ（使い切る量: 1\/2玉）/);
 });
 
 for (const width of [320, 390, 1280]) {

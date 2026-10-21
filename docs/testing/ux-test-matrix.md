@@ -11,7 +11,9 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | Behavior | Unit | E2E | Structure |
 | --- | --- | --- | --- |
 | 未指定項目をプロンプトに出力しない | required | smoke optional | source-of-truth guard |
-| 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
+| 出力テンプレートを先頭に置き、材料・使い方・量を1回にまとめて依頼文を生成する | required, no duplicate checklists | required for preview/copy/send | source-of-truth guard |
+| 食材の量を全品合計の上限とし、必須・使い切り・NG・器具・子供の条件を伝える | required prompt contract, unspecified rules omitted | required input values and complete submission | no |
+| 自由記入の複数品・追加説明を尊重し、矛盾時はレシピを作らない形式を指定する | required prompt contract | free text retained | no |
 | 任意入力の3項目を独立して開閉・入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
 | 材料名と量が揃い、未入力時の量例が見切れず、カードがコンパクト | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, scrollbar gutter/card width273px, placeholder width, normal card height <=180px, top-right delete target, rename | associated labels and error help |
@@ -52,6 +54,9 @@ validation. Optional requests have exactly three peer entry points:
 `recipe-item-toggle-supplementalNotes`. Other requests are entered as free text;
 the former dish, time, and preference controls are no longer rendered.
 Legacy fields cannot affect current prompt text, condition chips or request cancellation.
+Prompt unit tests own template order, single material entries, cross-dish amount
+limits, prohibition priority, requested explanations and the conflict-only format.
+They verify request instructions; mocked E2E answers do not prove model compliance.
 AI selection is accessed inside the privacy dialog; routine preview uses
 `prompt-preview-toggle` on the page. The fixed footer contains creator/privacy
 links and actions; the mobile sheet is reserved for clipboard failure.

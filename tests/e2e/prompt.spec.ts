@@ -14,8 +14,8 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   await page.getByTestId("prompt-preview-toggle").click();
   await expect(output).toHaveAccessibleName("コピーするレシピ依頼文");
   await expect(output).toHaveAttribute("readonly");
-  await expect(output).toHaveValue(/## 役割/);
-  await expect(output).toHaveValue(/## 出力形式/);
+  await expect(output).toHaveValue(/^## 出力テンプレート/);
+  await expect(output).not.toHaveValue(/## 役割|## 回答前の内部確認/);
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
   await expect(output).toHaveValue(/### 家にある食材・材料\n\n- 豆腐/);

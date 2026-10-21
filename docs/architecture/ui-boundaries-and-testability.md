@@ -26,7 +26,7 @@ This repo is a public single Vite app. It uses source-module boundaries instead 
 
 - `src/data.ts` defines current recipe item and candidate relationships.
 - `src/conditions.ts` projects only materials and their usage/amount, servings, cooking tools and supplemental notes into current output. Retained legacy state never enters prompt text or condition chips.
-- `src/prompt.ts` owns prompt output rules. Free text remains under その他の要望 without automatic classification into legacy fields; explicit recipe counts and requested explanations take precedence over defaults.
+- `src/prompt.ts` owns prompt output rules. It puts the response template before inputs and constraints, lists each material once with its usage/amount, and omits unspecified fields and their rules. Repeated interpretation and internal checklists are omitted. Free text remains under その他の要望 without automatic classification into legacy fields; explicit recipe counts and requested explanations take precedence over defaults. Quantities apply across all dishes, prohibited ingredients take precedence over seasoning additions, and incompatible inputs request reasons and conflicting conditions instead of a recipe. These are request instructions, not automatic validation of AI answers.
 - `src/ui.ts` owns rendering structure and stable hooks.
 - `src/recipe-application.ts` owns committed recipe requests and the AI lifecycle. Its
   typed operations, detached snapshots and subscriptions work in Node without a DOM.
