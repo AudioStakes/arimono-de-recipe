@@ -38,7 +38,8 @@ This repo is a public single Vite app. It uses source-module boundaries instead 
 - `src/app-events.ts` owns presentation interactions, dialogs and action adapters.
 - `src/ai-recipe-client.ts` owns the browser call to the same-origin `/api/recipe` endpoint.
 - `src/web-analytics.ts` owns the approved production-only Cloudflare Web Analytics script installation; it does not read form state.
-- `src/ai-prompt-panel.ts` renders answer state and handles explicit send focus. It
+- `src/recipe-application.ts` owns the monotonic 10-second deadline from accepted send attempts. Prompt/model changes and cancellation retain that in-memory deadline; validation failures do not start it.
+- `src/ai-prompt-panel.ts` keeps send/copy disabled with no materials and renders the send countdown through a controls-only timer. It does not repaint answer content or input controls on timer ticks. It renders answer state and handles explicit send focus. It
   reports Markdown rendering failures back to the application without mutating its
   snapshot. Async completion does not move focus or scroll. Unchanged answer state
   is not repainted while native input/change/click events are in progress.

@@ -204,7 +204,7 @@ test("材料の使い方は食材・材料の同じリストに紐づく", async
 
   await tofuRow.getByRole("button", { name: "豆腐150gを材料から削除" }).click();
   await expect(page.getByTestId("material-use-panel")).toContainText(
-    "先に「家にある食材・材料」を追加すると",
+    "家にある食材・材料を追加してください。",
   );
   await expect(page.getByTestId("prompt-output")).not.toHaveValue(/豆腐150g/);
 });
@@ -298,4 +298,32 @@ test("基本項目の DOM 順序がフォーム定義と一致する", async ({ 
     .locator(".field-title:visible")
     .allTextContents();
   expect(labels.map((text) => text.trim())).toEqual(["家にある食材・材料"]);
+});
+
+test("材料0件では送信とコピーを無効にし、追加と削除に追従する", async ({ page }) => {
+  await page.goto("/");
+  const send = page.getByTestId("mobile-ai-prompt-send");
+  const copy = page.getByTestId("copy-prompt-sticky");
+  await expect(send).toBeDisabled();
+  await expect(copy).toBeDisabled();
+  await expect(
+    page.getByText("家にある食材・材料を追加してください。", { exact: true }),
+  ).toBeVisible();
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  await page.getByTestId("supplemental-notes").fill("温かい料理");
+  await expect(send).toBeDisabled();
+  await expect(copy).toBeDisabled();
+  const input = page.getByTestId("combo-input-materials");
+  await input.fill("豆腐");
+  await expect(send).toBeDisabled();
+  await expect(copy).toBeDisabled();
+  await pressCommittedEnter(input);
+  await expect(send).toBeEnabled();
+  await expect(copy).toBeEnabled();
+  await page
+    .getByTestId(/^material-card-/)
+    .getByRole("button", { name: /削除/ })
+    .click();
+  await expect(send).toBeDisabled();
+  await expect(copy).toBeDisabled();
 });

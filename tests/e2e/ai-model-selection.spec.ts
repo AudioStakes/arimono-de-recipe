@@ -105,6 +105,8 @@ test("利用できないモデルから別の提供元へ自動で切り替え�
     });
   });
   await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
   await expect(page.getByTestId("ai-model-status")).toContainText("現在利用できません");
   await expect(page.getByTestId("ai-model-unavailable")).toContainText("現在利用できません");
   await expect(page.getByTestId("ai-model-unavailable")).toBeVisible();
@@ -124,6 +126,8 @@ test("利用状況の確認失敗は設定内に置き、利用可能な初期�
     await route.fulfill({ status: 503, body: "unavailable" });
   });
   await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
   await expect(page.getByTestId("ai-model-status")).toContainText("利用状況を確認できません");
   await expect(page.getByTestId("ai-model-status")).toBeHidden();
   await expect(page.getByTestId("ai-model-unavailable")).toBeEmpty();
@@ -141,6 +145,8 @@ test("全AIが利用不可なら回答欄に理由を示し、コピーを利用
     });
   });
   await page.goto("/");
+  await page.getByTestId("combo-input-materials").fill("豆腐");
+  await pressCommittedEnter(page.getByTestId("combo-input-materials"));
   await expect(page.getByTestId("ai-model-unavailable")).toHaveText(
     "現在利用できるAIがありません。依頼文はコピーできます。",
   );

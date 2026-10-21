@@ -55,9 +55,9 @@ for (const width of [1280, 390, 320]) {
     const ai = page.getByTestId("mobile-ai-prompt-send");
     const copy = page.getByTestId("copy-prompt-sticky");
     await expect(ai).toBeVisible();
-    await expect(ai).toBeEnabled();
+    await expect(ai).toBeDisabled();
     await expect(copy).toBeVisible();
-    await expect(copy).toBeEnabled();
+    await expect(copy).toBeDisabled();
     await expect(copy.getByText("依頼文をコピー", { exact: true })).toBeVisible();
     await expect(ai).toHaveAccessibleName("この依頼文をAIへ送信");
     await expect(ai).toHaveAccessibleDescription(

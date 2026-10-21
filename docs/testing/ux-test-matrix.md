@@ -30,7 +30,9 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | raw HTML・危険URL・Markdown/HTML画像を無効化する | parser required | required, dangerous DOM and third-party requests are zero | no |
 | AI回答の文字数上限をserver/clientで一致させ、超過時にコピーを残す | required boundary cases | mocked oversized response | no |
 | AI送信を主操作、依頼文コピーを副操作として両方使える | no | required desktop/mobile, preview remains optional | stable hook guard |
-| 材料なし・分量不足の原因を入力付近で示し、入力とエラーを固定footerの上へ表示する | no | required narrow and landscape viewports, API calls zero | no |
+| 材料0件の短い案内、送信・コピー無効、追加・全件削除への追従 | required direct-send input guard | required all 6 profiles, notes alone do not enable actions, API calls zero | no |
+| 送信開始から10秒未満は再送せず、入力・モデル変更・取消・失敗でも期限を維持する | required 9,999/10,000ms boundary, long loading, validation consumes no interval | required all 6 profiles, countdown and copy retained, no early POST | no |
+| 分量不足の原因を入力付近で示し、入力とエラーを固定footerの上へ表示する | required | required narrow and landscape viewports, API calls zero | no |
 | Clipboard API未対応時の代替コピーでfocusを保持する | no | required with native copy | no |
 | コピー代替パネルのTab循環・背景操作禁止・Escape/resizeでの解除 | no | required | no |
 | AI通信のtimeoutとtimer解放 | required | mocked errors covered | no |

@@ -111,6 +111,7 @@ for (const [width, clipboardAvailable] of [
 }
 
 test("その他の要望と器具を実際のフォーム操作から送信し、上限時はコピーを残す", async ({ page }) => {
+  await page.clock.install();
   await page.setViewportSize({ width: 1280, height: 900 });
   const requests: Record<string, unknown>[] = [];
   await page.route("**/api/recipe", async (route) => {
@@ -133,12 +134,14 @@ test("その他の要望と器具を実際のフォーム操作から送信し�
   await page.getByTestId("recipe-item-toggle-cookingTools").click();
   await page.getByTestId("combo-input-cookingTools").fill("電子レンジ");
   await page.getByTestId("combo-input-cookingTools").press("Enter");
+  await page.clock.runFor(10_000);
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("テスト用の失敗");
   expect(requests[1]?.["prompt"]).toContain("餃子に合う副菜を作りたい");
   expect(requests[1]?.["prompt"]).toContain("電子レンジ");
   expect(requests).toHaveLength(2);
   await page.getByTestId("supplemental-notes").fill("あ".repeat(11000));
+  await page.clock.runFor(10_000);
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("送信上限");
   await expect(page.getByTestId("copy-prompt-sticky")).toBeEnabled();

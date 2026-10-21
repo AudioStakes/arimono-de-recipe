@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { pressCommittedEnter } from "./helpers/combo";
+import { openAiSettings } from "./helpers/settings";
 
 const answer = "# 豆腐の料理\n\n- 豆腐を温めます。";
 const response = (recipe = answer) => JSON.stringify({ recipe, model: "test-model", usage: null });
@@ -34,6 +35,7 @@ test("編集中の材料名もコピー・送信の直前に確定し、量とID
 });
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.install();
   await page.addInitScript(() => {
     let text = "";
     Object.defineProperty(navigator, "clipboard", {
@@ -107,6 +109,8 @@ for (const width of [1280, 390]) {
     await expect(page.getByTestId("ai-prompt-status")).toHaveAttribute("role", "status");
     await expect(page.getByTestId("ai-prompt-panel")).toHaveCount(1);
     await expect(page.locator('img[src="x"]')).toHaveCount(0);
+    await expect(page.getByTestId(sendId)).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(page.getByTestId(sendId)).toBeEnabled();
     await page.getByTestId(copyId).click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
@@ -140,6 +144,7 @@ for (const width of [1280, 390]) {
     await expect
       .poll(() => page.evaluate(() => navigator.clipboard.readText()))
       .toBe(await page.getByTestId("prompt-output").inputValue());
+    await page.clock.runFor(10_000);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
     expect(calls).toBe(2);
@@ -231,6 +236,8 @@ test("入力変更で旧通信を中断し、新しい依頼への回答だけ�
   await page.getByTestId("combo-input-materials").fill("キャベツ");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
   await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeDisabled();
+  await page.clock.runFor(10_000);
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい回答");
   finishOld();
@@ -364,12 +371,12 @@ test("材料と使い切り量の不足は送信せず入力へ誘導し、入�
   const mobile = (page.viewportSize()?.width ?? 1280) < 1024;
   const send = page.getByTestId("mobile-ai-prompt-send");
   const input = page.getByTestId("combo-input-materials");
-  await send.click();
-  await expect(input).toBeFocused();
-  await expect(input).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByTestId("materials-error")).toBeVisible();
-  await expect(page.getByTestId("ai-prompt-status")).toContainText("家にある食材");
-  await expect(page.getByTestId("ai-prompt-status")).not.toContainText("再試行");
+  await expect(send).toBeDisabled();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeDisabled();
+  await expect(
+    page.getByText("家にある食材・材料を追加してください。", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("materials-error")).toBeHidden();
   expect(calls).toBe(0);
   await input.fill("キャベツ");
   await pressCommittedEnter(input);
@@ -406,6 +413,8 @@ for (const [length, message] of [
     const send = page.getByTestId("mobile-ai-prompt-send");
     await send.click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText(message);
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
     await page.getByTestId("copy-prompt-sticky").click();
@@ -468,6 +477,7 @@ test("過大なMarkdown表を表示せず、定型エラーからコピーと再
   await expect
     .poll(() => page.evaluate(() => navigator.clipboard.readText()))
     .toBe(await page.getByTestId("prompt-output").inputValue());
+  await page.clock.runFor(10_000);
   await send.click();
   await expect(page.getByTestId("ai-prompt-reply")).toBeVisible();
   expect(calls).toBe(2);
@@ -528,16 +538,17 @@ for (const width of [1280, 390]) {
     await page.addInitScript(() => {
       const originalFetch = window.fetch.bind(window);
       window.fetch = (input, init) => {
-        init?.signal?.addEventListener(
-          "abort",
-          () => {
-            const browserWindow = window as typeof window & {
-              recordCopyRequestAbort: () => Promise<void>;
-            };
-            void browserWindow.recordCopyRequestAbort();
-          },
-          { once: true },
-        );
+        if (init?.method === "POST")
+          init.signal?.addEventListener(
+            "abort",
+            () => {
+              const browserWindow = window as typeof window & {
+                recordCopyRequestAbort: () => Promise<void>;
+              };
+              void browserWindow.recordCopyRequestAbort();
+            },
+            { once: true },
+          );
         return originalFetch(input, init);
       };
     });
@@ -573,6 +584,8 @@ for (const width of [1280, 390]) {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     finishOld();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
     await expect.poll(() => aborts).toBe(1);
@@ -606,6 +619,8 @@ for (const width of [1280, 390]) {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "idle");
     await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
+    await expect(send).toBeDisabled();
+    await page.clock.runFor(10_000);
     await expect(send).toBeEnabled();
     expect(requests).toBe(1);
   });
@@ -620,16 +635,17 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   await page.addInitScript(() => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
-      init?.signal?.addEventListener(
-        "abort",
-        () => {
-          const browserWindow = window as typeof window & {
-            recordAmountRequestAbort: () => Promise<void>;
-          };
-          void browserWindow.recordAmountRequestAbort();
-        },
-        { once: true },
-      );
+      if (init?.method === "POST")
+        init.signal?.addEventListener(
+          "abort",
+          () => {
+            const browserWindow = window as typeof window & {
+              recordAmountRequestAbort: () => Promise<void>;
+            };
+            void browserWindow.recordAmountRequestAbort();
+          },
+          { once: true },
+        );
       return originalFetch(input, init);
     };
   });
@@ -678,8 +694,53 @@ test("分量変更は検証表示を更新し、旧通信を中断して新し�
   finishOld();
   await completed;
   await expect(page.getByTestId("ai-prompt-reply")).toBeHidden();
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeDisabled();
+  await page.clock.runFor(10_000);
   await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
   await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toHaveText("新しい分量の回答");
   expect(posted[1]).toEqual({ prompt });
+});
+
+test("送信後10秒は成功や入力・AI変更後も再送せず、コピーは利用できる", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/recipe", async (route) => {
+    calls += 1;
+    await route.fulfill({ contentType: "application/json", body: response() });
+  });
+  await page.goto("/");
+  const input = page.getByTestId("combo-input-materials");
+  await input.fill("豆腐");
+  await pressCommittedEnter(input);
+  await page.clock.pauseAt(new Date(Date.now() + 3_600_000));
+  const send = page.getByTestId("mobile-ai-prompt-send");
+  const copy = page.getByTestId("copy-prompt-sticky");
+  await send.click();
+  await expect(page.getByTestId("ai-prompt-reply")).toBeVisible();
+  await expect(send).toBeDisabled();
+  await expect(send).toHaveText("あと10秒");
+  await expect(copy).toBeEnabled();
+  await copy.click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(await page.getByTestId("prompt-output").inputValue());
+  await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
+  await page.getByTestId("supplemental-notes").fill("温かい料理");
+  await openAiSettings(page);
+  await page
+    .getByTestId("ai-model-select")
+    .selectOption("@cf/meta/llama-3.3-70b-instruct-fp8-fast");
+  await page.getByTestId("privacy-close").click();
+  await send.dispatchEvent("click");
+  expect(calls).toBe(1);
+  await page.clock.runFor(9_999);
+  await expect(send).toBeDisabled();
+  await expect(send).toHaveText("あと1秒");
+  await send.dispatchEvent("click");
+  expect(calls).toBe(1);
+  await page.clock.runFor(1);
+  await expect(send).toBeEnabled();
+  await expect(send).toHaveText("AIへ送信");
+  await send.click();
+  await expect.poll(() => calls).toBe(2);
 });

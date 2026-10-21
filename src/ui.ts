@@ -1,5 +1,6 @@
 import { initializeAiModelPicker, renderAiModelPicker } from "./ai-model-picker";
 import {
+  createAiPromptControls,
   renderAiPromptAnswer,
   renderAiPromptPanel,
   renderAiPromptSendButton,
@@ -180,8 +181,7 @@ function renderMaterialUsePanel(state: RecipeSnapshot): void {
   panel.hidden = false;
 
   if (state.materialRequests.length === 0) {
-    panel.innerHTML =
-      '<p class="field-hint">先に「家にある食材・材料」を追加すると、材料ごとの使い方を選べます。</p>';
+    panel.innerHTML = '<p class="field-hint">家にある食材・材料を追加してください。</p>';
     return;
   }
 
@@ -304,7 +304,7 @@ export function initializeApp(root: HTMLElement): void {
 
 function renderCopyButton(id: string, testId: string, classes = ""): string {
   return `
-    <button id="${id}" class="copy-icon-button copy-button button-secondary ${classes}" type="button" aria-label="AI向けレシピ依頼文をコピー" data-testid="${testId}" data-default-label="依頼文をコピー" data-success-label="コピーしました。普段使っているAIに貼り付けてください。">
+    <button id="${id}" class="copy-icon-button copy-button button-secondary ${classes}" type="button" disabled aria-label="AI向けレシピ依頼文をコピー" data-testid="${testId}" data-default-label="依頼文をコピー" data-success-label="コピーしました。普段使っているAIに貼り付けてください。">
       <span class="copy-button-icon" aria-hidden="true" data-icon="copy"></span>
       <span class="copy-label">依頼文をコピー</span>
       <span class="copy-status" aria-live="polite"></span>
@@ -553,8 +553,10 @@ function createOutputPanelServices(
 ): PromptPanelServices {
   let materialControlsStructure = "";
   let aiPresentation = "";
+  const refreshAiControls = createAiPromptControls(application, elements);
   const refresh = (): void => {
     const snapshot = application.getSnapshot();
+    refreshAiControls();
     if (snapshot.materialRequests.length) setMaterialInputError(elements.form, false);
     const structure = JSON.stringify(
       snapshot.materialRequests.map(({ id, name, usage }) => [id, name, usage]),

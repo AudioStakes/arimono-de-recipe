@@ -579,12 +579,12 @@ for (const viewport of [
     const input = page.getByTestId("combo-input-materials");
     const missingMaterials = page.getByTestId("materials-error");
     const footer = page.getByTestId("mobile-action-footer");
-    await send.click();
-    await expect(input).toBeFocused();
-    await expect(input).toHaveAttribute("aria-invalid", "true");
-    await expect(input).toHaveAccessibleDescription(/家にある食材を入れてください。/);
-    await expect(missingMaterials).toBeVisible();
-    expect((await missingMaterials.boundingBox())?.y).toBeGreaterThanOrEqual(0);
+    await expect(send).toBeDisabled();
+    await expect(page.getByTestId("copy-prompt-sticky")).toBeDisabled();
+    await expect(
+      page.getByText("家にある食材・材料を追加してください。", { exact: true }),
+    ).toBeVisible();
+    await expect(missingMaterials).toBeHidden();
     const assertRevealed = async (
       field: ReturnType<Page["getByTestId"]>,
       feedback: ReturnType<Page["getByTestId"]>,
@@ -597,7 +597,6 @@ for (const viewport of [
       expect(fieldBounds.y).toBeGreaterThanOrEqual(0);
       expect(feedbackBounds.y + feedbackBounds.height).toBeLessThanOrEqual(footerBounds.y);
     };
-    await assertRevealed(input, missingMaterials);
     expect(requests).toBe(0);
     await input.fill("キャベツ");
     await pressCommittedEnter(input);

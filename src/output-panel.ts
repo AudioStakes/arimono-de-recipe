@@ -230,6 +230,7 @@ export async function copyPrompt(
   let feedbackButton = button;
   services.flushPendingInputs();
   services.onChange();
+  if (!services.application.getSnapshot().materialRequests.length) return;
   refreshPromptPanel(state, elements, services);
   let copied = false;
   try {
