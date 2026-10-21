@@ -325,7 +325,7 @@ function renderAppShell(): string {
         <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
         <section class="prompt-section" aria-labelledby="promptHeading">
           <div class="prompt-heading"><h2 id="promptHeading">ありもので、何を作る？</h2><p id="promptDescription">材料と要望をまとめた依頼文を送ります。</p></div>
-          ${renderAiModelPicker()}
+          <p class="field-hint" id="aiModelStatus" data-testid="ai-model-status" role="status">AIの利用状況を確認しています。</p>
           <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
           <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
           <div class="prompt-main-actions" role="group" aria-label="実行方法">
@@ -340,17 +340,14 @@ function renderAppShell(): string {
         </section>
       </form>
     </div>
-    <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
-      <span>created by <a href="https://x.com/AudioStakes" target="_blank" rel="noopener noreferrer" data-testid="creator-link">@AudioStakes<span class="visually-hidden">（X・別タブで開く）</span></a></span>
-      <span aria-hidden="true">·</span>
-      <button id="privacyOpen" type="button" aria-haspopup="dialog" aria-controls="privacyDialog" data-testid="privacy-open">プライバシー</button>
-    </footer>
     <dialog id="privacyDialog" class="privacy-dialog" aria-labelledby="privacyHeading" data-testid="privacy-dialog">
       <div class="privacy-heading">
         <h2 id="privacyHeading">プライバシー</h2>
         <button id="privacyClose" type="button" class="privacy-close" aria-label="プライバシーを閉じる" data-testid="privacy-close">×</button>
       </div>
       <div class="privacy-body">
+        <h3>AIの設定</h3>
+        ${renderAiModelPicker()}
         <h3>入力内容とAIへの送信</h3>
         <p>このアプリは入力内容を保存しません。食材・要望・依頼文の作成とコピーはブラウザ内で行います。「AIへ送信」を押したときだけ、依頼文全文を選択した送信先（Cloudflare Workers AIまたはGroq）へ送信します。モデル一覧の確認には入力内容を含めません。</p>
         <p>Cloudflareは標準推論を学習に使わないと説明しています。Groqは障害・不正利用の調査のため、入力や回答を通常最大30日保持する場合があります（法令でより長い保持が必要な場合を除きます）。送信先のデータの扱いをご確認ください。</p>
@@ -366,14 +363,15 @@ function renderAppShell(): string {
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-testid="mobile-action-footer" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
-        <div class="sheet-summary-row">
-          <p id="footerTransmissionNotice" class="ai-transmission-notice" data-testid="mobile-ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
-          <button id="sheetToggle" data-testid="mobile-prompt-preview-toggle" class="sheet-preview-button" type="button" aria-expanded="false" aria-controls="mobilePromptPanel">依頼文を見る</button>
-        </div>
         <div class="sheet-actions">
           ${renderAiPromptSendButton(true)}
           ${renderCopyButton("copyPromptSticky", "copy-prompt-sticky", "copy-request-button")}
         </div>
+    <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
+      <span>Created by <a href="https://x.com/AudioStakes" target="_blank" rel="noopener noreferrer" data-testid="creator-link">AudioStakes<span class="visually-hidden">（X・別タブで開く）</span></a></span>
+      <span aria-hidden="true">·</span>
+      <button id="privacyOpen" type="button" aria-haspopup="dialog" aria-controls="privacyDialog" data-testid="privacy-open">プライバシー</button>
+    </footer>
         <div id="mobilePromptPanel" class="mobile-prompt-panel" data-testid="mobile-prompt-panel" data-state="closed" role="region" aria-labelledby="mobilePromptHeading" aria-hidden="true" tabindex="-1">
           <div class="mobile-prompt-head"><h2 id="mobilePromptHeading">AIに渡す依頼文</h2><button id="sheetClose" class="sheet-close" type="button" aria-label="閉じる">×</button></div>
           ${renderCopyButton("copyPromptMobile", "copy-prompt-mobile-panel")}
@@ -392,7 +390,6 @@ function getAppElements(): AppElements {
     bottom: queryElement("#bottomActions"),
     bottomInner: queryElement("#bottomActionsInner"),
     bottomBackdrop: queryElement("#bottomSheetBackdrop"),
-    sheetToggle: queryElement("#sheetToggle"),
     sheetClose: queryElement("#sheetClose"),
     chips: queryElement("#conditionChips"),
     copyPromptSticky: queryElement("#copyPromptSticky"),

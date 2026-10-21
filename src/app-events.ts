@@ -101,8 +101,6 @@ function setMobileSheetState(
   }
   elements.bottomBackdrop.hidden = !open;
   elements.bottomBackdrop.classList.toggle("show", open);
-  elements.sheetToggle.setAttribute("aria-expanded", String(open));
-  elements.sheetToggle.textContent = open ? "依頼文を閉じる" : "依頼文を見る";
   const mobilePromptPanel = $("#mobilePromptPanel");
   mobilePromptPanel.setAttribute("aria-hidden", String(!open));
   mobilePromptPanel.setAttribute("data-state", open ? "open" : "closed");
@@ -127,7 +125,7 @@ function attachBottomSheetDrag(state: AppState, elements: AppElements): void {
     if (
       !(target instanceof Element) ||
       target.closest("input, textarea, button, select, a[href], [contenteditable]") ||
-      !target.closest("#mobilePromptHeading, #footerTransmissionNotice")
+      !target.closest("#mobilePromptHeading")
     ) {
       return;
     }
@@ -166,6 +164,7 @@ export function bindAppEvents(
   services: PromptPanelServices,
 ): void {
   elements.privacyOpen.addEventListener("click", () => {
+    if (state.mobileSheetOpen) setMobileSheetState(state, elements, false);
     elements.privacyDialog.showModal();
     elements.privacyClose.focus();
   });
@@ -265,9 +264,6 @@ export function bindAppEvents(
     syncStickyFooterState(state, elements, services);
   });
 
-  elements.sheetToggle.addEventListener("click", () =>
-    setMobileSheetState(state, elements, !state.mobileSheetOpen, elements.sheetToggle),
-  );
   elements.sheetClose.addEventListener("click", () => setMobileSheetState(state, elements, false));
   elements.bottomBackdrop.addEventListener("click", () =>
     setMobileSheetState(state, elements, false),

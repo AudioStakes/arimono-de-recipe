@@ -59,6 +59,21 @@ function readComboValues(services: PromptDataReadServices): Record<ComboId, stri
   return values;
 }
 
+export function selectCurrentRequest(data: PromptData): PromptData {
+  return {
+    ...data,
+    requestIntent: "auto",
+    targetDish: [],
+    pairingTargets: [],
+    recipeCount: "auto",
+    recipeRoles: [],
+    cookTime: "",
+    recipeDirections: [],
+    ngFoodsAndSeasonings: [],
+    supplementalNotes: data.supplementalNotes.trim(),
+  };
+}
+
 export function createPromptDataReader(services: PromptDataReadServices): PromptDataReader {
   return {
     read: () => {
@@ -75,7 +90,7 @@ export function createPromptDataReader(services: PromptDataReadServices): Prompt
           ? "one"
           : requestedRecipeCount;
 
-      return {
+      return selectCurrentRequest({
         ...comboValues,
         targetDish: requestIntent === "target-dish" ? comboValues.targetDish : [],
         pairingTargets: requestIntent === "pairing" ? comboValues.pairingTargets : [],
@@ -89,7 +104,7 @@ export function createPromptDataReader(services: PromptDataReadServices): Prompt
         recipeCount,
         cookTime: services.getCookTimeText(),
         supplementalNotes: services.getSupplementalNotes(),
-      };
+      });
     },
   };
 }

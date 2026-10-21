@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { pressCommittedEnter } from "./helpers/combo";
+import { openCopyFallback } from "./helpers/settings";
 
 async function addMaterial(page: Page, name: string): Promise<void> {
   await page.getByTestId("combo-input-materials").fill(name);
@@ -59,6 +60,10 @@ for (const width of [320, 390, 1280]) {
     await page.goto("/");
     await addMaterial(page, "豆腐");
     const footer = page.getByTestId("site-footer");
+    const actions = page.getByTestId("mobile-action-footer");
+    await expect(actions.getByTestId("site-footer")).toContainText("Created by AudioStakes");
+    await expect(actions.getByRole("button", { name: "依頼文を見る", exact: true })).toHaveCount(0);
+    await expect(actions.getByText("Cloudflare AIへ送信", { exact: true })).toHaveCount(0);
     const creator = footer.getByTestId("creator-link");
     const privacy = footer.getByTestId("privacy-open");
     await privacy.scrollIntoViewIfNeeded();
@@ -72,8 +77,9 @@ for (const width of [320, 390, 1280]) {
       const actionsBounds = await page.getByTestId("mobile-action-footer").boundingBox();
       expect(footerBounds).not.toBeNull();
       expect(actionsBounds).not.toBeNull();
+      expect(footerBounds?.y ?? 0).toBeGreaterThanOrEqual(actionsBounds?.y ?? 0);
       expect((footerBounds?.y ?? 0) + (footerBounds?.height ?? 0)).toBeLessThanOrEqual(
-        actionsBounds?.y ?? 0,
+        (actionsBounds?.y ?? 0) + (actionsBounds?.height ?? 0),
       );
     }
     expect(
@@ -318,16 +324,12 @@ test("IME更新の予約描画は変換終了後の候補フォーカスを奪�
   );
 });
 
-test("本文の選択操作で閉じず、見出しのドラッグでのみシートを開閉する", async ({ page }) => {
+test("コピー代替の本文選択では閉じず、見出しのドラッグでシートを閉じる", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/");
   await addMaterial(page, "豆腐");
   const panel = page.getByTestId("mobile-prompt-panel");
-  const summary = page.getByTestId("mobile-ai-transmission-notice");
-  await summary.dispatchEvent("pointerdown", { clientY: 100 });
-  await summary.dispatchEvent("pointermove", { clientY: 40 });
-  await summary.dispatchEvent("pointerup", { clientY: 40 });
-  await expect(panel).toHaveAttribute("data-state", "open");
+  await openCopyFallback(page);
 
   const output = page.getByTestId("mobile-prompt-output");
   await output.scrollIntoViewIfNeeded();
@@ -363,8 +365,8 @@ test("モバイル本文の展開中は背景をスクロールせず、閉じ�
   await page.evaluate(() => window.scrollTo(0, 250));
   const originalScrollY = await page.evaluate(() => window.scrollY);
   expect(originalScrollY).toBeGreaterThan(0);
-  const opener = page.getByRole("button", { name: "依頼文を見る", exact: true });
-  await opener.click();
+  const opener = page.getByTestId("copy-prompt-sticky");
+  await openCopyFallback(page);
   await expect(page.getByRole("dialog")).toBeVisible();
   const lockedScrollY = await page.evaluate(() => window.scrollY);
   const supportsWheel = browserName !== "webkit" || !isMobile;
@@ -471,7 +473,7 @@ for (const width of [1280, 390]) {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     expect(requests).toHaveLength(0);
     if (mobile) {
-      await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
+      await page.getByTestId("prompt-preview-toggle").click();
     } else {
       await page.getByTestId("prompt-preview-toggle").click();
     }
@@ -697,3 +699,27 @@ for (const width of [320, 390, 1280]) {
     );
   });
 }
+
+test("コピー代替からプライバシーのAI設定へ移り、背景操作を復元できる", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  let sends = 0;
+  await page.route("**/api/recipe", async (route) => {
+    sends += 1;
+    await route.abort();
+  });
+  await page.goto("/");
+  await addMaterial(page, "豆腐");
+  await openCopyFallback(page);
+  const privacy = page.getByTestId("privacy-open");
+  await privacy.click();
+  const dialog = page.getByTestId("privacy-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).not.toHaveAttribute("inert", "");
+  await expect(dialog.getByTestId("ai-model-select")).toBeVisible();
+  await expect(page.getByTestId("mobile-prompt-panel")).toHaveAttribute("data-state", "closed");
+  await page.getByTestId("privacy-close").click();
+  await expect(privacy).toBeFocused();
+  await page.getByTestId("combo-input-materials").focus();
+  await expect(page.getByTestId("combo-input-materials")).toBeFocused();
+  expect(sends).toBe(0);
+});

@@ -63,9 +63,7 @@ for (const width of [1280, 390, 320]) {
     await expect(ai).toHaveAccessibleDescription(
       "「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。",
     );
-    await expect(
-      page.getByTestId(mobile ? "mobile-ai-transmission-notice" : "ai-transmission-notice"),
-    ).toHaveText("Cloudflare AIへ送信");
+    await expect(page.getByTestId("ai-transmission-notice")).toHaveText("Cloudflare AIへ送信");
     await expect(copy).toHaveAccessibleName("AI向けレシピ依頼文をコピー");
     const { aiPosition, copyPosition } = await ai.evaluate(
       (element, copyId) => {
@@ -105,16 +103,11 @@ for (const width of [1280, 390, 320]) {
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     expect(prompt).toContain("豆腐");
     expect(apiCalls).toBe(0);
-    if (mobile) {
-      await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
-      await expect(page.getByTestId("copy-prompt-mobile-panel")).toBeVisible();
-      await page.evaluate(() => navigator.clipboard.writeText("before-preview-copy"));
-      await page.getByTestId("copy-prompt-mobile-panel").click();
-      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
-      await page.getByRole("button", { name: "閉じる", exact: true }).click();
-    } else {
-      await page.getByTestId("prompt-preview-toggle").click();
-    }
+    await page.getByTestId("prompt-preview-toggle").click();
+    await expect(page.getByTestId("prompt-output")).toBeVisible();
+    await page.evaluate(() => navigator.clipboard.writeText("before-preview-copy"));
+    await copy.click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     expect(apiCalls).toBe(0);
     await ai.click();
     await expect(page.getByTestId("ai-prompt-status")).toBeVisible();

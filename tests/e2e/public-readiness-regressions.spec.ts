@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
+import { openCopyFallback } from "./helpers/settings";
 
 test("モバイル展開中は背景を操作せずTabをパネル内で循環できる", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
-  const opener = page.getByRole("button", { name: "依頼文を見る" });
-  await opener.click();
+  const opener = page.getByTestId("copy-prompt-sticky");
+  await openCopyFallback(page);
   const close = page.getByRole("button", { name: "閉じる", exact: true });
-  const first = page.getByRole("button", { name: "依頼文を閉じる" });
+  const first = page.getByTestId("mobile-ai-prompt-send");
   const output = page.getByTestId("mobile-prompt-output");
-  await expect(close).toBeFocused();
+  await expect(output).toBeFocused();
   await output.focus();
   await output.press("Tab");
   await expect(first).toBeFocused();
@@ -28,7 +29,7 @@ test("モバイル展開中は背景を操作せずTabをパネル内で循環�
   await expect(page.getByTestId("combo-input-materials")).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await opener.click();
-  await first.press("Enter");
+  await close.press("Enter");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(opener).toBeFocused();
   await opener.click();

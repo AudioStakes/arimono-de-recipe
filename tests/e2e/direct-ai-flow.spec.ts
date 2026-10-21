@@ -48,12 +48,8 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-async function openPreview(page: Page, mobile: boolean): Promise<void> {
-  if (mobile) {
-    await page.getByRole("button", { name: "依頼文を見る", exact: true }).click();
-  } else {
-    await page.getByTestId("prompt-preview-toggle").click();
-  }
+async function openPreview(page: Page): Promise<void> {
+  await page.getByTestId("prompt-preview-toggle").click();
 }
 
 for (const width of [1280, 390]) {
@@ -79,16 +75,16 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("キャベツ");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(copyId).click();
     expect(calls).toBe(0);
-    if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
+    if (mobile) await openPreview(page);
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = `改行と"引用符"を残す\n${"あ".repeat(250)}`;
     await page.getByTestId("supplemental-notes").fill(notes);
     // Do not press Enter: submitting must commit the pending material too.
     await page.getByTestId("combo-input-materials").fill("豆腐（１丁）");
-    if (mobile) await openPreview(page, mobile);
+    if (mobile) await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "loading");
     await expect(page.getByTestId(sendId)).toBeDisabled();
@@ -138,7 +134,7 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText("AI設定がありません。");
     await expect(page.getByTestId("ai-prompt-status")).toHaveAttribute("role", "alert");
@@ -164,7 +160,7 @@ for (const width of [1280, 390]) {
     await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
     const notes = "あ".repeat(11000);
     await page.getByTestId("supplemental-notes").fill(notes);
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect(page.getByTestId("ai-prompt-status")).toContainText("送信上限を超えています");
     const prompt = await page.getByTestId("prompt-output").inputValue();
@@ -191,16 +187,16 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-    await openPreview(page, mobile);
+    await openPreview(page);
     await page.getByTestId(sendId).click();
     await expect.poll(() => calls).toBe(1);
-    if (!mobile) await openPreview(page, mobile);
+    if (!mobile) await openPreview(page);
     await page.getByTestId("combo-input-materials").focus();
     finish();
     await expect(page.getByTestId("ai-prompt-panel")).toHaveAttribute("data-state", "success");
     await expect(page.getByTestId("combo-input-materials")).toBeFocused();
-    await openPreview(page, mobile);
-    if (mobile) await page.getByRole("button", { name: "閉じる", exact: true }).click();
+    await openPreview(page);
+    if (mobile) await openPreview(page);
     await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
     expect(calls).toBe(1);
   });
@@ -231,7 +227,7 @@ test("入力変更で旧通信を中断し、新しい依頼への回答だけ�
   await page.goto("/");
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await pressCommittedEnter(page.getByTestId("combo-input-materials"));
-  await openPreview(page, false);
+  await openPreview(page);
   await page.getByTestId("ai-prompt-send").click();
   await expect.poll(() => calls).toBe(1);
   await page.getByTestId("combo-input-materials").fill("キャベツ");
@@ -282,7 +278,7 @@ test("多くの必須・使い切り材料も、目的・品数・NGとともに
   await page
     .getByTestId("supplemental-notes")
     .fill("餃子に合う副菜を作りたい。にんにくは使わず、家族用に薄味で。");
-  await openPreview(page, false);
+  await openPreview(page);
   await page.getByTestId("ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-reply")).toContainText("豆腐を温めます。");
   const prompt = await page.getByTestId("prompt-output").inputValue();
@@ -384,7 +380,7 @@ test("材料と使い切り量の不足は送信せず入力へ誘導し、入�
   await expect(page.getByTestId("materials-error")).toBeHidden();
   const card = page.getByTestId(/^material-card-/);
   await card.getByRole("radio", { name: "使い切る", exact: true }).check();
-  if (mobile) await openPreview(page, true);
+  if (mobile) await openPreview(page);
   await send.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");

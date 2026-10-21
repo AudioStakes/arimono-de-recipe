@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pressCommittedEnter } from "./helpers/combo";
+import { openAiSettings } from "./helpers/settings";
 
 test("320pxでスクロールバー分の幅が減っても材料カードを低く保つ", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
@@ -118,6 +119,7 @@ for (const [width, fontSize] of [
           Number.parseFloat(getComputedStyle(element).lineHeight) + 1,
       ),
     ).toBe(true);
+    await openAiSettings(page);
     const select = page.getByTestId("ai-model-select");
     expect(
       await select.evaluate((element) => {
@@ -129,6 +131,7 @@ for (const [width, fontSize] of [
         return contentHeight >= Number.parseFloat(styles.fontSize) * 1.5 - 1;
       }),
     ).toBe(true);
+    await page.getByTestId("privacy-close").click();
     for (const id of [
       "ai-prompt-send",
       "copy-prompt",
@@ -157,7 +160,8 @@ for (const [width, fontSize] of [
     const footerBox = await footer.boundingBox();
     const actionsBox = await page.getByTestId("mobile-action-footer").boundingBox();
     if (!footerBox || !actionsBox) throw new Error("Both footers must be visible");
-    expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(actionsBox.y);
+    expect(footerBox.y).toBeGreaterThanOrEqual(actionsBox.y);
+    expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(actionsBox.y + actionsBox.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );

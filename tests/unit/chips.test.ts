@@ -22,37 +22,17 @@ describe("buildConditionChipSpecs", () => {
     );
 
     expect(chips.map((chip) => chip.label)).toEqual([
-      "一緒に出す料理に合わせたい",
       "家にある食材・材料: 豆腐、しめじ",
-      "一緒に出す料理: 餃子、カレー",
       "大人2人、子供1人、幼児1人",
-      "作りたい品数: 複数品",
-      "料理の役割・量感: 副菜・一品、汁物",
       "調理方法・調理器具: 電子レンジ",
-      "調理時間: 20分以内",
-      "レシピの方向性: あっさり、和風、平日夕食",
-      "使えない・持っていない: にんじん、にんにく",
       "その他の要望あり",
     ]);
-
-    expect(chips.map((chip) => chip.removable)).toEqual([
-      false,
-      true,
-      true,
-      false,
-      false,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
-    ]);
+    expect(chips.map((chip) => chip.removable)).toEqual([true, false, true, true]);
   });
 
   test("未指定の任意条件はチップ化されない", () => {
     const chips = buildConditionChipSpecs(makeEmptyPromptData());
 
-    expect(chips.map((chip) => chip.label)).toEqual(["ありものでおまかせ"]);
+    expect(chips.map((chip) => chip.label)).toEqual([]);
   });
 });

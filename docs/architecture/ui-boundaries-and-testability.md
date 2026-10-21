@@ -25,7 +25,8 @@ Stable hooks live near behavior and are independent from styling. CSS classes ar
 This repo is a public single Vite app. It uses source-module boundaries instead of package exports:
 
 - `src/data.ts` defines current recipe item and candidate relationships.
-- `src/prompt.ts` owns prompt output rules.
+- `src/conditions.ts` projects only materials and their usage/amount, servings, cooking tools and supplemental notes into current output. Retained legacy state never enters prompt text or condition chips.
+- `src/prompt.ts` owns prompt output rules. Free text remains under その他の要望 without automatic classification into legacy fields; explicit recipe counts and requested explanations take precedence over defaults.
 - `src/ui.ts` owns rendering structure and stable hooks.
 - `src/recipe-application.ts` owns committed recipe requests and the AI lifecycle. Its
   typed operations, detached snapshots and subscriptions work in Node without a DOM.

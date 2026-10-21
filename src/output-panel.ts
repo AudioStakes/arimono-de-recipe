@@ -117,19 +117,6 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
       };
     }
 
-    if (spec.kind === "cookTime") {
-      return {
-        label: spec.label,
-        tone,
-        removable: spec.removable,
-        action: () => {
-          services.clearCookTime();
-          services.onChange();
-          focusConditionControl("cookTime");
-        },
-      };
-    }
-
     if (spec.kind === "supplementalNotes") {
       return {
         label: spec.label,
@@ -151,9 +138,8 @@ function buildChips(data: PromptData, services: PromptPanelServices): ChipItem[]
   });
 }
 
-function focusConditionControl(id: ComboId | "cookTime" | "supplementalNotes"): void {
-  const inputId =
-    id === "cookTime" ? "cookTimeRange" : id === "supplementalNotes" ? id : `${id}Input`;
+function focusConditionControl(id: ComboId | "supplementalNotes"): void {
+  const inputId = id === "supplementalNotes" ? id : `${id}Input`;
   const controls = [
     document.getElementById(inputId),
     document.querySelector(`[data-testid="recipe-item-toggle-${id}"]`),

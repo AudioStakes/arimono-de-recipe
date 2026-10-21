@@ -26,7 +26,6 @@ const requiredStableHooks = [
   "supplemental-notes",
   "condition-chips",
   "ai-transmission-notice",
-  "mobile-ai-transmission-notice",
   "prompt-output",
   "mobile-prompt-output",
   "copy-prompt",

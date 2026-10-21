@@ -69,7 +69,7 @@ describe("recipe application without a browser", () => {
     expect(app.getSnapshot().materialRequests).toEqual([destination]);
   });
 
-  it("keeps hidden requests while deriving only effective intent, count and servings", () => {
+  it("retains legacy state while exposing only current request fields and servings", () => {
     const app = createApp();
     app.commitInput("materials", " 卵、豆腐  150g ");
     app.commitInput("targetDish", "カレー");
@@ -83,7 +83,7 @@ describe("recipe application without a browser", () => {
     app.setRequestIntent("target-dish");
     expect(app.readPromptData()).toMatchObject({
       materials: ["卵、豆腐  150g"],
-      targetDish: ["カレー"],
+      targetDish: [],
       pairingTargets: [],
       recipeCount: "auto",
       recipeRoles: [],
@@ -93,12 +93,14 @@ describe("recipe application without a browser", () => {
     app.setRecipeCount("auto");
     expect(app.readPromptData()).toMatchObject({
       targetDish: [],
-      pairingTargets: ["味噌汁"],
-      recipeCount: "one",
-      recipeRoles: ["主菜・しっかり"],
+      pairingTargets: [],
+      recipeCount: "auto",
+      recipeRoles: [],
     });
     app.setRequestIntent("target-dish");
-    expect(app.readPromptData().targetDish).toEqual(["カレー"]);
+    expect(app.readPromptData().targetDish).toEqual([]);
+    expect(app.getValues("targetDish")).toEqual(["カレー"]);
+    expect(app.getValues("pairingTargets")).toEqual(["味噌汁"]);
     app.setServingsMode("unspecified");
     expect(app.readPromptData().servings).toBe("");
     app.setServingsMode("custom");
@@ -197,7 +199,7 @@ describe("recipe application without a browser", () => {
     const prompts: string[] = [];
     const unsubscribe = app.subscribe(() => prompts.push(app.getSnapshot().prompt));
     app.commitInput("materials", "鶏肉");
-    app.setCookTime("20分以内");
+    app.setSupplementalNotes("20分以内");
     expect(prompts).toHaveLength(2);
     expect(prompts[1]).toContain("20分以内");
     unsubscribe();

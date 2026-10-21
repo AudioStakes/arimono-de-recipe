@@ -15,14 +15,14 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | 今日のリクエストの3項目を独立して開閉・入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
 | 材料名と量が揃い、未入力時の量例が見切れず、カードがコンパクト | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, scrollbar gutter/card width273px, placeholder width, normal card height <=180px, top-right delete target, rename | associated labels and error help |
-| 文字拡大時に人数・モデル・主操作が欠けず、最終footerを固定操作が隠さない | no | required all 6 profiles, 320/360/1280px and 200% text | no |
+| 文字拡大時に人数・設定内モデル・主操作が欠けず、固定footer内の作者・プライバシーを操作できる | no | required all 6 profiles, 320/360/1280px and 200% text | no |
 | 材料・調理方法の指定値をキーボードで編集できる | no | required all 6 profiles, Enter then edit | no |
 | 作者リンクとプライバシーを狭い画面でも操作でき、モーダル内のTab循環・背景操作禁止・閉じた後のfocusと位置を保持する | no | required all 6 profiles, 320/390/1280px footer clearance | stable hooks |
 | Cloudflare解析は本番originだけで一度読み込み、遮断時も入力とプライバシーを操作できる | no | required all 6 profiles, production CSP, local/Preview exclusion, stubbed beacon | existing application fetch restrictions retained |
 | 材料は未入力時に日常向け20件を表示し、検索時は一致する初期候補を優先して全候補から絞り込む | required priority, full catalog and no mutation | required initial order, selection exclusion and keyboard on all 6 profiles | no |
 | コピー対象の出力欄が更新される | optional | required | stable hook guard |
 | 条件サマリーの削除後、表示中の入力または最も近い開閉ボタンへfocusを戻す | no | required all 6 profiles, materials/closed cooking tools/open notes/closed notes | no |
-| モバイル用 bottom sheet / mobile output | optional | required where practical | stable hook guard |
+| モバイルのコピー失敗時に本文選択用sheetを表示する | optional | required where practical | stable hook guard |
 | 表示・コピーと同じ依頼文全文を明示操作だけで送信する | required for client contract | required desktop/mobile, pending input and native copy | no |
 | 全文送信の文字数・JSON全体UTF-8上限を超えてもコピー本文を保持する | required boundary cases | required with no API calls | no |
 | 全文回答の型・空応答・timeout・入力変更によるabortと古い応答を検査する | required client lifecycle | required retry and stale-response flows | no |
@@ -32,7 +32,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | AI送信を主操作、依頼文コピーを副操作として両方使える | no | required desktop/mobile, preview remains optional | stable hook guard |
 | 材料なし・分量不足の原因を入力付近で示し、入力とエラーを固定footerの上へ表示する | no | required narrow and landscape viewports, API calls zero | no |
 | Clipboard API未対応時の代替コピーでfocusを保持する | no | required with native copy | no |
-| モバイル展開パネルのTab循環・背景操作禁止・Escape/resizeでの解除 | no | required | no |
+| コピー代替パネルのTab循環・背景操作禁止・Escape/resizeでの解除 | no | required | no |
 | AI通信のtimeoutとtimer解放 | required | mocked errors covered | no |
 | empty/loading/error/retry/fallback states | validation required | required | stable hook guard |
 | UI selector stability | no | yes | required |
@@ -49,6 +49,10 @@ validation. 今日のリクエスト has exactly three peer entry points:
 `recipe-item-toggle-servings`, `recipe-item-toggle-cookingTools`, and
 `recipe-item-toggle-supplementalNotes`. Other requests are entered as free text;
 the former dish, time, and preference controls are no longer rendered.
+Legacy fields cannot affect current prompt text, condition chips or request cancellation.
+AI selection is accessed inside the privacy dialog; routine preview uses
+`prompt-preview-toggle` on the page. The fixed footer contains creator/privacy
+links and actions; the mobile sheet is reserved for clipboard failure.
 Material cards display latest first while prompt order remains insertion order.
 The fixed send/copy bar is available at desktop widths as well as mobile widths.
 
@@ -73,8 +77,6 @@ The fixed send/copy bar is available at desktop widths as well as mobile widths.
 - `data-testid="materials-error"`
 - `data-testid="mobile-action-footer"`
 - `data-testid="prompt-preview-toggle"`
-- `data-testid="mobile-prompt-preview-toggle"`
-- `data-testid="mobile-ai-transmission-notice"`
 - `data-testid="prompt-output"`
 - `data-testid="mobile-prompt-output"`
 - `data-testid="copy-prompt"`

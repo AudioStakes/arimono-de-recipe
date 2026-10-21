@@ -36,7 +36,7 @@ describe("buildPrompt", () => {
 
     expect(prompt).toContain("## 役割");
     expect(prompt).toContain("## 入力条件");
-    expect(prompt).toContain("### 今回やりたいこと\n\n一緒に出す料理に合わせたい");
+    expect(prompt).not.toContain("### 今回やりたいこと");
     expect(prompt).toContain("### 家にある食材・材料");
     expect(prompt).toContain(
       "### 必ず使う食材・材料\n\n- しろ菜（家にある食材・材料に書いた量を使う）",
@@ -44,49 +44,41 @@ describe("buildPrompt", () => {
     expect(prompt).toContain(
       "### 使い切りたい食材・材料\n\n- 豆腐150g（家にある食材・材料に書いた量を使う）",
     );
-    expect(prompt).toContain("### 作りたい品数\n\n1品だけ");
-    expect(prompt).toContain("### 料理の役割・量感\n\n- 副菜・一品");
+    expect(prompt).not.toContain("### 作りたい品数\n\n1品だけ");
+    expect(prompt).not.toContain("### 料理の役割・量感\n\n- 副菜・一品");
     expect(prompt).toContain("### 調理方法・調理器具");
-    expect(prompt).toContain("### 一緒に出す料理");
+    expect(prompt).not.toContain("### 一緒に出す料理");
     expect(prompt).toContain("### 人数・分量");
     expect(prompt).not.toContain("### 調理時間");
-    expect(prompt).toContain("### 一緒に出す料理との相性");
+    expect(prompt).not.toContain("### 一緒に出す料理との相性");
     expect(prompt).toContain("指定された調理方法・調理器具だけで作れる手順にしてください。");
     expect(prompt).not.toContain("★");
   });
 
   test("ケース2: 食材なしなら食材固有の項目を出さない", () => {
-    const prompt = buildPrompt(
-      makeEmptyPromptData({
-        requestIntent: "target-dish",
-        targetDish: ["カレー"],
-      }),
-    );
-
-    expect(prompt).toContain("### 今回やりたいこと\n\n作りたい料理がある");
-    expect(prompt).toContain("### 作りたい料理\n\n- カレー");
-    expect(prompt).not.toContain("### 家にある食材・材料");
-    expect(prompt).not.toContain("### 指定材料の扱い");
-    expect(prompt).not.toContain("### 必ず使う食材・材料");
-    expect(prompt).not.toContain("### 使い切りたい食材・材料");
+    const prompt = buildPrompt(makeEmptyPromptData({ supplementalNotes: "カレーを作りたい。" }));
+    expect(prompt).toContain("### その他の要望\n\nカレーを作りたい。");
+    for (const title of [
+      "家にある食材・材料",
+      "指定材料の扱い",
+      "必ず使う食材・材料",
+      "使い切りたい食材・材料",
+      "作りたい料理",
+    ])
+      expect(prompt).not.toContain(`### ${title}`);
     expect(prompt).toContain("家にない主材料を追加しないでください。");
   });
 
-  test("ケース3: 使えない食材ありなら専用ルールと内部確認を出す", () => {
+  test("ケース3: 使えない食材はその他の要望として反映する", () => {
     const prompt = buildPrompt(
-      makeEmptyPromptData({
-        ngFoodsAndSeasonings: ["にんにく", "唐辛子"],
-      }),
+      makeEmptyPromptData({ supplementalNotes: "にんにくと唐辛子は使わない。" }),
     );
-
-    expect(prompt).toContain("### 使えない・持っていない食材・調味料");
-    expect(prompt).toContain("### 使えない・持っていない食材・調味料の扱い");
+    expect(prompt).toContain("### その他の要望\n\nにんにくと唐辛子は使わない。");
     expect(prompt).toContain(
-      "使えない・持っていない食材・調味料に含まれるものは使わないでください。",
+      "その他の要望で使わないよう指定された食材・調味料は使わないでください。",
     );
-    expect(prompt).toContain(
-      "- 使えない・持っていない食材・調味料: 指定されたものを使っていないか",
-    );
+    expect(prompt).toContain("- その他の要望: その他の要望を反映しているか");
+    expect(prompt).not.toContain("使えない・持っていない食材・調味料");
   });
 
   test("ケース4: 子供・幼児ありなら配慮ルールを出す", () => {
@@ -106,16 +98,13 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("- 子ども・幼児がいる場合は、刺激の強い調整にしない");
   });
 
-  test("ケース5: 調理時間ありなら時間解釈を出す", () => {
-    const prompt = buildPrompt(
-      makeEmptyPromptData({
-        cookTime: "20分以内",
-      }),
+  test("ケース5: 調理時間の希望はその他の要望として出す", () => {
+    const prompt = buildPrompt(makeEmptyPromptData({ supplementalNotes: "20分以内。" }));
+    expect(prompt).toContain("### その他の要望\n\n20分以内。");
+    expect(prompt).not.toContain("### 調理時間");
+    expect(prompt).toContain(
+      "- その他の要望: 料理名、品数、時間、食材の制約、味付けなど、書かれた希望を自然に反映する",
     );
-
-    expect(prompt).toContain("### 調理時間");
-    expect(prompt).toContain("下ごしらえ、加熱、仕上げを含めて指定時間に収める");
-    expect(prompt).toContain("- 調理時間: 指定時間内で作れる内容か");
   });
 
   test("ケース6: 条件衝突時の出力形式を含む", () => {
@@ -170,41 +159,28 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("- 買い足し提案");
   });
 
-  test("合わせたい料理だけ指定した場合は相性項目だけを入力依存で出す", () => {
+  test("合わせたい料理はその他の要望に記入し、専用の見出しへ分類しない", () => {
     const prompt = buildPrompt(
-      makeEmptyPromptData({
-        requestIntent: "pairing",
-        pairingTargets: ["餃子", "焼き魚"],
-        recipeCount: "one",
-      }),
+      makeEmptyPromptData({ supplementalNotes: "餃子と焼き魚に合う副菜を作りたい。" }),
     );
-
-    expect(prompt).toContain("### 一緒に出す料理");
-    expect(prompt).toContain("- 餃子");
-    expect(prompt).toContain("- 焼き魚");
-    expect(prompt).toContain("### 一緒に出す料理との相性");
-    expect(prompt).toContain("- 一緒に出す料理: 味・食感・量が重なりすぎないようにする");
-    expect(prompt).not.toContain("### 家にある食材・材料");
+    expect(prompt).toContain("### その他の要望\n\n餃子と焼き魚に合う副菜を作りたい。");
+    expect(prompt).not.toContain("### 一緒に出す料理");
     expect(prompt).not.toContain("### 調理器具の補足");
     expect(prompt).not.toContain("指定された調理方法・調理器具だけで作れる手順にしてください。");
   });
 
-  test("対象外 intent の値はプロンプトに出さない", () => {
-    const prompt = buildPrompt(
-      makeEmptyPromptData({
-        requestIntent: "target-dish",
-        targetDish: ["カレー"],
-        pairingTargets: ["餃子"],
-        recipeCount: "multiple",
-        recipeRoles: ["副菜・一品"],
-      }),
-    );
-
-    expect(prompt).toContain("### 作りたい料理\n\n- カレー");
-    expect(prompt).not.toContain("### 一緒に出す料理");
-    expect(prompt).not.toContain("### 一緒に出す料理との相性");
-    expect(prompt).not.toContain("### 作りたい品数");
-    expect(prompt).not.toContain("### 料理の役割・量感");
+  test("旧intentや料理・役割の値は現在のプロンプトに出さない", () => {
+    expect(
+      buildPrompt(
+        makeEmptyPromptData({
+          requestIntent: "target-dish",
+          targetDish: ["カレー"],
+          pairingTargets: ["餃子"],
+          recipeCount: "multiple",
+          recipeRoles: ["副菜・一品"],
+        }),
+      ),
+    ).toBe(buildPrompt(makeEmptyPromptData()));
   });
 
   test("使い切りたい量を別指定する場合は量をそのまま出す", () => {
@@ -272,19 +248,14 @@ describe("buildPrompt", () => {
     expect(prompt).not.toContain("1/4玉");
   });
 
-  test("複数品指定では役割ごとに1品ずつ依頼する", () => {
-    const prompt = buildPrompt(
-      makeEmptyPromptData({
-        requestIntent: "pairing",
-        pairingTargets: ["生姜焼き"],
-        recipeCount: "multiple",
-        recipeRoles: ["副菜・一品", "汁物"],
-      }),
-    );
-
-    expect(prompt).toContain("### 作りたい品数\n\n複数品を指定");
-    expect(prompt).toContain("### 料理の役割・量感\n\n- 副菜・一品\n- 汁物");
-    expect(prompt).toContain("指定された料理の役割・量感ごとに、1品ずつ作り方を書いてください。");
+  test("複数品の希望は自由記入のまま伝え、1品へ固定しない", () => {
+    const notes = "生姜焼きに合う副菜と汁物を1品ずつ作りたい。";
+    const prompt = buildPrompt(makeEmptyPromptData({ supplementalNotes: notes }));
+    expect(prompt).toContain(notes);
+    expect(prompt).toContain("複数品の希望がある場合は、料理ごとに材料と作り方を分けてください。");
+    expect(prompt).not.toContain("### 作りたい品数");
+    expect(prompt).not.toContain("### 料理の役割・量感");
+    expect(prompt).not.toContain("レシピを1つ提案");
   });
 });
 

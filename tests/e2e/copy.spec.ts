@@ -93,7 +93,7 @@ test("未確定の入力に変えた直後の再コピーでも最新内容が�
     .toContain("未確定の次の食材");
 });
 
-test("モバイル展開パネル内のコピー操作でも最新の依頼文をコピーできる", async ({ page }) => {
+test("モバイルのページ内プレビューから最新の依頼文を確認・コピーできる", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
@@ -102,10 +102,11 @@ test("モバイル展開パネル内のコピー操作でも最新の依頼文�
 
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
-  await page.getByRole("button", { name: "依頼文を見る" }).click();
+  await page.getByTestId("prompt-preview-toggle").click();
 
-  await page.getByTestId("copy-prompt-mobile-panel").click();
-  await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText(
+  await expect(page.getByTestId("prompt-output")).toBeVisible();
+  await page.getByTestId("copy-prompt-sticky").click();
+  await expect(page.getByTestId("copy-prompt-sticky")).toContainText(
     "コピーしました。普段使っているAIに貼り付けてください。",
   );
   await expect
@@ -113,7 +114,7 @@ test("モバイル展開パネル内のコピー操作でも最新の依頼文�
     .toContain("### 家にある食材・材料");
 
   await page.waitForTimeout(2700);
-  await expect(page.getByTestId("copy-prompt-mobile-panel")).toContainText("依頼文をコピー");
+  await expect(page.getByTestId("copy-prompt-sticky")).toContainText("依頼文をコピー");
 });
 
 test("モバイル固定コピーのフォールバックは展開パネルを開いてパネル側へ結果を表示する", async ({
