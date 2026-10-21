@@ -9,6 +9,7 @@ export function renderAiModelPicker(): string {
       ${aiModels.map((model) => `<option value="${model.id}"${model.provider === "groq" ? " disabled" : ""}>${model.label}（${model.provider === "cloudflare" ? "Cloudflare" : "Groq"}）</option>`).join("")}
     </select>
     <p class="field-hint" id="aiModelInfo" data-testid="ai-model-info"></p>
+    <p class="field-hint" id="aiModelStatus" data-testid="ai-model-status" role="status">AIの利用状況を確認しています。</p>
     <p class="field-hint">1分3回・1日10回まで（同じ接続元で共有、毎朝9時更新）。全体の無料枠で停止した場合も依頼文はコピーできます。</p>
   </div>`;
 }
@@ -18,7 +19,9 @@ export function initializeAiModelPicker(application: RecipeApplication): void {
   const info = document.querySelector<HTMLElement>("#aiModelInfo");
   const status = document.querySelector<HTMLElement>("#aiModelStatus");
   const privacy = document.querySelector<HTMLElement>("#aiPrivacyNotice");
-  if (!select || !info || !status || !privacy) throw new Error("AI model picker is missing");
+  const unavailable = document.querySelector<HTMLElement>("#aiModelUnavailable");
+  if (!select || !info || !status || !privacy || !unavailable)
+    throw new Error("AI model picker is missing");
   let catalogNotice = "AIの利用状況を確認しています。";
   const refresh = (): void => {
     const snapshot = application.getSnapshot();
@@ -32,16 +35,20 @@ export function initializeAiModelPicker(application: RecipeApplication): void {
     info.textContent = snapshot.availableAiModels.includes(model.id)
       ? `${model.label} / ${model.recipient}へ依頼文を送信します。`
       : "このモデルは現在利用できません。別のモデルを選ぶか、依頼文をコピーしてください。";
-    status.textContent = !snapshot.availableAiModels.length
+    const unavailableMessage = !snapshot.availableAiModels.length
       ? "現在利用できるAIがありません。依頼文はコピーできます。"
       : !snapshot.availableAiModels.includes(model.id)
         ? "このAIは現在利用できません。プライバシーの「AIの設定」から変更するか、依頼文をコピーしてください。"
-        : catalogNotice;
+        : "";
+    const statusText = unavailableMessage || catalogNotice;
+    if (status.textContent !== statusText) status.textContent = statusText;
+    unavailable.classList.toggle("visually-hidden", !unavailableMessage);
+    if (unavailable.textContent !== unavailableMessage)
+      unavailable.textContent = unavailableMessage;
     privacy.textContent = `「AIへ送信」を押すと、依頼文全文を${model.recipient}へ送信します。依頼文は入力やコピーだけでは送信しません。`;
-    for (const recipient of document.querySelectorAll<HTMLElement>("[data-model-recipient]")) {
-      const text = `${model.provider === "cloudflare" ? "Cloudflare AI" : "Groq AI"}へ送信`;
-      if (recipient.textContent !== text) recipient.textContent = text;
-    }
+    document
+      .querySelector('[aria-describedby="aiPrivacyNotice"]')
+      ?.setAttribute("title", `${model.recipient}へ依頼文全文を送信します。`);
   };
   select.addEventListener("change", () => {
     const model = findAiModel(select.value);

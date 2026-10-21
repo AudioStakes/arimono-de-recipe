@@ -50,7 +50,7 @@ for (const width of [1280, 390]) {
     await page.getByTestId("combo-input-materials").fill("豆腐");
     await page.getByTestId("combo-input-materials").press("Enter");
     const textareaCount = await page.locator("textarea").count();
-    const button = page.getByTestId(width < 1024 ? "copy-prompt-sticky" : "copy-prompt");
+    const button = page.getByTestId("copy-prompt-sticky");
     await button.focus();
     await button.press("Enter");
     await expect(button).toContainText("コピーしました");
@@ -98,8 +98,8 @@ for (const [width, clipboardAvailable] of [
     await page.getByTestId("combo-input-materials").press("Enter");
     const textareaCount = await page.locator("textarea").count();
     const mobile = width < 1024;
-    await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
-    const feedback = page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt");
+    await page.getByTestId("copy-prompt-sticky").click();
+    const feedback = page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt-sticky");
     await expect(feedback).toContainText("本文を選択してコピーしてください");
     await expect(page.getByTestId(mobile ? "mobile-prompt-output" : "prompt-output")).toHaveValue(
       /豆腐/,
@@ -126,22 +126,22 @@ test("その他の要望と器具を実際のフォーム操作から送信し�
   await page.getByTestId("combo-input-materials").press("Enter");
   await page.getByTestId("recipe-item-toggle-supplementalNotes").click();
   await page.getByTestId("supplemental-notes").fill("カレーを作りたい");
-  await page.getByTestId("ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("テスト用の失敗");
   expect(requests[0]?.["prompt"]).toContain("カレーを作りたい");
   await page.getByTestId("supplemental-notes").fill("餃子に合う副菜を作りたい");
   await page.getByTestId("recipe-item-toggle-cookingTools").click();
   await page.getByTestId("combo-input-cookingTools").fill("電子レンジ");
   await page.getByTestId("combo-input-cookingTools").press("Enter");
-  await page.getByTestId("ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("テスト用の失敗");
   expect(requests[1]?.["prompt"]).toContain("餃子に合う副菜を作りたい");
   expect(requests[1]?.["prompt"]).toContain("電子レンジ");
   expect(requests).toHaveLength(2);
   await page.getByTestId("supplemental-notes").fill("あ".repeat(11000));
-  await page.getByTestId("ai-prompt-send").click();
+  await page.getByTestId("mobile-ai-prompt-send").click();
   await expect(page.getByTestId("ai-prompt-status")).toContainText("送信上限");
-  await expect(page.getByTestId("copy-prompt")).toBeEnabled();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeEnabled();
   await expect(page.getByTestId("prompt-output")).toHaveValue(/電子レンジ/);
   await expect(page.getByTestId("prompt-output")).toHaveValue(new RegExp("あ".repeat(11000)));
   expect(requests).toHaveLength(2);

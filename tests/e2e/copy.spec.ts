@@ -1,12 +1,4 @@
-import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-
-async function getVisibleCopyButton(page: Page) {
-  const innerWidth = await page.evaluate(() => window.innerWidth);
-  return innerWidth >= 1024
-    ? page.getByTestId("copy-prompt")
-    : page.getByTestId("copy-prompt-sticky");
-}
 
 test("コピー操作は本文をクリップボードに書き込み、一時的に成功文言へ変わる", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -18,8 +10,8 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
   await page.getByTestId("combo-input-materials").fill("豆腐");
   await page.getByTestId("combo-input-materials").press("Enter");
 
-  await page.getByTestId("copy-prompt").click();
-  await expect(page.getByTestId("copy-prompt")).toContainText(
+  await page.getByTestId("copy-prompt-sticky").click();
+  await expect(page.getByTestId("copy-prompt-sticky")).toContainText(
     "コピーしました。普段使っているAIに貼り付けてください。",
   );
   const clipboardText1 = await page.evaluate(() => navigator.clipboard.readText());
@@ -39,7 +31,6 @@ test("コピー操作は本文をクリップボードに書き込み、一時�
   expect(clipboardText2).toContain("### 家にある食材・材料");
 
   await page.waitForTimeout(1900);
-  await expect(page.getByTestId("copy-prompt")).toContainText("依頼文をコピー");
   await expect(page.getByTestId("copy-prompt-sticky")).toContainText("依頼文をコピー");
   await expect(page.locator("#notice")).toHaveCount(0);
 });
@@ -51,7 +42,7 @@ test("入力を変更したあとの再コピーでクリップボード内容�
   });
 
   const input = page.getByTestId("combo-input-materials");
-  const copyButton = await getVisibleCopyButton(page);
+  const copyButton = page.getByTestId("copy-prompt-sticky");
 
   await input.fill("最初の食材");
   await input.press("Enter");
@@ -76,7 +67,7 @@ test("未確定の入力に変えた直後の再コピーでも最新内容が�
   });
 
   const input = page.getByTestId("combo-input-materials");
-  const copyButton = await getVisibleCopyButton(page);
+  const copyButton = page.getByTestId("copy-prompt-sticky");
 
   await input.fill("最初の食材");
   await input.press("Enter");

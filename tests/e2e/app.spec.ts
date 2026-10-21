@@ -28,6 +28,23 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   await expect(page.getByRole("img", { name: "ありもの de レシピ", exact: true })).toBeVisible();
   await expect(page.getByText("冷蔵庫にあるもので、今日のごはんを。")).toBeVisible();
 
+  await expect(page.getByRole("heading", { name: /今日のリクエスト/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "ありもので、何を作る？", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "AIの回答", level: 2, exact: true }),
+  ).toBeVisible();
+  const form = page.getByTestId("recipe-form");
+  await expect(form.getByRole("button", { name: "この依頼文をAIへ送信", exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    form.getByRole("button", { name: "AI向けレシピ依頼文をコピー", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("group", { name: "実行方法", exact: true }).getByRole("button"),
+  ).toHaveCount(2);
   const basicFields = page.getByTestId("basic-fields");
   await expect(basicFields.locator(".field-title:visible")).toHaveText(["家にある食材・材料"]);
   for (const id of [
@@ -43,7 +60,7 @@ test("ページ基本表示と折りたたみ項目の開閉が新UIどおり", 
   ]) {
     await expect(page.getByTestId(`recipe-item-${id}`)).toHaveCount(0);
   }
-  await expect(page.getByTestId("ai-prompt-send")).toContainText("AIへ送信");
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toContainText("AIへ送信");
 
   const requestFields = page.getByTestId("advanced-fields");
   await expect(requestFields.getByTestId(/^recipe-item-panel-/)).toHaveCount(3);
@@ -109,7 +126,7 @@ test("モバイル初期表示は材料入力とAI送信CTAを優先する", asy
     .poll(async () => (await generate.boundingBox())?.y ?? Number.POSITIVE_INFINITY)
     .toBeLessThan(700);
   await expect(page.getByTestId("prompt-output")).not.toBeVisible();
-  await expect(page.getByTestId("copy-prompt")).toBeVisible();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeVisible();
 });
 
 test("その他の要望を編集・消去すると依頼文とチップも更新される", async ({ page }) => {

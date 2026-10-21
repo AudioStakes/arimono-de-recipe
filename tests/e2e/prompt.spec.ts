@@ -9,7 +9,7 @@ test("依頼文欄は初期表示と自動更新の両方が機能する", async
   await page.goto("/");
   const output = page.getByTestId("prompt-output");
   await expect(
-    page.getByRole("heading", { name: "ありもので、何を作る？", exact: true }),
+    page.getByRole("heading", { name: "AIの回答", level: 2, exact: true }),
   ).toBeVisible();
   await page.getByTestId("prompt-preview-toggle").click();
   await expect(output).toHaveAccessibleName("コピーするレシピ依頼文");

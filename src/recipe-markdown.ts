@@ -71,9 +71,9 @@ export function renderRecipeMarkdown(container: HTMLElement, markdown: string): 
       link.replaceWith(...link.childNodes);
     }
   }
-  // The answer belongs under the article's h3; model headings start at h4.
+  // The answer belongs under the article's h2; model headings start at h3.
   for (const heading of template.content.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
-    const nested = document.createElement(`h${Math.min(Number(heading.tagName[1]) + 3, 6)}`);
+    const nested = document.createElement(`h${Math.min(Number(heading.tagName[1]) + 2, 6)}`);
     nested.append(...heading.childNodes);
     heading.replaceWith(nested);
   }

@@ -132,12 +132,7 @@ for (const [width, fontSize] of [
       }),
     ).toBe(true);
     await page.getByTestId("privacy-close").click();
-    for (const id of [
-      "ai-prompt-send",
-      "copy-prompt",
-      "mobile-ai-prompt-send",
-      "copy-prompt-sticky",
-    ]) {
+    for (const id of ["mobile-ai-prompt-send", "copy-prompt-sticky"]) {
       const button = page.getByTestId(id);
       const label = button.getByText(id.includes("copy") ? "依頼文をコピー" : "AIへ送信", {
         exact: true,

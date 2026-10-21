@@ -12,7 +12,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 | --- | --- | --- | --- |
 | 未指定項目をプロンプトに出力しない | required | smoke optional | source-of-truth guard |
 | 指定値からレシピ依頼文を生成する | required | required for key user flow | source-of-truth guard |
-| 今日のリクエストの3項目を独立して開閉・入力できる | optional | required | stable hook guard |
+| 任意入力の3項目を独立して開閉・入力できる | optional | required | stable hook guard |
 | 材料の使い方を指定できる | required for validation | required | stable hook guard |
 | 材料名と量が揃い、未入力時の量例が見切れず、カードがコンパクト | no | required all 6 profiles, 320/390/1280px, 16/20/32px text, scrollbar gutter/card width273px, placeholder width, normal card height <=180px, top-right delete target, rename | associated labels and error help |
 | 文字拡大時に人数・設定内モデル・主操作が欠けず、固定footer内の作者・プライバシーを操作できる | no | required all 6 profiles, 320/360/1280px and 200% text | no |
@@ -45,7 +45,7 @@ Structure tests are mechanical guardrails. They are not proof of runtime behavio
 The Node-only `recipe-application.test.ts` covers public operations, material IDs,
 hidden input retention, detached snapshots, subscriptions, input errors, retry,
 copyable text and request generations. Existing client tests own timeout and size
-validation. 今日のリクエスト has exactly three peer entry points:
+validation. Optional requests have exactly three peer entry points:
 `recipe-item-toggle-servings`, `recipe-item-toggle-cookingTools`, and
 `recipe-item-toggle-supplementalNotes`. Other requests are entered as free text;
 the former dish, time, and preference controls are no longer rendered.
@@ -54,7 +54,13 @@ AI selection is accessed inside the privacy dialog; routine preview uses
 `prompt-preview-toggle` on the page. The fixed footer contains creator/privacy
 links and actions; the mobile sheet is reserved for clipboard failure.
 Material cards display latest first while prompt order remains insertion order.
-The fixed send/copy bar is available at desktop widths as well as mobile widths.
+The fixed send/copy bar is the single action pair at desktop and mobile widths.
+There is no request-group heading or preamble above the answer. The answer uses
+an h2 and generated recipe headings begin at h3. Availability failures appear
+in the answer through an initially empty, accessible live region; model catalog
+notices stay inside privacy settings. Recipient disclosure remains in settings
+and the send button description/title. Desktop clipboard fallback opens and
+scrolls to the inline request; mobile fallback uses the sheet.
 
 - `data-testid="app-shell"`
 - `data-testid="site-footer"`
@@ -79,7 +85,6 @@ The fixed send/copy bar is available at desktop widths as well as mobile widths.
 - `data-testid="prompt-preview-toggle"`
 - `data-testid="prompt-output"`
 - `data-testid="mobile-prompt-output"`
-- `data-testid="copy-prompt"`
 - `data-testid="copy-prompt-sticky"`
 - `data-testid="copy-prompt-mobile-panel"`
 - `data-testid="material-card-{materialRequestId}"`
@@ -89,10 +94,10 @@ The fixed send/copy bar is available at desktop widths as well as mobile widths.
 - `data-testid="material-use-up-error-{materialRequestId}"`
 - `data-testid="mobile-prompt-panel"`
 - `data-state="open|closed"` for collapsible panels and the mobile prompt panel.
-- `data-testid="ai-prompt-send"`
 - `data-testid="ai-model-select"`
 - `data-testid="ai-model-info"`
 - `data-testid="ai-model-status"`
+- `data-testid="ai-model-unavailable"`
 - `data-testid="mobile-ai-prompt-send"`
 - `data-testid="ai-prompt-panel"`
 - `data-testid="ai-prompt-heading"`

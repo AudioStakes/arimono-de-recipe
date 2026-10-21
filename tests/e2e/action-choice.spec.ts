@@ -52,8 +52,8 @@ for (const width of [1280, 390, 320]) {
       .context()
       .grantPermissions(["clipboard-read", "clipboard-write"], { origin: page.url() });
     const mobile = width < 1024;
-    const ai = page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send");
-    const copy = page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt");
+    const ai = page.getByTestId("mobile-ai-prompt-send");
+    const copy = page.getByTestId("copy-prompt-sticky");
     await expect(ai).toBeVisible();
     await expect(ai).toBeEnabled();
     await expect(copy).toBeVisible();
@@ -63,18 +63,15 @@ for (const width of [1280, 390, 320]) {
     await expect(ai).toHaveAccessibleDescription(
       "「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。",
     );
-    await expect(page.getByTestId("ai-transmission-notice")).toHaveText("Cloudflare AIへ送信");
+    await expect(ai).toHaveAttribute("title", "CloudflareのAIへ依頼文全文を送信します。");
     await expect(copy).toHaveAccessibleName("AI向けレシピ依頼文をコピー");
-    const { aiPosition, copyPosition } = await ai.evaluate(
-      (element, copyId) => {
-        const secondary = document.querySelector(`[data-testid="${copyId}"]`);
-        return {
-          aiPosition: element.getBoundingClientRect().toJSON(),
-          copyPosition: secondary?.getBoundingClientRect().toJSON(),
-        };
-      },
-      mobile ? "copy-prompt-sticky" : "copy-prompt",
-    );
+    const { aiPosition, copyPosition } = await ai.evaluate((element, copyId) => {
+      const secondary = document.querySelector(`[data-testid="${copyId}"]`);
+      return {
+        aiPosition: element.getBoundingClientRect().toJSON(),
+        copyPosition: secondary?.getBoundingClientRect().toJSON(),
+      };
+    }, "copy-prompt-sticky");
     if (!aiPosition || !copyPosition) throw new Error("Both choices must be rendered");
     expect(
       aiPosition.y < copyPosition.y ||

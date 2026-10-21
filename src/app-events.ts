@@ -278,10 +278,8 @@ export function bindAppEvents(
   });
 
   for (const button of [
-    $<HTMLButtonElement>("#copyPrompt"),
     elements.copyPromptSticky,
     elements.copyPromptMobile,
-    elements.sendPrompt,
     elements.sendPromptMobile,
   ]) {
     button.addEventListener("pointerdown", (event) => {
@@ -298,10 +296,6 @@ export function bindAppEvents(
     });
   }
 
-  $("#copyPrompt").addEventListener(
-    "click",
-    (event) => void copyPromptPanel(state, elements, services, event),
-  );
   elements.copyPromptSticky.addEventListener(
     "click",
     (event) => void copyPromptPanel(state, elements, services, event),
@@ -315,7 +309,6 @@ export function bindAppEvents(
     if (state.mobileSheetOpen) setMobileSheetState(state, elements, false);
     void sendPromptToAi(elements, services);
   };
-  elements.sendPrompt.addEventListener("click", send);
   elements.sendPromptMobile.addEventListener("click", send);
   syncStickyFooterState(state, elements, services);
 }

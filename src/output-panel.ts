@@ -237,8 +237,9 @@ export async function copyPrompt(
     copied = true;
   } catch {
     const useMobileFallback =
-      button === elements.copyPromptMobile || button === elements.copyPromptSticky;
-    if (button === elements.copyPromptSticky) {
+      window.innerWidth < 1024 &&
+      (button === elements.copyPromptMobile || button === elements.copyPromptSticky);
+    if (useMobileFallback && button === elements.copyPromptSticky) {
       services.openMobilePromptForCopy?.(elements.copyPromptSticky);
       feedbackButton = elements.copyPromptMobile;
     }
@@ -250,6 +251,7 @@ export async function copyPrompt(
     try {
       fallbackTarget.focus({ preventScroll: true });
       fallbackTarget.select();
+      if (!useMobileFallback) fallbackTarget.scrollIntoView({ block: "nearest" });
       copied = document.execCommand("copy");
     } catch {
       copied = false;

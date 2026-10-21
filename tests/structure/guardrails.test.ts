@@ -25,10 +25,8 @@ const requiredStableHooks = [
   "mobile-action-footer",
   "supplemental-notes",
   "condition-chips",
-  "ai-transmission-notice",
   "prompt-output",
   "mobile-prompt-output",
-  "copy-prompt",
   "copy-prompt-sticky",
   "copy-prompt-mobile-panel",
   "material-card-${",
@@ -36,8 +34,8 @@ const requiredStableHooks = [
   "material-usage-option-${",
   "material-amount-${",
   "material-use-up-error-${",
-  "ai-prompt-send",
   "mobile-ai-prompt-send",
+  "ai-model-unavailable",
   "ai-prompt-panel",
   "ai-prompt-heading",
   "ai-prompt-status",
@@ -317,7 +315,7 @@ function assertStableHooks(sourceFiles: readonly TextFile[], e2eFiles: readonly 
     throw new Error(`Missing stable hook strings:\n${missingHooks.join("\n")}`);
   }
 
-  for (const hook of ["ai-prompt-send", "mobile-ai-prompt-send", "ai-prompt-reply"]) {
+  for (const hook of ["mobile-ai-prompt-send", "ai-prompt-reply"]) {
     if (!e2eText.includes(hook)) {
       throw new Error(`Missing direct AI flow E2E hook usage: ${hook}`);
     }

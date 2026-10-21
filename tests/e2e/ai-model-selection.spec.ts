@@ -106,7 +106,8 @@ test("利用できないモデルから別の提供元へ自動で切り替え�
   });
   await page.goto("/");
   await expect(page.getByTestId("ai-model-status")).toContainText("現在利用できません");
-  await expect(page.getByTestId("ai-model-status")).toBeVisible();
+  await expect(page.getByTestId("ai-model-unavailable")).toContainText("現在利用できません");
+  await expect(page.getByTestId("ai-model-unavailable")).toBeVisible();
   await openAiSettings(page);
   await expect(page.getByTestId("ai-model-info")).toContainText("現在利用できません");
   await expect(page.getByTestId("ai-model-select")).toHaveValue(defaultAiModelId);
@@ -115,4 +116,36 @@ test("利用できないモデルから別の提供元へ自動で切り替え�
   await page.getByTestId("ai-model-select").selectOption("openai/gpt-oss-20b");
   await page.getByTestId("privacy-close").click();
   await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
+  await expect(page.getByTestId("ai-model-unavailable")).toBeEmpty();
+});
+
+test("利用状況の確認失敗は設定内に置き、利用可能な初期画面を塞がない", async ({ page }) => {
+  await page.route("**/api/recipe?models", async (route) => {
+    await route.fulfill({ status: 503, body: "unavailable" });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("ai-model-status")).toContainText("利用状況を確認できません");
+  await expect(page.getByTestId("ai-model-status")).toBeHidden();
+  await expect(page.getByTestId("ai-model-unavailable")).toBeEmpty();
+  await expect(page.getByTestId("ai-model-unavailable")).toHaveAttribute("role", "status");
+  await expect(page.getByTestId("ai-model-unavailable")).not.toHaveAttribute("hidden");
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeEnabled();
+  await openAiSettings(page);
+  await expect(page.getByTestId("ai-model-status")).toBeVisible();
+});
+
+test("全AIが利用不可なら回答欄に理由を示し、コピーを利用できる", async ({ page }) => {
+  await page.route("**/api/recipe?models", async (route) => {
+    await route.fulfill({
+      json: { models: aiModels.map((model) => ({ id: model.id, enabled: false })) },
+    });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("ai-model-unavailable")).toHaveText(
+    "現在利用できるAIがありません。依頼文はコピーできます。",
+  );
+  await expect(page.getByTestId("ai-model-unavailable")).toBeVisible();
+  await expect(page.getByTestId("ai-prompt-empty")).toBeHidden();
+  await expect(page.getByTestId("mobile-ai-prompt-send")).toBeDisabled();
+  await expect(page.getByTestId("copy-prompt-sticky")).toBeEnabled();
 });

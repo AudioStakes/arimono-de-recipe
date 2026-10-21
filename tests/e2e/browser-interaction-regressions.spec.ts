@@ -419,10 +419,11 @@ for (const width of [1280, 390]) {
     await page.goto("/");
     await addMaterial(page, "豆腐");
     const mobile = width < 1024;
-    await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
+    await page.getByTestId("copy-prompt-sticky").click();
     const output = page.getByTestId(mobile ? "mobile-prompt-output" : "prompt-output");
     await expect(output).toBeVisible();
     await expect(output).toBeFocused();
+    await expect(output).toBeInViewport();
     expect(
       await output.evaluate((element) => {
         const textarea = element as HTMLTextAreaElement;
@@ -430,7 +431,7 @@ for (const width of [1280, 390]) {
       }),
     ).toBe(true);
     await expect(
-      page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt"),
+      page.getByTestId(mobile ? "copy-prompt-mobile-panel" : "copy-prompt-sticky"),
     ).toContainText("本文を選択してコピーしてください");
   });
 
@@ -469,7 +470,7 @@ for (const width of [1280, 390]) {
     const mobile = width < 1024;
     const prompt = await page.getByTestId("prompt-output").inputValue();
     expect(prompt).toContain("150g");
-    await page.getByTestId(mobile ? "copy-prompt-sticky" : "copy-prompt").click();
+    await page.getByTestId("copy-prompt-sticky").click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(prompt);
     expect(requests).toHaveLength(0);
     if (mobile) {
@@ -477,7 +478,7 @@ for (const width of [1280, 390]) {
     } else {
       await page.getByTestId("prompt-preview-toggle").click();
     }
-    await page.getByTestId(mobile ? "mobile-ai-prompt-send" : "ai-prompt-send").click();
+    await page.getByTestId("mobile-ai-prompt-send").click();
     await expect.poll(() => requests.length).toBe(1);
     expect(requests[0]).toEqual({ prompt });
   });

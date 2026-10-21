@@ -97,7 +97,7 @@ textarea {
   display: none;
 }
 :where(input, textarea, select, button, summary, a):focus-visible,
-.ai-prompt-panel h3:focus {
+.ai-prompt-panel > h2:focus {
   outline: 3px solid var(--ingredient);
   outline-offset: 3px;
 }
@@ -164,22 +164,15 @@ h3 {
   padding: 0;
   border: 0;
 }
-.section-heading,
-.section-title {
+.section-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
-.section-heading h2,
-.section-title {
+.section-heading h2 {
   font-size: 1.125rem;
   line-height: 1.5;
-}
-.section-hint {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 400;
 }
 .material-count {
   padding: 0 var(--space-3);
@@ -646,26 +639,18 @@ input[aria-invalid="true"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
 }
-.prompt-heading {
-  display: grid;
-  gap: var(--space-1);
-}
-.prompt-heading h2,
 .mobile-prompt-head h2 {
   font-size: 1.125rem;
 }
-.prompt-heading p,
 .ai-prompt-panel > p {
   color: var(--muted);
   font-size: 0.85rem;
 }
-.prompt-main-actions,
 .sheet-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
-.prompt-main-actions > button,
 .sheet-actions > button {
   flex: 1 1 auto;
   inline-size: auto;
@@ -752,14 +737,12 @@ input[aria-invalid="true"] {
   display: grid;
   gap: var(--space-3);
   min-inline-size: 0;
-  padding-block-start: var(--space-3);
-  border-block-start: 1px solid var(--line);
 }
-.ai-prompt-panel h3 {
-  font-size: 1rem;
+.ai-prompt-panel > h2 {
+  font-size: 1.125rem;
   scroll-margin-block-start: var(--space-5);
 }
-.ai-prompt-panel[data-state="error"] {
+.prompt-section:has(> .ai-prompt-panel[data-state="error"]) {
   border-color: var(--error);
 }
 .ai-prompt-empty,
@@ -784,7 +767,7 @@ input[aria-invalid="true"] {
 .ai-recipe-answer > :last-child {
   margin-block-end: 0;
 }
-.ai-recipe-answer :is(h4, h5, h6) {
+.ai-recipe-answer :is(h3, h4, h5, h6) {
   margin-block: var(--space-5) var(--space-2);
   color: var(--primary-deep);
   font-size: 1rem;
@@ -940,16 +923,6 @@ input[aria-invalid="true"] {
 .sheet-actions .copy-request-button {
   gap: var(--space-1);
   white-space: nowrap;
-}
-.ai-transmission-notice {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-.ai-transmission-notice .icon {
-  flex: none;
 }
 .mobile-prompt-panel {
   display: none;

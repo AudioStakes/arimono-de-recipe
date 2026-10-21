@@ -321,23 +321,15 @@ function renderAppShell(): string {
     <div class="workspace">
       <form id="recipeForm" class="form" data-testid="recipe-form" autocomplete="off">
         <div id="basicFields" class="basic-fields" data-testid="basic-fields"></div>
-        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields"></div>
+        <div id="advancedFields" class="advanced-fields" data-testid="advanced-fields" role="group" aria-label="レシピの要望"></div>
         <div id="conditionChips" class="chips secondary-condition-chips" data-testid="condition-chips"></div>
-        <section class="prompt-section" aria-labelledby="promptHeading">
-          <div class="prompt-heading"><h2 id="promptHeading">ありもので、何を作る？</h2><p id="promptDescription">材料と要望をまとめた依頼文を送ります。</p></div>
-          <p class="field-hint" id="aiModelStatus" data-testid="ai-model-status" role="status">AIの利用状況を確認しています。</p>
-          <p class="ai-transmission-notice" data-testid="ai-transmission-notice"><span aria-hidden="true">${icon("info")}</span><span data-model-recipient>Cloudflare AIへ送信</span></p>
-          <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
-          <div class="prompt-main-actions" role="group" aria-label="実行方法">
-            ${renderAiPromptSendButton()}
-            ${renderCopyButton("copyPrompt", "copy-prompt")}
-          </div>
+        <div class="prompt-section">
           ${renderAiPromptAnswer()}
           <details class="prompt-preview-details">
             <summary data-testid="prompt-preview-toggle">依頼文を見る</summary>
-            <div class="output-shell"><textarea id="output" class="output" data-testid="prompt-output" aria-label="コピーするレシピ依頼文" aria-describedby="promptDescription" readonly></textarea></div>
+            <div class="output-shell"><textarea id="output" class="output" data-testid="prompt-output" aria-label="コピーするレシピ依頼文" readonly></textarea></div>
           </details>
-        </section>
+        </div>
       </form>
     </div>
     <dialog id="privacyDialog" class="privacy-dialog" aria-labelledby="privacyHeading" data-testid="privacy-dialog">
@@ -363,8 +355,9 @@ function renderAppShell(): string {
     <div class="bottom-sheet-backdrop" id="bottomSheetBackdrop" data-testid="bottom-sheet-backdrop" hidden></div>
     <div class="bottom-actions" id="bottomActions" data-testid="mobile-action-footer" data-state="closed">
       <div class="bottom-actions-inner" id="bottomActionsInner">
-        <div class="sheet-actions">
-          ${renderAiPromptSendButton(true)}
+        <p class="visually-hidden" id="aiPrivacyNotice">「AIへ送信」を押すと、依頼文全文をCloudflareのAIへ送信します。依頼文は入力やコピーだけでは送信しません。</p>
+        <div class="sheet-actions" role="group" aria-label="実行方法">
+          ${renderAiPromptSendButton()}
           ${renderCopyButton("copyPromptSticky", "copy-prompt-sticky", "copy-request-button")}
         </div>
     <footer class="site-footer" data-testid="site-footer" aria-label="サイト情報">
@@ -394,7 +387,6 @@ function getAppElements(): AppElements {
     chips: queryElement("#conditionChips"),
     copyPromptSticky: queryElement("#copyPromptSticky"),
     copyPromptMobile: queryElement("#copyPromptMobile"),
-    sendPrompt: queryElement("#sendPrompt"),
     sendPromptMobile: queryElement("#sendPromptMobile"),
     aiPromptPanel: queryElement("#aiPromptPanel"),
     aiPromptHeading: queryElement("#ai-prompt-reply-heading"),
@@ -408,7 +400,6 @@ function renderFields(): void {
   queryElement("#basicFields").innerHTML = [renderComboField(getCombo("materials"))].join("");
 
   queryElement("#advancedFields").innerHTML = `
-    <h2 class="section-title">今日のリクエスト<span class="section-hint">必要なところだけ</span></h2>
     <div class="request-settings">
       ${renderServingsField()}
       ${renderCollapsibleComboField(getCombo("cookingTools"))}

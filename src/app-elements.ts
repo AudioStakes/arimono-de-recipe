@@ -9,7 +9,6 @@ export type AppElements = {
   chips: HTMLElement;
   copyPromptSticky: HTMLButtonElement;
   copyPromptMobile: HTMLButtonElement;
-  sendPrompt: HTMLButtonElement;
   sendPromptMobile: HTMLButtonElement;
   aiPromptPanel: HTMLElement;
   aiPromptHeading: HTMLElement;
