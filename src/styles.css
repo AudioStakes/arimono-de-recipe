@@ -8,6 +8,7 @@
   --ink: #373b2f;
   --ink-strong: #303b29;
   --muted: #515645;
+  --placeholder: #737866;
   --line: #e3e0cc;
   --line-strong: #8f947e;
   --primary: #f6e5a6;
@@ -448,7 +449,7 @@ h3 {
   font-weight: 700;
 }
 .material-amount-input::placeholder {
-  color: var(--muted);
+  color: var(--placeholder);
   opacity: 1;
 }
 .material-usage-fieldset {

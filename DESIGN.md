@@ -24,6 +24,7 @@ application and domain modules, not this visual specification.
   --ink: #373b2f;
   --ink-strong: #303b29;
   --muted: #515645;
+  --placeholder: #737866;
   --line: #e3e0cc;
   --line-strong: #8f947e;
   --primary: #f6e5a6;
