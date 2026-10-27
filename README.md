@@ -1,76 +1,47 @@
 # ありもの de レシピ
 
-**冷蔵庫にあるもので、今日のごはんを。**
+家にある食材と「使い切りたい量」から、AIにレシピを相談できるWebアプリです。
 
-家にある食材と「使い切りたい量」を入力して、AIに料理を相談できるWebアプリです。買い足しなしを基本に、入力から作った依頼文をアプリ内AIへ送り、回答をその場で読めます。普段使っているChatGPT・Claude・Gemini向けの依頼文を作ってコピーすることもできます。
-
-[アプリを使う](https://arimono-de-recipe.pages.dev/)
+**[アプリを使う](https://arimono-de-recipe.pages.dev/)** — 登録不要
 
 ![材料を入力して料理を相談するデスクトップ画面](docs/media/form-ui-desktop.png)
 
-[スマートフォンの画面](docs/media/form-ui-mobile.png) · [移行前の操作動画](docs/media/demo.mp4)
-
 ## 使い方
 
-1. **材料を追加する。** 「豆腐」「キャベツ」など、家にある食材を入力します。
-2. **使い方を選ぶ。** 材料ごとに「おまかせ」「必ず使う」「使い切る」と分量を指定できます。任意の入力は「人数・分量」「調理方法・調理器具」「その他の要望」の3項目です。料理名・時間・使えない食材などは「その他の要望」へ自由に記入できます。
-3. **AIへ送信する。** 材料を1件以上追加すると送信とコピーを使えます。「AIへ送信」を押すと依頼文全文を送り、回答を読みやすいMarkdown表示で確認できます。利用するAIを変更したい場合は、固定フッターの「プライバシー」にある「AIの設定」から選べます。
+1. **食材を入力する**：材料ごとに「おまかせ」「必ず使う」「使い切る」と分量を指定します。
+2. **希望を加える**：人数・調理器具・「子ども向け」などの要望を入力します。
+3. **「AIへ送信」を押す**：アプリ内でレシピを確認できます。
 
-別のAIを使う場合は「依頼文をコピー」を押して貼り付けてください。入力条件を整理した日本語の依頼文を作ります。アプリ内AIが利用できないときもコピーできます。
+「依頼文をコピー」で、ChatGPT・Claude・Geminiに貼り付けて相談することもできます。アプリ内AIの利用制限に達したときもコピーできます。
 
-送信後は最低10秒間、再送信できません。回答待ちの間も再送信できず、材料があれば依頼文はコピーできます。入力やAI設定を変更しても10秒の待ち時間は維持します。
+入力は保存されず、再読み込みすると消えます。詳しくは[使い方・データの扱い](docs/usage.md)を参照してください。
 
-アプリ内AIには接続元ごとの回数と全体の無料枠の制限があります。モデル変更だけでは送信しません。
-提供元の無料契約と[利用制限の設定](docs/architecture/ai-provider-setup.md)が必要です。
-[無料API候補の調査](docs/research/free-ai-api-options.md)には、継続無料・試用限定・有料契約付属の違いを記録しています。
-標準AIは、短縮した依頼文の実回答を検証したGemma 4とする。既存のモデル選択・利用制限を維持する。比較条件と回答例は[依頼文の評価記録](docs/research/short-recipe-prompt-evaluation-2026-10-21.md)を参照。
-アプリ内の送信先はCloudflareと任意のGroqです。OpenAIのAPI・ChatGPTアカウント連携は対象外です。
+## 技術構成
 
-登録は不要です。入力・依頼文の生成・コピーはブラウザ内で行い、入力内容はAIへ送るボタンを押すまで自動送信しません。入力は保存せず、再読み込みすると消えます。本番はCloudflare Web Analyticsでアクセス状況を集計しますが、食材や依頼文を解析へ送りません。フッターの「プライバシー」でデータの扱いを確認できます。AIの回答は参考情報です。調理前に材料・アレルギー・加熱条件を確認してください。[入力上限とデータの扱い](docs/usage.md)
-
-## 技術構成と設計
-
-| 領域 | 採用技術・役割 |
+| 用途 | 技術 |
 | --- | --- |
-| フロントエンド | TypeScript、HTML、CSS、Vite。UIフレームワークを使わず、画面と入力状態を管理 |
-| 配信・AI | Cloudflare Pages、Pages Functions、Workers AI、任意のGroq Free。ブラウザは同一オリジンの `/api/recipe` だけを利用 |
-| 利用制限 | Cloudflare D1の原子的な回数・使用量予約。入力・回答は保存しない |
-| 回答表示 | micromarkと表拡張。raw HTML・外部画像を表示せず、安全なMarkdownを描画 |
-| テスト | Vitestで依頼文・入力条件・API契約を検証。Playwrightでブラウザ操作とレスポンシブ表示を確認 |
-| 品質管理 | Biome、TypeScript、HTML・Markdown・YAML検査、npm auditをGitHub Actionsで実行 |
+| フロントエンド | TypeScript / Vite / HTML / CSS |
+| 配信・API | Cloudflare Pages / Pages Functions |
+| AI・利用制限 | Workers AI / Groq（任意）/ Cloudflare D1 |
+| テスト・品質管理 | Vitest / Playwright / Biome / GitHub Actions |
 
-依頼文を組み立てる処理と画面描画を分け、項目・候補値を設定データで管理しています。依頼文は出力テンプレートを先頭に置き、材料・使い方・量を1回にまとめ、重複する条件や未指定項目のルールを省きます。食材の量は全品合計の上限とし、NG指定を優先し、条件を両立できない場合は理由と衝突する条件を示すよう求めます。品数や追加説明は「その他の要望」に従います。詳しくは[現行の入力と依頼文](docs/prd/direct-ai-recipe-flow.md#現行の入力と依頼文)を参照してください。
+## 開発
 
-表示・コピー・送信で同じ依頼文を使い、待機・失敗時もコピーできます。入力変更による通信の中断や古い回答の破棄も扱います。AIの回答は材料・NG条件の自動照合を行わないため、調理前の確認が必要です。
-
-スマートフォンでは下部の送信・コピー操作とページ内の回答、デスクトップでは材料とリクエストを2カラムに並べ、回答をその下に表示します。キーボード操作、フォーカスの復元、長い入力、コピー拒否、AIの待機・失敗もテスト対象です。設計の理由と制約は[ADR](docs/adr/)、検証範囲は[UXテスト対応表](docs/testing/ux-test-matrix.md)に記録しています。
-
-## ローカルで動かす
-
-Node.js 22.22以上の22系、または24.8以上とnpmを使います。CIはNode.js 22です。
+Node.js 22.22以降の22系、または24.8以降を使用します。
 
 ```bash
+git clone https://github.com/AudioStakes/arimono-de-recipe.git
+cd arimono-de-recipe
 npm ci
-npx playwright install --with-deps chromium firefox webkit
 npm run dev
 ```
 
-表示されたURLを開くと依頼文の作成・コピーを試せます。アプリ内AIを含める場合は[Cloudflareでの公開手順](docs/deployment.md)を参照してください。
+この手順では、材料入力と依頼文のコピーを試せます。アプリ内AIの利用には[追加設定](docs/deployment.md)が必要です。
 
-```bash
-npm run check  # 整形・lint・型検査・ビルド・unit・structure・E2E
-npm run audit:dependencies
-npm run build  # dist/ に静的ファイルを出力
-```
-
-開発手順は[CONTRIBUTING.md](CONTRIBUTING.md)、検査の担当範囲は[品質ゲート](docs/quality-gates.md)に記載しています。
-
-[公開前レビューと改善記録](docs/release-readiness-2026-10-18.md)には、確認した範囲、修正内容、本番AIを有効にする前の残作業をまとめています。コードのマージだけでは本番のD1・secret・Free契約設定やデプロイは完了しません。
-
-[フォームの設計・画面と検証](docs/testing/form-ui-verification-2026-10-18.md)には、材料名と量の整列、量例とカードの小型化、文字拡大時の操作とキーボード改善を記録しています。
+[開発・検証手順](CONTRIBUTING.md) · [設計判断](docs/adr/)
 
 ## 問い合わせ・利用条件
 
-不具合や改善案は[GitHub Issues](https://github.com/AudioStakes/arimono-de-recipe/issues)へ、脆弱性は[非公開の報告手順](SECURITY.md)をご確認ください。
+不具合・改善案は[Issues](https://github.com/AudioStakes/arimono-de-recipe/issues)、脆弱性の報告は[SECURITY.md](SECURITY.md)へ。
 
 ソースは閲覧用に公開しています。再利用を許諾するライセンスは未設定です（`UNLICENSED`）。
