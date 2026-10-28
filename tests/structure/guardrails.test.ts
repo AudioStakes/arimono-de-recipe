@@ -372,6 +372,15 @@ function extractAdrLinks(text: string): string[] {
 }
 
 describe("current repository guardrails", () => {
+  it("disables Pages SPA fallback and limits Function invocation to the recipe API", async () => {
+    expect((await stat(path.join(projectRoot, "404.html"))).isFile()).toBe(true);
+    expect(JSON.parse(await readProjectFile("public/_routes.json"))).toEqual({
+      version: 1,
+      include: ["/api/recipe"],
+      exclude: [],
+    });
+  });
+
   it("keeps client network use limited to the approved recipe API", async () => {
     const sourceFiles = await collectFiles("src", isScriptFile);
     assertClientNetworkBoundary(sourceFiles);
