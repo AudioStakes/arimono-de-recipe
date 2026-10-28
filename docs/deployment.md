@@ -21,6 +21,8 @@ npx wrangler pages deploy dist --project-name arimono-de-recipe --branch main
 
 `public/_routes.json` はビルド時に `dist/_routes.json` へコピーし、Functionの実行対象を `/api/recipe` に限定します。通常の画面・静的ファイルへのアクセスでFunctionを起動する必要はありません。
 
+ルートの `404.html` はViteのHTMLエントリとして処理し、共通の `src/styles.css` を参照する `dist/404.html` を生成します。Pagesは配信ルートの `404.html` がないとSPAとみなし、存在しないパスにもトップページを200で返します。このアプリでは未知のパスを404にするため、このエントリを維持してください。`_redirects` で404ステータスを指定する方法は対応していません。[Pagesの配信仕様](https://developers.cloudflare.com/pages/configuration/serving-pages/)、[redirectの対応範囲](https://developers.cloudflare.com/pages/configuration/redirects/)
+
 独自のアカウントで公開する場合は、コード・画像の利用条件を確認し、Pagesプロジェクト名を変更してください。Git連携ビルドを選ぶ場合はNode.js 22.22以上の22系、ビルド `npm run build`、配信ディレクトリ `dist` を使用します。
 
 ## ローカルでFunctionも動かす
@@ -43,6 +45,35 @@ npm run preview
 ```
 
 このモードはFunctionを配信しません。通常の自動テストはモックを使い、Cloudflareアカウントや課金を必要としません。AI未設定時のFunctionの応答もユニットテストで確認します。
+
+## HTTPステータスの確認
+
+`npm run check` は404ファイルの存在とFunctionの実行範囲、404画面からトップへ戻る操作を検査します。
+E2Eの配信はVite previewのため、Pages固有のステータス、ヘッダー、ルーティングは `wrangler pages dev` と公開後のURLでも確認します。
+ビルド後に `dist/404.html` が生成され、参照するCSSが読み込めることを確認してください。HTML内のCSSパスはViteがビルド時に書き換えるため、ソースHTMLとのバイト比較は行いません。
+
+公開後は次のGETを実行します。確認先をPreviewに変更する場合も、実AIへのPOSTは不要です。
+
+```bash
+recipe_origin=https://arimono-de-recipe.pages.dev
+for recipe_path in / /brand/favicon.png /wp-login.php /.git/config /api/does-not-exist /assets/does-not-exist.js '/api/recipe?models'; do
+  curl --silent --show-error --max-time 20 --output /dev/null \
+    --write-out "$recipe_path status=%{http_code} type=%{content_type}\n" \
+    "$recipe_origin$recipe_path"
+done
+curl --silent --show-error --max-time 20 --dump-header - --output /dev/null \
+  "$recipe_origin/api/recipe?models"
+```
+
+| 対象 | 期待する応答 |
+| --- | --- |
+| `/` と既存の画像、CSS、JS | GETで200。条件付きリクエストの304は正常 |
+| 未存在の画面、`.git/config`、API、アセット | GETとHEADで404。GET本文は404ページ |
+| `GET /api/recipe?models` | 200のJSON、`Cache-Control: no-store`、`X-Content-Type-Options: nosniff` |
+| `/api/recipe` の対象外メソッド | 405。モデル一覧の確認はHEADではなくGETを使う |
+
+未知のパスが404でも、実在するHTMLの拡張子除去などの正規化では301が返る場合があります。
+通常の静的ファイルをFunctionへ広げず、Pages標準キャッシュを維持します。[キャッシュの公式推奨](https://developers.cloudflare.com/pages/configuration/serving-pages/#caching-and-performance)
 
 ## 公開APIの濫用・費用対策
 
@@ -96,6 +127,25 @@ CSPではスクリプトを `https://static.cloudflareinsights.com/beacon.min.js
 - AIを停止した場合、応答が失敗した場合、入力上限を超えた場合もコピーできる。
 - 画面の外部送信の説明が見え、API応答を共有キャッシュへ保存しない。
 - HTTPSでクリップボードが動き、デスクトップ・モバイルで操作できる。
+
+## 問題発生時のロールバック
+
+費用や意図しないAI送信が疑われる場合は、先に「全AIの緊急停止」を実施します。
+配信を戻すだけでは、Previewや旧deployment URLのAPIは停止しません。
+停止を維持するときは、戻し先のhash URLで全モデルが無効であることを切り替え前に確認してください。
+通常の旧版へ戻すと、旧deploymentの有効設定が復活する可能性があります。
+停止済みの安全な戻し先がなければ、既知の正常なコードをAI停止設定で再デプロイする方法を所有者が判断します。
+
+1. Pagesプロジェクトの **Deployments** で、利用制限と無料契約の前提を満たす既知の正常なProduction deploymentを選びます。D1制限導入前など、保護のない旧版を戻し先にしないでください。
+2. 所有者が対象deploymentのメニューから **Rollback to this deployment** を選び、確認します。成功したProduction deploymentだけが対象で、Previewは対象外です。
+3. 本番URLで「HTTPステータスの確認」を実行し、入力とコピーが使えることを確認します。AI停止中はモデル一覧の全モデルが無効であることも確認します。
+4. 戻したdeploymentの識別子、理由、確認結果を作業記録に残します。古いURLの公開状態も別途確認します。
+
+PagesのロールバックをD1データの復元として扱わないでください。
+利用制限用DBを過去へ戻すと、消費済みの枠が未使用に戻る可能性があります。
+本番のロールバック、旧deploymentの削除、D1の復元は所有者が判断して実施します。[Pagesのロールバック](https://developers.cloudflare.com/pages/configuration/rollbacks/)
+
+今回のCloudflare設定監査と残る確認項目は[2026-10-28の調査記録](cloudflare-readiness-2026-10-28.md)にまとめています。
 
 ## よくある問題
 

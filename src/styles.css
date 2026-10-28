@@ -119,6 +119,36 @@ h3 {
   inline-size: min(100%, 1160px);
   margin-inline: auto;
 }
+html:has(.not-found-page) {
+  scrollbar-gutter: auto;
+}
+.not-found-page {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--viewport-block);
+  padding: var(--space-5);
+}
+.not-found {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+.not-found-code {
+  font-size: clamp(6rem, 24vw, 10rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.not-found p {
+  color: var(--muted);
+}
+.not-found a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  color: var(--primary-deep);
+  font-size: 0.85rem;
+}
 .site-header {
   display: grid;
   justify-items: center;

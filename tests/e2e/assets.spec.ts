@@ -2,6 +2,18 @@ import { readFile } from "node:fs/promises";
 import { expect, type Page, test } from "@playwright/test";
 import { pressCommittedEnter } from "./helpers/combo";
 
+test("404ページからトップへ戻れる", async ({ page }) => {
+  await page.goto("/404.html");
+  await expect(page.getByRole("heading", { name: "404", level: 1, exact: true })).toBeVisible();
+  await expect(page.getByRole("main")).toContainText("ページが見つかりません");
+  await expect(page.locator("script")).toHaveCount(0);
+  const home = page.getByRole("link", { name: "トップへ戻る" });
+  await expect(home).toHaveAttribute("href", "/");
+  await home.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("recipe-form")).toBeVisible();
+});
+
 async function serveBuiltAppAt(
   page: Page,
   origin: string,

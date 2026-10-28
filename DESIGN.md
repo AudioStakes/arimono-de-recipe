@@ -137,3 +137,11 @@ transition. Empty control surfaces use:
 Field and action wrapping follows available space and text size. The 1024px
 workspace breakpoint changes the overall column layout; it does not prescribe
 a narrow fixed width for the amount field.
+
+## Not found page
+
+The standalone 404 page shares the canvas, ink, system font and focus tokens.
+Center one group in the dynamic viewport, using 24px outer padding and 16px gaps.
+Show only the large 404, a short message and an underlined home link with a 44px target.
+The number uses `clamp(6rem, 24vw, 10rem)`, line height `1` and letter spacing `-0.04em`.
+Do not add a card, illustration or animation.
